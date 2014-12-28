@@ -86,23 +86,33 @@ class MoveEntryCommand : public IUndoableAction {
     const QPersistentModelIndex m_targetPind;
     int m_sourceRowFirst, m_sourceRowLast;
     int m_targetRow;
+    String m_text;
 public:
     MoveEntryCommand(const QModelIndex &source_parentid, int first, int last,
                      const QModelIndex &target_parentid, int target_row,
                      DatabaseModel *m)
         :m_model(m), m_sourcePind(source_parentid), m_targetPind(target_parentid),
-          m_sourceRowFirst(first), m_sourceRowLast(last), m_targetRow(target_row)
+          m_sourceRowFirst(first), m_sourceRowLast(last), m_targetRow(target_row),
+          m_text(String::Format("Move: %s", m_model->index(m_sourceRowFirst, 0, m_sourcePind).data().toString().toUtf8().constData()))
     {}
     void Do(){
         m_model->_mov_entries(m_sourcePind, m_sourceRowFirst, m_sourceRowLast,
                               m_targetPind, m_targetRow);
     }
     void Undo(){
-        m_model->_mov_entries(m_targetPind, m_targetRow,
-                              m_targetRow + m_sourceRowLast - m_sourceRowFirst,
-                              m_sourcePind, m_sourceRowFirst);
+        int cnt = m_sourceRowLast - m_sourceRowFirst + 1;
+        int source = m_targetRow;
+        int dest = m_sourceRowFirst;
+        if(m_targetPind == m_sourcePind){
+            if(m_targetRow > m_sourceRowFirst)
+                source -= cnt;
+            else
+                dest += cnt;
+        }
+        m_model->_mov_entries(m_targetPind, source, source + cnt - 1,
+                              m_sourcePind, dest);
     }
-    String Text() const{ return String::Format("Move: "); }
+    String Text() const{ return m_text; }
 };
 
 
@@ -490,12 +500,8 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
     if(r_dest < 0)
         r_dest = cl_targ.length();
 
-    // If dropping onto the same parent, then adjust the rows
     if(pid == pid_targ)
     {
-        if(r_dest > r_last)
-            r_dest -= move_cnt;
-
         // Don't proceed if the source is the same as the destination
         if(r_dest >= r_first && r_dest <= r_last)
             return;
@@ -504,6 +510,7 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
     // Move the entries in the database
     m_db->MoveEntries(pid, r_first, r_last,
                       pid_targ, r_dest);
+
 
     // Now move them in the model
     beginMoveRows(pind, r_first, r_last, targ_pind, r_dest);

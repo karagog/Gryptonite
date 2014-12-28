@@ -777,10 +777,10 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
 
         // Update the siblings at the source
         int siblings_cnt = __count_entries_by_parent_id(q, src_parent);
-        for(int i = row_first; i < siblings_cnt; ++i){
+        for(int i = row_last + 1; i < siblings_cnt + row_cnt; ++i){
             q.prepare(QString("UPDATE Entry SET Row=? WHERE ParentID%1 AND Row=?")
                       .arg(src_parent.IsNull() ? " IS NULL" : "=?"));
-            q.addBindValue(i);
+            q.addBindValue(i - row_cnt);
             if(!src_parent.IsNull())
                 q.addBindValue(src_parent.ToQByteArray());
             q.addBindValue(row_first + row_cnt);
@@ -931,7 +931,7 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     Vector<EntryId> moving_rows(move_cnt);
 
     if(row_first >= src.Length() || row_last >= src.Length() ||
-            (same_parents && row_dest >= (dest.Length() - move_cnt)) ||
+            (same_parents && row_dest > dest.Length()) ||
             (!same_parents && row_dest > dest.Length()))
         throw Exception<>("Invalid move parameters");
 
@@ -946,6 +946,8 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
         d->index.find(src[i])->second.row = i;
 
     // Insert the rows at the dest parent
+    if(same_parents && row_dest > row_first)
+        row_dest -= move_cnt;
     for(int i = 0; i < move_cnt; ++i)
         dest.Insert(moving_rows[i], row_dest + i);
 

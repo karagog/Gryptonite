@@ -263,7 +263,8 @@ public:
         UpdateFile,
         DeleteFile,
         ExportFile,
-        ExportToPS
+        ExportToPS,
+        ImportFromPS
     } CommandType;
 
     virtual ~bg_worker_command(){}
@@ -380,6 +381,20 @@ class export_to_ps_command : public bg_worker_command
 public:
     export_to_ps_command(const char *filepath, const char *password, const char *keyfile)
         :bg_worker_command(ExportToPS),
+          FilePath(filepath),
+          Password(password),
+          KeyFile(keyfile)
+    {}
+    const QByteArray FilePath;
+    const QByteArray Password;
+    const QByteArray KeyFile;
+};
+
+class import_from_ps_command : public bg_worker_command
+{
+public:
+    import_from_ps_command(const char *filepath, const char *password, const char *keyfile)
+        :bg_worker_command(ImportFromPS),
           FilePath(filepath),
           Password(password),
           KeyFile(keyfile)
@@ -1155,6 +1170,16 @@ void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
     d->wc_file_thread.notify_one();
 }
 
+void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
+                                              const char *password,
+                                              const char *keyfile)
+{
+    G_D;
+    unique_lock<mutex> lkr(d->file_thread_lock);
+    d->file_thread_commands.push(new import_from_ps_command(import_filename, password, keyfile));
+    d->wc_file_thread.notify_one();
+}
+
 static void  __cache_children(QSqlQuery &q, d_t *d,
                               const EntryId &parent_id,
                               int cur_lvl, int target_lvl)
@@ -1422,6 +1447,12 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
                     _fw_export_to_gps(conn_str, *bgCryptor, e2ps->FilePath, e2ps->Password, e2ps->KeyFile);
                 }
                     break;
+                case bg_worker_command::ImportFromPS:
+                {
+                    import_from_ps_command *e2ps = static_cast<import_from_ps_command *>(cmd.Data());
+                    _fw_import_from_gps(conn_str, *bgCryptor, e2ps->FilePath, e2ps->Password, e2ps->KeyFile);
+                }
+                    break;
                 default:
                     break;
                 }
@@ -1646,6 +1677,14 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
     }
     db.commit();    // Nothing should have changed, is a rollback better here?
     emit NotifyProgressUpdated(100, m_curTaskString);
+}
+
+void PasswordDatabase::_fw_import_from_gps(const QString &conn_str,
+                                           GUtil::CryptoPP::Cryptor &my_cryptor,
+                                           const char *ps_filepath,
+                                           const char *password, const char *keyfile)
+{
+    throw NotImplementedException<>();
 }
 
 

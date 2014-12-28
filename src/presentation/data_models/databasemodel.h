@@ -111,6 +111,11 @@ public:
                               const char *password,
                               const char *keyfile = NULL);
 
+    /** Imports data from the portable safe file. */
+    void ImportFromPortableSafe(const char *export_filename,
+                                const char *password,
+                                const char *keyfile = NULL);
+
     /** Loads all entries from the database. */
     void FetchAllEntries();
 

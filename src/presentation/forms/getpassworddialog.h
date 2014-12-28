@@ -31,7 +31,7 @@ class GetPasswordDialog :
 {
     Q_OBJECT
     QByteArray password;
-    QString keyfile;
+    QByteArray keyfile;
     Ui::GetPasswordDialog *ui;
     GUtil::Qt::Settings *m_settings;
 public:
@@ -42,7 +42,7 @@ public:
     ~GetPasswordDialog();
 
     QByteArray const &Password() const{ return password; }
-    QString const &KeyFile() const{ return keyfile; }
+    QByteArray const &KeyFile() const{ return keyfile; }
 
     virtual void accept();
 

@@ -566,12 +566,18 @@ void DatabaseModel::ExportFile(const FileId &id, const char *export_file_path)
     m_db->ExportFile(id, export_file_path);
 }
 
-/** Exports the entire database in the portable safe format. */
 void DatabaseModel::ExportToPortableSafe(const char *export_filename,
                                          const char *password,
                                          const char *keyfile)
 {
     m_db->ExportToPortableSafe(export_filename, password, keyfile);
+}
+
+void DatabaseModel::ImportFromPortableSafe(const char *export_filename,
+                                           const char *password,
+                                           const char *keyfile)
+{
+    m_db->ImportFromPortableSafe(export_filename, password, keyfile);
 }
 
 vector<pair<FileId, quint32> > DatabaseModel::GetFileSummary()

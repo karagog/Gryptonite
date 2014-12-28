@@ -92,7 +92,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
 
     connect(ui->actionQuit, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(ui->actionNewOpenDB, SIGNAL(triggered()), this, SLOT(_new_open_database()));
-    connect(ui->action_Portable_Safe, SIGNAL(triggered()), this, SLOT(_export_to_portable_safe()));
+    connect(ui->action_export_ps, SIGNAL(triggered()), this, SLOT(_export_to_portable_safe()));
+    connect(ui->action_import_ps, SIGNAL(triggered()), this, SLOT(_import_from_portable_safe()));
     connect(ui->action_Close, SIGNAL(triggered()), this, SLOT(_close_database()));
     connect(ui->actionNew_Entry, SIGNAL(triggered()), this, SLOT(_new_entry()));
     connect(ui->action_EditEntry, SIGNAL(triggered()), this, SLOT(_edit_entry()));
@@ -283,7 +284,7 @@ void MainWindow::_new_open_database(const QString &path)
             return;
 
         password = dlg.Password();
-        keyfile = dlg.KeyFile().toUtf8();
+        keyfile = dlg.KeyFile();
     }
     else
     {
@@ -382,7 +383,7 @@ void MainWindow::_export_to_portable_safe()
 {
     QString fn = QFileDialog::getSaveFileName(this, tr("Export to Portable Safe"),
                                               QString(),
-                                              "Grypto Portable Safe (*.gps)"
+                                              "GUtil Portable Safe (*.gps)"
                                               ";;All Files(*)");
     if(fn.isEmpty())
         return;
@@ -396,6 +397,22 @@ void MainWindow::_export_to_portable_safe()
         return;
 
     _get_database_model()->ExportToPortableSafe(fn.toUtf8(), dlg.Password(), dlg.KeyFile());
+}
+
+void MainWindow::_import_from_portable_safe()
+{
+    QString fn = QFileDialog::getOpenFileName(this, tr("Import from Portable Safe"),
+                                              QString(),
+                                              "GUtil Portable Safe (*.gps)"
+                                              ";;All Files(*)");
+    if(fn.isEmpty() || !QFile::exists(fn))
+        return;
+
+    GetPasswordDialog dlg(m_settings, fn, this);
+    if(QDialog::Accepted != dlg.exec())
+        return;
+
+    _get_database_model()->ImportFromPortableSafe(fn.toUtf8(), dlg.Password(), dlg.KeyFile());
 }
 
 void MainWindow::_new_entry()
@@ -744,7 +761,7 @@ void MainWindow::RequestUnlock()
     GetPasswordDialog dlg(m_settings, _get_database_model()->FilePath(), this);
     if(QDialog::Accepted == dlg.exec())
     {
-        if(_get_database_model()->CheckPassword(dlg.Password(), dlg.KeyFile().toUtf8()))
+        if(_get_database_model()->CheckPassword(dlg.Password(), dlg.KeyFile()))
             _lock_unlock_interface(false);
         else
             __show_access_denied(this, tr("Invalid Password"));

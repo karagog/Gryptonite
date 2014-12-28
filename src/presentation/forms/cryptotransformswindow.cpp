@@ -152,7 +152,7 @@ void CryptoTransformsWindow::_test_password()
     if(QDialog::Accepted == dlg.exec()){
         if(!m_cryptor)
             QMessageBox::critical(this, tr("No Key"), tr("No key has been set"));
-        else if(m_cryptor->CheckPassword(dlg.Password(), dlg.KeyFile().toUtf8()))
+        else if(m_cryptor->CheckPassword(dlg.Password(), dlg.KeyFile()))
             QMessageBox::information(this, tr("OK"), tr("Key is correct"));
         else
             QMessageBox::critical(this, tr("Failed"), tr("Key is incorrect"));

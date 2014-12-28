@@ -140,6 +140,11 @@ public:
                               const char *password,
                               const char *keyfile = NULL);
 
+    /** Imports data from the portable safe file. */
+    void ImportFromPortableSafe(const char *export_filename,
+                                const char *password,
+                                const char *keyfile = NULL);
+
 
 public slots:
 
@@ -185,6 +190,7 @@ private:
     void _fw_exp_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
     void _fw_del_file(const QString &, const FileId &);
     void _fw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const char *password, const char *keyfile);
+    void _fw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const char *password, const char *keyfile);
     void _fw_fail_if_cancelled();
     int m_progressMin, m_progressMax;
     QString m_curTaskString;

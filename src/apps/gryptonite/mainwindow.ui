@@ -136,11 +136,20 @@
      <property name="title">
       <string>&amp;Export</string>
      </property>
-     <addaction name="action_Portable_Safe"/>
+     <addaction name="action_export_ps"/>
+    </widget>
+    <widget class="QMenu" name="menu_Import">
+     <property name="title">
+      <string>&amp;Import</string>
+     </property>
+     <addaction name="action_import_ps"/>
     </widget>
     <addaction name="actionNewOpenDB"/>
     <addaction name="action_Save_As"/>
+    <addaction name="separator"/>
     <addaction name="menu_Export"/>
+    <addaction name="menu_Import"/>
+    <addaction name="separator"/>
     <addaction name="action_Close"/>
     <addaction name="menu_Recent_Files"/>
     <addaction name="separator"/>
@@ -333,7 +342,12 @@
     <string>Cleanup &amp;Files</string>
    </property>
   </action>
-  <action name="action_Portable_Safe">
+  <action name="action_export_ps">
+   <property name="text">
+    <string>&amp;Portable Safe</string>
+   </property>
+  </action>
+  <action name="action_import_ps">
    <property name="text">
     <string>&amp;Portable Safe</string>
    </property>

@@ -57,13 +57,13 @@ void GetPasswordDialog::accept()
 {
     int cb_ind = ui->comboBox->currentIndex();
     QByteArray tmp_password;
-    QString tmp_keyfile;
+    QByteArray tmp_keyfile;
     if(cb_ind == 0 || cb_ind == 2)
         tmp_password = ui->le_password->text().toUtf8();
 
     if(cb_ind == 1 || cb_ind == 2)
     {
-        tmp_keyfile = ui->le_keyfile->text().trimmed();
+        tmp_keyfile = ui->le_keyfile->text().trimmed().toUtf8();
         QFile kf(tmp_keyfile);
         if(kf.fileName().isEmpty()){
             QMessageBox::critical(this, tr("No Keyfile"),
@@ -72,7 +72,7 @@ void GetPasswordDialog::accept()
         }
         if(!kf.exists()){
             QMessageBox::critical(this, tr("Keyfile Not Found"),
-                                  QString(tr("Could not find the keyfile: %1")).arg(tmp_keyfile));
+                                  QString(tr("Could not find the keyfile: %1")).arg(tmp_keyfile.constData()));
             return;
         }
 

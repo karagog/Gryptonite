@@ -88,7 +88,7 @@ public:
     /** Updates the given entry's data. Note this function is not used to move entries
      *  around the hierarchy.
     */
-    void UpdateEntry(const Entry &);
+    void UpdateEntry(Entry &);
 
     /** Moves a block of entries.
 

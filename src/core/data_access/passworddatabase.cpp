@@ -872,9 +872,12 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     d->entry_thread_commands.push(new add_entry_command(e));
     d->entry_thread_lock.unlock();
     d->wc_entry_thread.notify_one();
+
+    // Clear the file path so we don't add the same file twice
+    e.SetFilePath(QString::null);
 }
 
-void PasswordDatabase::UpdateEntry(const Entry &e)
+void PasswordDatabase::UpdateEntry(Entry &e)
 {
     G_D;
 
@@ -897,6 +900,9 @@ void PasswordDatabase::UpdateEntry(const Entry &e)
     d->entry_thread_commands.push(new update_entry_command(e));
     d->entry_thread_lock.unlock();
     d->wc_entry_thread.notify_one();
+
+    // Clear the file path so we don't add the same file twice
+    e.SetFilePath(QString::null);
 }
 
 void PasswordDatabase::DeleteEntry(const EntryId &id)

@@ -175,7 +175,7 @@ private:
 
     void _add_entry(Entry &, bool);
     void _del_entry(const EntryId &);
-    void _edt_entry(const Entry &);
+    void _edt_entry(Entry &);
     void _mov_entries(const QModelIndex &pind, int r_first, int r_last,
                       const QModelIndex &target_pind, int &r_dest);
 

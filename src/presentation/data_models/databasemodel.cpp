@@ -467,7 +467,7 @@ void DatabaseModel::_del_entry(const EntryId &id)
     endRemoveRows();
 }
 
-void DatabaseModel::_edt_entry(const Entry &e)
+void DatabaseModel::_edt_entry(Entry &e)
 {
     m_db->UpdateEntry(e);
 

@@ -26,7 +26,10 @@ NAMESPACE_GRYPTO;
 EntryModel::EntryModel(DatabaseModel *m, QObject *parent)
     :QAbstractTableModel(parent),
       m_dbModel(m)
-{}
+{
+    connect(m, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+            this, SLOT(_db_data_changed(QModelIndex,QModelIndex)));
+}
 
 EntryModel::EntryModel(const Entry &e, DatabaseModel *m, QObject *parent)
     :QAbstractTableModel(parent),
@@ -259,6 +262,19 @@ bool EntryModel::dropMimeData(const QMimeData *data,
 Qt::DropActions EntryModel::supportedDropActions() const
 {
     return Qt::CopyAction;
+}
+
+// Updates our model if the data changed in the database model
+void EntryModel::_db_data_changed(const QModelIndex &topleft, const QModelIndex &bottomright)
+{
+    for(int i = topleft.row(); i <= bottomright.row(); ++i){
+        Entry const *e = m_dbModel->GetEntryFromIndex(m_dbModel->index(i, 0, topleft.parent()));
+        if(e->GetId() == m_entry.GetId()){
+            m_entry = *e;
+            emit dataChanged(index(0,0), index(rowCount()-1, columnCount()-1));
+            break;
+        }
+    }
 }
 
 

@@ -62,6 +62,11 @@ public:
         IDNotes = Qt::UserRole + 2
     };
 
+
+private slots:
+
+    void _db_data_changed(const QModelIndex &, const QModelIndex &);
+
 };
 
 

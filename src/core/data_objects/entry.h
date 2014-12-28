@@ -44,6 +44,7 @@ public:
     PROPERTY(Name, QString);
     PROPERTY(Description, QString);
     PROPERTY(FileId, FileId);
+    PROPERTY(FilePath, QString);
     PROPERTY(FavoriteIndex, int);
     PROPERTY(ModifyDate, QDateTime);
 

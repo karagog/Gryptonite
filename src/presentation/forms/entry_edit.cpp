@@ -195,14 +195,17 @@ void EntryEdit::_select_file()
         return;
 
     QFileInfo fi(fn);
+    m_entry.SetFilePath(fi.absoluteFilePath());
+    if(m_entry.GetFileId().IsNull())
+        m_entry.SetFileId(FileId::NewId());
 
-    // Remember the original filename in the notes
+    // Remember the original filename
     QAbstractItemModel *mdl = ui->tableView->model();
     mdl->insertRow(0);
     mdl->setData(mdl->index(0, 0), tr("Filename"));
     mdl->setData(mdl->index(0, 1), fi.fileName());
 
-    ui->lbl_fileStatus->setText(fi.absolutePath());
+    ui->lbl_fileStatus->setText(tr("(Upload pending dialog acceptance)"));
 }
 
 

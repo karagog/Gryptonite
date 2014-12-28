@@ -128,10 +128,12 @@ typedef pair<FileId, quint32> fileid_length_pair;
 
 
 // Adds any new files in the entry to the database
+// Returns a file id if a new one was created. Otherwise returns a null one.
 static void __add_new_files(PasswordDatabase *pdb, const Entry &e)
 {
-//    if(!e.GetFileId().IsNull())
-//        pdb->AddUpdateFile(e.GetFileId(), );
+    if(!e.GetFileId().IsNull() && !e.GetFilePath().isEmpty()){
+        pdb->AddUpdateFile(e.GetFileId(), e.GetFilePath().toUtf8().constData());
+    }
 }
 
 static int __count_entries_by_parent_id(QSqlQuery &q, const EntryId &id)

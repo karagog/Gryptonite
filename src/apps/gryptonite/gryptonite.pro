@@ -18,6 +18,7 @@ LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
     -lGUtilQt \
     -lGUtilCryptoPP \
     -lGUtil \
+    #-lGUtilTest \
     -lcryptopp
 
 HEADERS += \

@@ -20,6 +20,7 @@ limitations under the License.*/
 #include <QMimeData>
 #include <QStringList>
 #include <unordered_map>
+//#include "../gutil/src/test/modeltest.h"
 USING_NAMESPACE_GUTIL;
 using namespace std;
 
@@ -81,8 +82,8 @@ public:
 
 class MoveEntryCommand : public IUndoableAction {
     DatabaseModel *m_model;
-    const QModelIndex m_sourcePind;
-    const QModelIndex m_targetPind;
+    const QPersistentModelIndex m_sourcePind;
+    const QPersistentModelIndex m_targetPind;
     int m_sourceRowFirst, m_sourceRowLast;
     int m_targetRow;
 public:
@@ -155,6 +156,8 @@ DatabaseModel::DatabaseModel(const char *f, const char *p, const char *k, QObjec
 
     // We need to manually fetch the root
     fetchMore(QModelIndex());
+
+    //new ModelTest(this);
 }
 
 DatabaseModel::~DatabaseModel()

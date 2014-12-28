@@ -254,6 +254,7 @@ public:
         AddEntry,
         EditEntry,
         DeleteEntry,
+        MoveEntry,
         FetchEntrysByParentId,
         RefreshFavoriteEntries,
         SetFavoriteEntries,
@@ -298,6 +299,19 @@ public:
           Id(id)
     {}
     const EntryId Id;
+};
+
+class move_entry_command : public bg_worker_command
+{
+public:
+    move_entry_command(const EntryId &parentId_src, quint32 row_first, quint32 row_last,
+                       const EntryId &parentId_dest, quint32 row_dest)
+        :bg_worker_command(MoveEntry),
+          ParentSource(parentId_src), ParentDest(parentId_dest),
+          RowFirst(row_first), RowLast(row_last), RowDest(row_dest)
+    {}
+    const EntryId ParentSource, ParentDest;
+    quint32 RowFirst, RowLast, RowDest;
 };
 
 class cache_entries_by_parentid_command : public bg_worker_command
@@ -737,6 +751,71 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
         emit NotifyFavoritesUpdated();
 }
 
+void PasswordDatabase::_ew_move_entry(const QString &conn_str,
+                                      const EntryId &src_parent, quint32 row_first, quint32 row_last,
+                                      const EntryId &dest_parent, quint32 row_dest)
+{
+    int row_cnt = row_last - row_first + 1;
+    GASSERT(row_cnt > 0);
+
+    QSqlDatabase db = QSqlDatabase::database(conn_str);
+    QSqlQuery q(db);
+    db.transaction();
+    try
+    {
+        // First move the source rows to a dummy parent with ID=0
+        for(int i = 0; i < row_cnt; ++i){
+            q.prepare(QString("UPDATE Entry SET ParentID=?,Row=? WHERE ParentID%1 AND Row=?")
+                      .arg(src_parent.IsNull() ? " IS NULL" : "=?"));
+            q.addBindValue(EntryId::Null().ToQByteArray());
+            q.addBindValue(row_dest + i);
+            if(!src_parent.IsNull())
+                q.addBindValue(src_parent.ToQByteArray());
+            q.addBindValue(row_first + i);
+            DatabaseUtils::ExecuteQuery(q);
+        }
+
+        // Update the siblings at the source
+        int siblings_cnt = __count_entries_by_parent_id(q, src_parent);
+        for(int i = row_first; i < siblings_cnt; ++i){
+            q.prepare(QString("UPDATE Entry SET Row=? WHERE ParentID%1 AND Row=?")
+                      .arg(src_parent.IsNull() ? " IS NULL" : "=?"));
+            q.addBindValue(i);
+            if(!src_parent.IsNull())
+                q.addBindValue(src_parent.ToQByteArray());
+            q.addBindValue(row_first + row_cnt);
+            DatabaseUtils::ExecuteQuery(q);
+        }
+
+        // Update the siblings at the dest
+        siblings_cnt = __count_entries_by_parent_id(q, dest_parent);
+        for(int i = row_dest; i < siblings_cnt; ++i){
+            q.prepare(QString("UPDATE Entry SET Row=? WHERE ParentID%1 AND Row=?")
+                      .arg(dest_parent.IsNull() ? " IS NULL" : "=?"));
+            q.addBindValue(i + row_cnt);
+            if(!dest_parent.IsNull())
+                q.addBindValue(dest_parent.ToQByteArray());
+            q.addBindValue(i);
+            DatabaseUtils::ExecuteQuery(q);
+        }
+
+        // Finally move the rows into the dest
+        q.prepare("UPDATE Entry SET ParentID=? WHERE ParentID=?");
+        if(dest_parent.IsNull())
+            q.addBindValue(QByteArray());
+        else
+            q.addBindValue(dest_parent.ToQByteArray());
+        q.addBindValue(EntryId::Null().ToQByteArray());
+        DatabaseUtils::ExecuteQuery(q);
+    }
+    catch(...)
+    {
+        db.rollback();
+        throw;
+    }
+    db.commit();
+}
+
 void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 {
     G_D;
@@ -838,7 +917,48 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
 void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_first, quint32 row_last,
                                    const EntryId &parentId_dest, quint32 row_dest)
 {
-    //throw NotImplementedException<>();
+    G_D;
+    int move_cnt = row_last - row_first + 1;
+    bool same_parents = parentId_src == parentId_dest;
+    if(0 > move_cnt ||
+            (same_parents && row_first <= row_dest && row_dest <= row_last))
+        throw Exception<>("Invalid move parameters");
+
+    // Update the index
+    unique_lock<mutex> lkr(d->index_lock);
+    Vector<EntryId> &src = d->parent_index.find(parentId_src)->second;
+    Vector<EntryId> &dest = d->parent_index.find(parentId_dest)->second;
+    Vector<EntryId> moving_rows(move_cnt);
+
+    if(row_first >= src.Length() || row_last >= src.Length() ||
+            (same_parents && row_dest >= (dest.Length() - move_cnt)) ||
+            (!same_parents && row_dest > dest.Length()))
+        throw Exception<>("Invalid move parameters");
+
+    // Extract the rows from the source parent
+    for(quint32 i = row_first; i <= row_last; ++i){
+        moving_rows.PushBack(src[row_first]);
+        src.RemoveAt(row_first);
+    }
+
+    // Update the siblings at the source
+    for(quint32 i = row_first; i < src.Length(); ++i)
+        d->index.find(src[i])->second.row = i;
+
+    // Insert the rows at the dest parent
+    for(int i = 0; i < move_cnt; ++i)
+        dest.Insert(moving_rows[i], row_dest + i);
+
+    // Update the siblings at the dest
+    for(quint32 i = row_dest; i < dest.Length(); ++i)
+        d->index.find(dest[i])->second.row = i;
+    lkr.unlock();
+
+    // Update the database
+    d->entry_thread_lock.lock();
+    d->entry_thread_commands.push(new move_entry_command(parentId_src, row_first, row_last, parentId_dest, row_dest));
+    d->entry_thread_lock.unlock();
+    d->wc_entry_thread.notify_one();
 }
 
 Entry PasswordDatabase::FindEntry(const EntryId &id)
@@ -1200,6 +1320,14 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
                 {
                     delete_entry_command *dec = static_cast<delete_entry_command *>(cmd.Data());
                     _ew_delete_entry(conn_str, dec->Id);
+                }
+                    break;
+                case bg_worker_command::MoveEntry:
+                {
+                    move_entry_command *mec = static_cast<move_entry_command *>(cmd.Data());
+                    _ew_move_entry(conn_str,
+                                   mec->ParentSource, mec->RowFirst, mec->RowLast,
+                                   mec->ParentDest, mec->RowDest);
                 }
                     break;
                 case bg_worker_command::FetchEntrysByParentId:

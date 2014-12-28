@@ -478,8 +478,6 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
 
     EntryContainer *ec = _get_container_from_index(pind);
     EntryContainer *ec_targ = _get_container_from_index(targ_pind);
-    GASSERT(pind.isValid() || ec);
-    GASSERT(targ_pind.isValid() || ec_targ);
 
     const EntryId pid = pind.isValid() ? ec->entry.GetId() : EntryId::Null();
     const EntryId pid_targ = targ_pind.isValid() ? ec_targ->entry.GetId() : EntryId::Null();
@@ -488,6 +486,17 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
     // Dropping onto an item appends to its children
     if(r_dest < 0)
         r_dest = cl_targ.length();
+
+    // If dropping onto the same parent, then adjust the rows
+    if(pid == pid_targ)
+    {
+        if(r_dest > r_last)
+            r_dest -= move_cnt;
+
+        // Don't proceed if the source is the same as the destination
+        if(r_dest >= r_first && r_dest <= r_last)
+            return;
+    }
 
     // Move the entries in the database
     m_db->MoveEntries(pid, r_first, r_last,
@@ -507,8 +516,11 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
     // Adjust rows at both source and dest
     for(int i = r_first; i < cl.length(); ++i)
         cl[i]->entry.SetRow(i);
-    for(int i = r_dest; i < cl_targ.length(); ++i)
-        cl_targ[i]->entry.SetRow(i);
+    for(int i = r_dest; i < cl_targ.length(); ++i){
+        EntryContainer *cur = cl_targ[i];
+        cur->entry.SetRow(i);
+        cur->entry.SetParentId(pid_targ);
+    }
     if(ec) ec->child_count -= move_cnt;
     if(ec_targ) ec_targ->child_count += move_cnt;
     endMoveRows();

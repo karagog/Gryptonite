@@ -193,6 +193,7 @@ private:
     void _ew_add_entry(const QString &, GUtil::CryptoPP::Cryptor&, const Entry &);
     void _ew_update_entry(const QString &, GUtil::CryptoPP::Cryptor&, const Entry &);
     void _ew_delete_entry(const QString &, const EntryId &);
+    void _ew_move_entry(const QString &, const EntryId &, quint32, quint32, const EntryId &, quint32);
     void _ew_cache_entries_by_parentid(const QString &, const EntryId &);
     void _ew_refresh_favorites(const QString &);
     void _ew_set_favorites(const QString &, const GUtil::Vector<EntryId> &sorted_favorites);

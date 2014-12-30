@@ -1425,9 +1425,6 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
             lkr.unlock();
             try
             {
-                // Always notify that the task is complete, even if it's an error
-                finally([=]{ emit NotifyProgressUpdated(100); });
-
                 // Process the command (long task)
                 switch(cmd->CommandType)
                 {
@@ -1508,6 +1505,9 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
         cryptor.EncryptData(&o, &f, NULL, nonce, DEFAULT_CHUNK_SIZE, this);
     }
 
+    // Always notify that the task is complete, even if it's an error
+    finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
+
     _fw_fail_if_cancelled();
     m_curTaskString = QString("Inserting: %1").arg(filename);
     emit NotifyProgressUpdated(m_progressMax, m_curTaskString);
@@ -1539,7 +1539,6 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
         throw;
     }
     db.commit();
-    emit NotifyProgressUpdated(100, m_curTaskString);
 }
 
 void PasswordDatabase::_fw_exp_file(const QString &conn_str,
@@ -1554,6 +1553,9 @@ void PasswordDatabase::_fw_exp_file(const QString &conn_str,
 
     m_curTaskString = QString(tr("Decrypt and Export: %1")).arg(filename);
     emit NotifyProgressUpdated(0, m_curTaskString);
+
+    // Always notify that the task is complete, even if it's an error
+    finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
 
     // First fetch the file from the database
     q.prepare("SELECT Data FROM File WHERE ID=?");
@@ -1577,7 +1579,6 @@ void PasswordDatabase::_fw_exp_file(const QString &conn_str,
         m_progressMin = 35, m_progressMax = 100;
         cryptor.DecryptData(&f, &i, NULL, DEFAULT_CHUNK_SIZE, this);
     }
-    emit NotifyProgressUpdated(100, m_curTaskString);
 }
 
 void PasswordDatabase::_fw_del_file(const QString &conn_str, const FileId &id)
@@ -1607,6 +1608,9 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
     m_curTaskString = QString(tr("Exporting to Portable Safe: %1"))
                             .arg(QFileInfo(ps_filepath).fileName());
     emit NotifyProgressUpdated(progress_counter, m_curTaskString);
+
+    // Always notify that the task is complete, even if it's an error
+    finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
 
     QSqlDatabase db(QSqlDatabase::database(conn_str));
     GASSERT(db.isValid());
@@ -1684,7 +1688,6 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
         throw;
     }
     db.commit();    // Nothing should have changed, is a rollback better here?
-    emit NotifyProgressUpdated(100, m_curTaskString);
 }
 
 void PasswordDatabase::_fw_import_from_gps(const QString &conn_str,
@@ -1692,6 +1695,9 @@ void PasswordDatabase::_fw_import_from_gps(const QString &conn_str,
                                            const char *ps_filepath,
                                            const char *password, const char *keyfile)
 {
+    // Always notify that the task is complete, even if it's an error
+    //finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
+
     throw NotImplementedException<>();
 }
 

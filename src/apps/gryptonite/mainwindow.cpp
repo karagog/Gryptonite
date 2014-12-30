@@ -315,7 +315,7 @@ void MainWindow::_new_open_database(const QString &path)
     // Wire up the progress bar control
     connect(&m_progressBar, SIGNAL(Clicked()), dbm, SLOT(CancelAllBackgroundOperations()));
     connect(dbm, SIGNAL(NotifyProgressUpdated(int,QString)),
-            &m_progressBar, SLOT(SetProgress(int,QString)));
+            this, SLOT(_progress_updated(int,QString)));
 }
 
 void MainWindow::_new_open_database()
@@ -777,4 +777,12 @@ void MainWindow::_cleanup_files()
         m_cleanupFilesWindow = NULL;
     m_cleanupFilesWindow = new CleanupFilesWindow(_get_database_model(), m_settings, this);
     m_cleanupFilesWindow->show();
+}
+
+void MainWindow::_progress_updated(int progress, const QString &task_name)
+{
+    m_progressBar.SetProgress(progress, task_name);
+
+    if(progress == 100)
+        ui->statusbar->showMessage(QString(tr("Finished %1")).arg(task_name), STATUSBAR_MSG_TIMEOUT);
 }

@@ -121,6 +121,7 @@ private slots:
     void _treeview_doubleclicked(const QModelIndex &);
 
     void _entry_row_activated(int);
+    void _progress_updated(int, const QString &);
 
 
 private:

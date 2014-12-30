@@ -29,6 +29,7 @@ LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
 
 RESOURCES += grypto_ui.qrc
 
+include(controls/controls.pri)
 include(custom/custom.pri)
 include(data_models/data_models.pri)
 include(data_objects/data_objects.pri)

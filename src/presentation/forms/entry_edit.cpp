@@ -40,10 +40,11 @@ EntryEdit::EntryEdit(const Entry &e, DatabaseModel *m, QWidget *parent)
     ui->fav_btn->setChecked(e.IsFavorite());
 
     if(!e.GetFileId().IsNull()){
+        ui->le_filename->setText(e.GetFileName());
         if(m->FileExists(e.GetFileId()))
-            ui->lbl_fileStatus->setText(tr("Uploaded"));
+            ui->lbl_fileStatus->setText(tr("(Uploaded)"));
         else
-            ui->lbl_fileStatus->setText(tr("Missing"));
+            ui->lbl_fileStatus->setText(tr("(Missing)"));
     }
 }
 
@@ -66,6 +67,7 @@ void EntryEdit::accept()
     m_entry.SetName(ui->labelEdit->text().trimmed());
     m_entry.SetDescription(ui->descriptionEdit->toPlainText());
     m_entry.SetModifyDate(QDateTime::currentDateTime());
+    m_entry.SetFileName(ui->le_filename->text().trimmed());
 
     if(m_entry.IsFavorite())
     {
@@ -188,7 +190,7 @@ void EntryEdit::_select_file()
     ind = ui->tableView->model()->index(ind.row(), 1);
     ui->tableView->closePersistentEditor(ind);
 
-    QString fn = QFileDialog::getOpenFileName(this, tr("Select file to add to database"));
+    QString fn = QFileDialog::getOpenFileName(this, tr("Select file to import"));
     if(fn.isEmpty())
         return;
 
@@ -197,13 +199,8 @@ void EntryEdit::_select_file()
     if(m_entry.GetFileId().IsNull())
         m_entry.SetFileId(FileId::NewId());
 
-    // Remember the original filename
-    QAbstractItemModel *mdl = ui->tableView->model();
-    mdl->insertRow(0);
-    mdl->setData(mdl->index(0, 0), tr("Filename"));
-    mdl->setData(mdl->index(0, 1), fi.fileName());
-
-    ui->lbl_fileStatus->setText(tr("(Upload pending dialog acceptance)"));
+    ui->le_filename->setText(fi.fileName());
+    ui->lbl_fileStatus->setText(tr("(Upload pending)"));
 }
 
 

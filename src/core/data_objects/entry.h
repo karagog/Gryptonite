@@ -43,10 +43,17 @@ public:
 
     PROPERTY(Name, QString);
     PROPERTY(Description, QString);
-    PROPERTY(FileId, FileId);
-    PROPERTY(FilePath, QString);
     PROPERTY(FavoriteIndex, int);
     PROPERTY(ModifyDate, QDateTime);
+
+    /** The FileId refers to the database ID. */
+    PROPERTY(FileId, FileId);
+
+    /** The FileName is the moniker for the file. */
+    PROPERTY(FileName, QString);
+
+    /** The FilePath property refers to the absolute location of the file on disk. */
+    PROPERTY(FilePath, QString);
 
     QList<SecretValue> &Values(){ return m_values; }
     QList<SecretValue> const &Values() const{ return m_values; }

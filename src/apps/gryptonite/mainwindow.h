@@ -104,7 +104,6 @@ private slots:
     void _action_lock_unlock_interface();
     void _cryptographic_transformations();
     void _cleanup_files();
-    void _export_file();
 
     void _undo();
     void _redo();

@@ -24,6 +24,7 @@ class EntryView;
 
 namespace Grypt{
 class EntryModel;
+class DatabaseModel;
 
 
 class EntryView : public QWidget
@@ -33,6 +34,11 @@ public:
     explicit EntryView(QWidget *parent = 0);
     ~EntryView();
 
+    /** Sets the database model used for querying extra data about the entry.
+     *  You should update this whenever you close and open a new database model.
+    */
+    void SetDatabaseModel(DatabaseModel *);
+
     void SetEntry(const Entry &);
     const Entry &GetEntry() const{ return m_entry; }
 
@@ -41,18 +47,21 @@ signals:
     /** This signal indicates that the row was activated (double-clicked or enter pressed). */
     void RowActivated(int row);
 
-    /** This signal indicates that the user wants to export the file. */
-    void ExportFileRequested();
-
 
 protected:
 
     virtual bool eventFilter(QObject *, QEvent *);
 
 
+private slots:
+
+    void _export_file();
+
+
 private:
     Ui::EntryView *ui;
     Entry m_entry;
+    DatabaseModel *m_dbModel;
 
     EntryModel *_get_entry_model() const;
 };

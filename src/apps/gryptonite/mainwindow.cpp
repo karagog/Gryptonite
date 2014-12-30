@@ -102,7 +102,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
     connect(ui->actionCleanup_Files, SIGNAL(triggered()), this, SLOT(_cleanup_files()));
     connect(ui->action_cryptoTransform, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
-    connect(ui->view_entry, SIGNAL(ExportFileRequested()), this, SLOT(_export_file()));
 
     //connect(&m_undostack, SIGNAL(indexChanged(int)), this, SLOT(_update_undo_text()));
     connect(&m_navStack, SIGNAL(indexChanged(int)), this, SLOT(_nav_index_changed(int)));
@@ -306,6 +305,8 @@ void MainWindow::_new_open_database(const QString &path)
     _update_ui_file_opened(true);
     m_lockoutTimer.StartLockoutTimer(30);
 
+    ui->view_entry->SetDatabaseModel(dbm);
+
     m_fileLabel->setText(path);
 
     // Add this to the recent files list
@@ -416,8 +417,8 @@ void MainWindow::_new_entry()
         e.SetRow(model->rowCount(ind));
     }
 
-    EntryEdit dlg(e, model, this);
-    if(EntryEdit::Accepted == dlg.exec())
+    EntryEdit dlg(e, _get_database_model(), this);
+    if(QDialog::Accepted == dlg.exec())
         model->AddEntry(dlg.GetEntry());
 }
 
@@ -532,11 +533,10 @@ void MainWindow::_delete_entry()
 
 void MainWindow::_edit_entry(const Entry &e)
 {
-    DatabaseModel *m = _get_database_model();
-    EntryEdit dlg(e, m, this);
+    EntryEdit dlg(e, _get_database_model(), this);
     if(QDialog::Accepted == dlg.exec())
     {
-        m->UpdateEntry(dlg.GetEntry());
+        _get_database_model()->UpdateEntry(dlg.GetEntry());
         _nav_index_changed(m_navStack.index());
     }
 }
@@ -777,13 +777,4 @@ void MainWindow::_cleanup_files()
         m_cleanupFilesWindow = NULL;
     m_cleanupFilesWindow = new CleanupFilesWindow(_get_database_model(), m_settings, this);
     m_cleanupFilesWindow->show();
-}
-
-void MainWindow::_export_file()
-{
-    GASSERT(!ui->view_entry->GetEntry().GetFileId().IsNull());
-
-    QString file_path = QFileDialog::getSaveFileName(this, tr("Export File"));
-    if(!file_path.isEmpty())
-        _get_database_model()->ExportFile(ui->view_entry->GetEntry().GetFileId(), file_path.toUtf8());
 }

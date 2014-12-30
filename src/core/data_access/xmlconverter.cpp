@@ -41,8 +41,10 @@ template<>QDomNode XmlConverter::AppendToXmlNode(const Entry &e, QDomNode &root,
     entry_root.setAttribute("name", e.GetName().toUtf8().toBase64().constData());
     entry_root.setAttribute("desc", e.GetDescription().toUtf8().toBase64().constData());
     entry_root.setAttribute("modified", DatabaseUtils::ConvertDateToString(e.GetModifyDate()));
-    if(!e.GetFileId().IsNull())
+    if(!e.GetFileId().IsNull()){
         entry_root.setAttribute("file_id", e.GetFileId().ToString64().ConstData());
+        entry_root.setAttribute("file_name", e.GetFileName().toUtf8().toBase64().constData());
+    }
 
     foreach(const SecretValue &sv, e.Values())
     {
@@ -68,8 +70,10 @@ template<>Entry XmlConverter::FromXmlNode(const QDomElement &elt)
     ret.SetName(QByteArray::fromBase64(elt.attribute("name").toUtf8()));
     ret.SetDescription(QByteArray::fromBase64(elt.attribute("desc").toUtf8()));
     ret.SetModifyDate(DatabaseUtils::ConvertStringToDate(elt.attribute("modified")));
-    if(elt.attributes().contains("file_id"))
+    if(elt.attributes().contains("file_id")){
         ret.SetFileId(QByteArray::fromBase64(elt.attribute("file_id").toUtf8()));
+        ret.SetFileName(QByteArray::fromBase64(elt.attribute("file_name").toUtf8()));
+    }
 
     QDomNodeList nl = elt.childNodes();
     for(int i = 0; i < nl.count(); ++i)

@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>433</width>
+    <width>447</width>
     <height>452</height>
    </rect>
   </property>
@@ -23,6 +23,13 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QGridLayout" name="gridLayout_2">
+     <item row="2" column="3">
+      <widget class="QLabel" name="lbl_fileStatus">
+       <property name="text">
+        <string>(status)</string>
+       </property>
+      </widget>
+     </item>
      <item row="2" column="4">
       <widget class="QToolButton" name="btn_fileUpload">
        <property name="sizePolicy">
@@ -32,7 +39,7 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string>Upload File</string>
+        <string>Upload New File</string>
        </property>
        <property name="text">
         <string>...</string>
@@ -109,7 +116,7 @@ p, li { white-space: pre-wrap; }
         </sizepolicy>
        </property>
        <property name="text">
-        <string>File Status:</string>
+        <string>File:</string>
        </property>
       </widget>
      </item>
@@ -144,6 +151,33 @@ p, li { white-space: pre-wrap; }
         </widget>
        </item>
       </layout>
+     </item>
+     <item row="1" column="2" colspan="3">
+      <widget class="QTextEdit" name="descriptionEdit">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>1</horstretch>
+         <verstretch>1</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A description to help you remember the context of this entry.&lt;/p&gt;&lt;p&gt;Also this will aid the search function because it will have more keywords to find.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="whatsThis">
+        <string>Keep a note about this entry.
+
+This will give the searchbar more words to match with, so you can use this to apply tags to help you find entries.</string>
+       </property>
+       <property name="tabChangesFocus">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item row="4" column="1" colspan="4">
       <widget class="QTableView" name="tableView">
@@ -281,33 +315,6 @@ Use the arrows on the side to adjust the order that the enries appear in.</strin
        </item>
       </layout>
      </item>
-     <item row="1" column="2" colspan="3">
-      <widget class="QTextEdit" name="descriptionEdit">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>1</horstretch>
-         <verstretch>1</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>100</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A description to help you remember the context of this entry.&lt;/p&gt;&lt;p&gt;Also this will aid the search function because it will have more keywords to find.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="whatsThis">
-        <string>Keep a note about this entry.
-
-This will give the searchbar more words to match with, so you can use this to apply tags to help you find entries.</string>
-       </property>
-       <property name="tabChangesFocus">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
      <item row="0" column="2" colspan="3">
       <widget class="QLineEdit" name="labelEdit">
        <property name="sizePolicy">
@@ -321,19 +328,6 @@ This will give the searchbar more words to match with, so you can use this to ap
        </property>
        <property name="whatsThis">
         <string>A label by which to remember your secret.</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="2" colspan="2">
-      <widget class="QLabel" name="lbl_fileStatus">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>1</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>No file uploaded</string>
        </property>
       </widget>
      </item>
@@ -409,6 +403,22 @@ Be careful, because pressing this button will wipe out any content currently hel
          </widget>
         </item>
        </layout>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QLineEdit" name="le_filename">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>200</width>
+         <height>0</height>
+        </size>
+       </property>
       </widget>
      </item>
     </layout>

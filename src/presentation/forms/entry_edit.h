@@ -32,7 +32,7 @@ class EntryEdit :
     Q_OBJECT
 public:
 
-    explicit EntryEdit(DatabaseModel *, QWidget *parent = 0);
+    explicit EntryEdit(QWidget *parent = 0);
     explicit EntryEdit(const Entry &, DatabaseModel *, QWidget *parent = 0);
     ~EntryEdit();
 
@@ -58,10 +58,9 @@ private slots:
 private:
 
     Ui::EntryEdit *ui;
-    DatabaseModel *m_dbModel;
     Entry m_entry;
 
-    void _init(DatabaseModel *);
+    void _init();
 
 };
 

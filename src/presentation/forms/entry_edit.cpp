@@ -24,19 +24,17 @@ limitations under the License.*/
 NAMESPACE_GRYPTO;
 
 
-EntryEdit::EntryEdit(DatabaseModel *m, QWidget *parent)
-    :QDialog(parent),
-      m_dbModel(m)
+EntryEdit::EntryEdit(QWidget *parent)
+    :QDialog(parent)
 {
-    _init(m);
+    _init();
 }
 
 EntryEdit::EntryEdit(const Entry &e, DatabaseModel *m, QWidget *parent)
     :QDialog(parent),
-      m_dbModel(m),
       m_entry(e)
 {
-    _init(m);
+    _init();
     ui->labelEdit->setText(e.GetName());
     ui->descriptionEdit->setText(e.GetDescription());
     ui->fav_btn->setChecked(e.IsFavorite());
@@ -49,7 +47,7 @@ EntryEdit::EntryEdit(const Entry &e, DatabaseModel *m, QWidget *parent)
     }
 }
 
-void EntryEdit::_init(DatabaseModel *mdl)
+void EntryEdit::_init()
 {
     (ui = new Ui::EntryEdit)->setupUi(this);
     ui->tableView->setModel(new EntryModel(m_entry, this));

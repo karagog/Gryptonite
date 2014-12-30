@@ -15,8 +15,8 @@
     <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2">
-    <item>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <widget class="QWidget" name="page_locked">
        <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -58,55 +58,21 @@
        </layout>
       </widget>
       <widget class="QWidget" name="page_unlocked">
-       <layout class="QVBoxLayout" name="verticalLayout_4">
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
         <item>
-         <widget class="QLabel" name="lbl_name">
-          <property name="font">
-           <font>
-            <pointsize>14</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Name</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="lbl_description">
-          <property name="text">
-           <string>Description</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QTableView" name="tableView">
-          <property name="styleSheet">
-           <string notr="true">background:rgb(209, 209, 209)</string>
-          </property>
-          <property name="editTriggers">
-           <set>QAbstractItemView::NoEditTriggers</set>
-          </property>
-          <property name="selectionMode">
-           <enum>QAbstractItemView::SingleSelection</enum>
-          </property>
-          <property name="selectionBehavior">
-           <enum>QAbstractItemView::SelectRows</enum>
-          </property>
-          <attribute name="horizontalHeaderCascadingSectionResizes">
-           <bool>true</bool>
-          </attribute>
-          <attribute name="horizontalHeaderStretchLastSection">
-           <bool>true</bool>
-          </attribute>
-          <attribute name="verticalHeaderVisible">
-           <bool>false</bool>
-          </attribute>
-         </widget>
+         <widget class="Grypt::EntryView" name="view_entry" native="true"/>
         </item>
        </layout>
       </widget>
@@ -368,6 +334,12 @@
    <extends>QTreeView</extends>
    <header>gutil_treeview.h</header>
   </customwidget>
+  <customwidget>
+   <class>Grypt::EntryView</class>
+   <extends>QWidget</extends>
+   <header>grypto_entryview.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources>
   <include location="../../presentation/grypto_ui.qrc"/>
@@ -402,22 +374,6 @@
     <hint type="destinationlabel">
      <x>276</x>
      <y>370</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>tableView</sender>
-   <signal>doubleClicked(QModelIndex)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>_tableview_doubleclicked(QModelIndex)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>358</x>
-     <y>67</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>275</x>
-     <y>171</y>
     </hint>
    </hints>
   </connection>
@@ -460,5 +416,6 @@
   <slot>_tableview_doubleclicked(QModelIndex)</slot>
   <slot>_filter_updated(Grypt::FilterInfo_t)</slot>
   <slot>RequestUnlock()</slot>
+  <slot>_export_file()</slot>
  </slots>
 </ui>

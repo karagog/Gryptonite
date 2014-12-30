@@ -20,7 +20,6 @@ limitations under the License.*/
 #include <QAbstractTableModel>
 
 namespace Grypt{
-class DatabaseModel;
 
 
 class EntryModel :
@@ -28,11 +27,10 @@ class EntryModel :
 {
     Q_OBJECT
     Entry m_entry;
-    DatabaseModel *m_dbModel;
 public:
 
-    explicit EntryModel(DatabaseModel * = 0, QObject *parent = 0);
-    explicit EntryModel(const Entry &, DatabaseModel * = 0, QObject *parent = 0);
+    explicit EntryModel(QObject *parent = 0);
+    explicit EntryModel(const Entry &, QObject *parent = 0);
 
     void SetEntry(const Entry &);
     Entry const &GetEntry() const{ return m_entry; }
@@ -61,11 +59,6 @@ public:
         IDSecret = Qt::UserRole + 1,
         IDNotes = Qt::UserRole + 2
     };
-
-
-private slots:
-
-    void _db_data_changed(const QModelIndex &, const QModelIndex &);
 
 };
 

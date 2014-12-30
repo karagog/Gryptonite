@@ -12,9 +12,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#include "ui_entry_view.h"
+#include "ui_entry_popup.h"
 #include "grypto_globals.h"
-#include "entry_view.h"
+#include "entry_popup.h"
 #include "grypto_entrymodel.h"
 #include <QCloseEvent>
 #include <QClipboard>
@@ -22,15 +22,15 @@ limitations under the License.*/
 NAMESPACE_GRYPTO;
 
 
-EntryView::EntryView(const Entry &e, QWidget *parent)
+EntryPopup::EntryPopup(const Entry &e, QWidget *parent)
     :QWidget(parent, Qt::Dialog | Qt::WindowStaysOnTopHint),
-      ui(new Ui::EntryView),
+      ui(new Ui::EntryPopup),
       m_entry(e)
 {
     ui->setupUi(this);
     setWindowTitle(e.GetName());
 
-    ui->tableView->setModel(new EntryModel(e, NULL, this));
+    ui->tableView->setModel(new EntryModel(e, this));
 
     // Set up the context menu
     QAction *action_copy = new QAction(tr("Copy to Clipboard"), this);
@@ -38,18 +38,18 @@ EntryView::EntryView(const Entry &e, QWidget *parent)
     ui->tableView->addAction(action_copy);
 }
 
-EntryView::~EntryView()
+EntryPopup::~EntryPopup()
 {
     delete ui;
 }
 
-void EntryView::copy_to_clipboard()
+void EntryPopup::copy_to_clipboard()
 {
 
 }
 
 
-void EntryView::_show_in_main_window()
+void EntryPopup::_show_in_main_window()
 {
     close();
 }

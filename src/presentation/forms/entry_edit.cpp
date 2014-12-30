@@ -52,7 +52,7 @@ EntryEdit::EntryEdit(const Entry &e, DatabaseModel *m, QWidget *parent)
 void EntryEdit::_init(DatabaseModel *mdl)
 {
     (ui = new Ui::EntryEdit)->setupUi(this);
-    ui->tableView->setModel(new EntryModel(m_entry, mdl, this));
+    ui->tableView->setModel(new EntryModel(m_entry, this));
     ui->tableView->setItemDelegateForColumn(0, new SecretLabelDelegate(this));
 
     ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);

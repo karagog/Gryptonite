@@ -19,9 +19,8 @@ limitations under the License.*/
 #include "grypto_getpassworddialog.h"
 #include "grypto_databasemodel.h"
 #include "grypto_filtereddatabasemodel.h"
-#include "grypto_entrymodel.h"
 #include "grypto_entry_edit.h"
-#include "grypto_entry_view.h"
+#include "grypto_entry_popup.h"
 #include "grypto_cryptotransformswindow.h"
 #include "grypto_cleanupfileswindow.h"
 #include "gutil_qt_settings.h"
@@ -73,7 +72,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     ui->statusbar->addPermanentWidget(m_fileLabel);
 
     ui->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     // Set up the toolbar
     btn_navBack = new QToolButton(this);
@@ -104,13 +102,13 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
     connect(ui->actionCleanup_Files, SIGNAL(triggered()), this, SLOT(_cleanup_files()));
     connect(ui->action_cryptoTransform, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
+    connect(ui->view_entry, SIGNAL(ExportFileRequested()), this, SLOT(_export_file()));
 
     //connect(&m_undostack, SIGNAL(indexChanged(int)), this, SLOT(_update_undo_text()));
     connect(&m_navStack, SIGNAL(indexChanged(int)), this, SLOT(_nav_index_changed(int)));
     connect(&m_lockoutTimer, SIGNAL(Lock()), this, SLOT(Lock()));
 
     ui->treeView->installEventFilter(this);
-    ui->tableView->installEventFilter(this);
     ui->searchWidget->installEventFilter(this);
 
     // Restore the previous session's window state
@@ -201,13 +199,6 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
                 }
                 else if(kev->key() == ::Qt::Key_Delete){
                     _delete_entry();
-                    ret = true;
-                }
-            }
-            else if(o == ui->tableView)
-            {
-                if(kev->key() == ::Qt::Key_Enter || kev->key() == ::Qt::Key_Return){
-                    _tableview_doubleclicked(ui->tableView->currentIndex());
                     ret = true;
                 }
             }
@@ -315,7 +306,6 @@ void MainWindow::_new_open_database(const QString &path)
     _update_ui_file_opened(true);
     m_lockoutTimer.StartLockoutTimer(30);
 
-    ui->tableView->setModel(new EntryModel(dbm, this));
     m_fileLabel->setText(path);
 
     // Add this to the recent files list
@@ -364,13 +354,8 @@ void MainWindow::_close_database()
         disconnect(ui->searchWidget, SIGNAL(FilterChanged(Grypt::FilterInfo_t)),
                    this, SLOT(_filter_updated(Grypt::FilterInfo_t)));
 
-        // Delete the old entry model
-        QAbstractItemModel *old_model = ui->treeView->model();
-        ui->tableView->setModel(0);
-        delete old_model;
-
         // Delete the old database model
-        old_model = ui->treeView->model();
+        QAbstractItemModel *old_model = ui->treeView->model();
         ui->treeView->setModel(0);
         delete old_model;
 
@@ -439,14 +424,10 @@ void MainWindow::_new_entry()
 void MainWindow::_update_ui_file_opened(bool b)
 {
     ui->treeView->setEnabled(b);
-    ui->tableView->setEnabled(b);
+    ui->view_entry->setEnabled(b);
     ui->searchWidget->setEnabled(b);
 
-    ui->lbl_name->setEnabled(b);
-    ui->lbl_description->setEnabled(b);
-
-    ui->lbl_name->clear();
-    ui->lbl_description->clear();
+    ui->view_entry->SetEntry(Entry());
 
     ui->actionNew_Entry->setEnabled(b);
     ui->action_EditEntry->setEnabled(b);
@@ -469,9 +450,6 @@ void MainWindow::_update_ui_file_opened(bool b)
         btn_navBack->setEnabled(false);
         btn_navForward->setEnabled(false);
 
-        ui->lbl_name->clear();
-        ui->lbl_description->clear();
-
         ui->searchWidget->Clear();
         m_fileLabel->clear();
     }
@@ -481,7 +459,7 @@ void MainWindow::_update_ui_file_opened(bool b)
 
 void MainWindow::_favorite_action_clicked(QAction *a)
 {
-    m_entryView = new EntryView(_get_database_model()->FindEntryById(a->data().value<EntryId>()));
+    m_entryView = new EntryPopup(_get_database_model()->FindEntryById(a->data().value<EntryId>()));
     m_entryView->show();
 }
 
@@ -531,11 +509,6 @@ DatabaseModel *MainWindow::_get_database_model() const
     return NULL == pm ? NULL : static_cast<DatabaseModel *>(pm->sourceModel());
 }
 
-EntryModel *MainWindow::_get_entry_model() const
-{
-    return static_cast<EntryModel *>(ui->tableView->model());
-}
-
 void MainWindow::_edit_entry()
 {
     _treeview_doubleclicked(ui->treeView->currentIndex());
@@ -577,12 +550,10 @@ void MainWindow::_treeview_doubleclicked(const QModelIndex &ind)
     }
 }
 
-void MainWindow::_tableview_doubleclicked(const QModelIndex &ind)
+void MainWindow::_entry_row_activated(int r)
 {
-    if(ind.isValid())
-    {
-        EntryModel *em = _get_entry_model();
-        const SecretValue &v = em->GetEntry().Values()[ind.row()];
+    if(0 < r){
+        const SecretValue &v = ui->view_entry->GetEntry().Values()[r];
         m_clipboard.SetText(v.GetValue(), v.GetIsHidden() ? CLIPBOARD_TIMEOUT : 0);
         ui->statusbar->showMessage(QString("Copied %1 to clipboard").arg(v.GetName()),
                                    STATUSBAR_MSG_TIMEOUT);
@@ -631,19 +602,13 @@ void MainWindow::_nav_index_changed(int ind)
             Entry e = _get_database_model()->FindEntryById(
                 static_cast<const navigation_command *>(m_navStack.command(ind))->CurEntryId);
 
-            ui->lbl_name->setText(e.GetName());
-            ui->lbl_description->setText(e.GetDescription());
-            _get_entry_model()->SetEntry(e);
+            ui->view_entry->SetEntry(e);
             success = true;
         } catch(...) {}
     }
 
-    if(!success){
-        ui->lbl_name->clear();
-        ui->lbl_description->clear();
-        if(_get_entry_model())
-            _get_entry_model()->SetEntry(Entry());
-    }
+    if(!success)
+        ui->view_entry->SetEntry(Entry());
 
     btn_navBack->setEnabled(m_navStack.canUndo());
     btn_navForward->setEnabled(m_navStack.canRedo());
@@ -812,4 +777,13 @@ void MainWindow::_cleanup_files()
         m_cleanupFilesWindow = NULL;
     m_cleanupFilesWindow = new CleanupFilesWindow(_get_database_model(), m_settings, this);
     m_cleanupFilesWindow->show();
+}
+
+void MainWindow::_export_file()
+{
+    GASSERT(!ui->view_entry->GetEntry().GetFileId().IsNull());
+
+    QString file_path = QFileDialog::getSaveFileName(this, tr("Export File"));
+    if(!file_path.isEmpty())
+        _get_database_model()->ExportFile(ui->view_entry->GetEntry().GetFileId(), file_path.toUtf8());
 }

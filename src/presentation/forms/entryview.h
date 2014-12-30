@@ -12,48 +12,52 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#ifndef GRYPTO_ENTRY_VIEW
-#define GRYPTO_ENTRY_VIEW
+#ifndef ENTRYVIEW_H
+#define ENTRYVIEW_H
 
-#include "grypto_entry.h"
-#include <QSortFilterProxyModel>
-#include <QAction>
+#include <grypto_entry.h>
+#include <QWidget>
 
-class QCloseEvent;
-class QUuid;
-
-namespace Ui{
+namespace Ui {
 class EntryView;
 }
 
-namespace Grypt
-{
+namespace Grypt{
+class EntryModel;
 
 
-class EntryView :
-        public QWidget
+class EntryView : public QWidget
 {
     Q_OBJECT
 public:
-
-    EntryView(const Entry &, QWidget *parent = 0);
+    explicit EntryView(QWidget *parent = 0);
     ~EntryView();
 
+    void SetEntry(const Entry &);
+    const Entry &GetEntry() const{ return m_entry; }
 
-private slots:
+signals:
 
-    void copy_to_clipboard();
-    void _show_in_main_window();
+    /** This signal indicates that the row was activated (double-clicked or enter pressed). */
+    void RowActivated(int row);
+
+    /** This signal indicates that the user wants to export the file. */
+    void ExportFileRequested();
+
+
+protected:
+
+    virtual bool eventFilter(QObject *, QEvent *);
 
 
 private:
-
     Ui::EntryView *ui;
     Entry m_entry;
 
+    EntryModel *_get_entry_model() const;
 };
 
 
 }
 
-#endif // GRYPTO_ENTRY_VIEW
+#endif // ENTRYVIEW_H

@@ -104,6 +104,7 @@ private slots:
     void _action_lock_unlock_interface();
     void _cryptographic_transformations();
     void _cleanup_files();
+    void _export_file();
 
     void _undo();
     void _redo();
@@ -120,7 +121,7 @@ private slots:
     void _treeview_clicked(const QModelIndex &);
     void _treeview_doubleclicked(const QModelIndex &);
 
-    void _tableview_doubleclicked(const QModelIndex &);
+    void _entry_row_activated(int);
 
 
 private:
@@ -146,7 +147,6 @@ private:
     void _lock_unlock_interface(bool);
     Grypt::FilteredDatabaseModel *_get_proxy_model() const;
     Grypt::DatabaseModel *_get_database_model() const;
-    Grypt::EntryModel *_get_entry_model() const;
 
     void _edit_entry(const Grypt::Entry &);
     bool _handle_key_pressed(QKeyEvent *);

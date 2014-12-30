@@ -6,8 +6,9 @@ FORMS += \
     forms/generatepassworddialog.ui \
     forms/noteseditdialog.ui \
     forms/cryptotransformswindow.ui \
-    $$PWD/entry_view.ui \
-    $$PWD/cleanupfileswindow.ui
+    $$PWD/cleanupfileswindow.ui \
+    $$PWD/entry_popup.ui \
+    $$PWD/entryview.ui
 
 HEADERS += \
     forms/getpassworddialog.h \
@@ -17,8 +18,9 @@ HEADERS += \
     forms/generatepassworddialog.h \
     forms/noteseditdialog.h \
     forms/cryptotransformswindow.h \
-    $$PWD/entry_view.h \
-    $$PWD/cleanupfileswindow.h
+    $$PWD/cleanupfileswindow.h \
+    $$PWD/entry_popup.h \
+    $$PWD/entryview.h
 
 SOURCES += \
     forms/getpassworddialog.cpp \
@@ -28,5 +30,6 @@ SOURCES += \
     forms/generatepassworddialog.cpp \
     forms/noteseditdialog.cpp \
     forms/cryptotransformswindow.cpp \
-    $$PWD/entry_view.cpp \
-    $$PWD/cleanupfileswindow.cpp
+    $$PWD/cleanupfileswindow.cpp \
+    $$PWD/entry_popup.cpp \
+    $$PWD/entryview.cpp

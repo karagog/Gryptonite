@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>EntryView</class>
- <widget class="QWidget" name="EntryView">
+ <class>EntryPopup</class>
+ <widget class="QWidget" name="EntryPopup">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -113,12 +113,12 @@ You can click-and-drag them or copy them to clipboard and paste them into forms.
   <connection>
    <sender>btn_toClipboard</sender>
    <signal>clicked()</signal>
-   <receiver>EntryView</receiver>
+   <receiver>EntryPopup</receiver>
    <slot>copy_to_clipboard()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>118</x>
-     <y>190</y>
+     <x>127</x>
+     <y>254</y>
     </hint>
     <hint type="destinationlabel">
      <x>125</x>
@@ -129,7 +129,7 @@ You can click-and-drag them or copy them to clipboard and paste them into forms.
   <connection>
    <sender>tableView</sender>
    <signal>doubleClicked(QModelIndex)</signal>
-   <receiver>EntryView</receiver>
+   <receiver>EntryPopup</receiver>
    <slot>copy_to_clipboard()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -145,12 +145,12 @@ You can click-and-drag them or copy them to clipboard and paste them into forms.
   <connection>
    <sender>btn_mainWindow</sender>
    <signal>clicked()</signal>
-   <receiver>EntryView</receiver>
+   <receiver>EntryPopup</receiver>
    <slot>go_back()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>194</x>
-     <y>186</y>
+     <x>385</x>
+     <y>254</y>
     </hint>
     <hint type="destinationlabel">
      <x>228</x>

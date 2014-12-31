@@ -17,40 +17,20 @@ limitations under the License.*/
 
 #include <gutil/id.h>
 #include <gutil/exception.h>
+#include <gutil/cryptopp_cryptor.h>
 #include <QMetaType>
 
 
 #define GRYPTO_APP_NAME "Gryptonite"
 
-#define GRYPTO_VERSION_STRING "1.0"
-
-
-// Default attribute labels
-// Basic labels
-#define S_LABEL         "Label"
-#define S_DESCRIPTION   "Description"
-#define S_VALUE         "Value"
-#define S_PASSWORD      "Password"
-#define S_NOTES         "Notes"
-#define S_BINARY        "Bin"
-#define S_BROKEN_ID     "Broke"
-
-// For a website
-#define S_URL           "URL"
-#define S_USERNAME      "Username"
-
-// For a credit card
-#define S_CCNUMBER      "Card Number"
-#define S_EXP_DATE      "Expiration"
-#define S_SECURITYCODE  "Security Code"
-
-// These are the date formats used throughout
-#define TFH_DATE_FORMAT "M/dd/yy h:mm"
-#define AP_DATE_FORMAT "M/dd/yy h:mm AP"
-
+#define GRYPTO_VERSION_STRING "3.0"
 
 
 typedef unsigned char byte;
+
+namespace Grypt{
+    typedef ::GUtil::CryptoPP::Cryptor::Credentials Credentials;
+}
 
 
 

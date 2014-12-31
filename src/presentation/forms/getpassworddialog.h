@@ -16,7 +16,7 @@ limitations under the License.*/
 #define GETPASSWORDDIALOG_H
 
 #include <gutil/qt_settings.h>
-#include <gutil/cryptopp_cryptor.h>
+#include <grypto_globals.h>
 #include <QDialog>
 
 namespace Ui {
@@ -33,7 +33,7 @@ class GetPasswordDialog :
     Q_OBJECT
     Ui::GetPasswordDialog *ui;
     GUtil::Qt::Settings *m_settings;
-    GUtil::CryptoPP::Cryptor::Credentials m_creds;
+    Credentials m_creds;
 public:
     explicit GetPasswordDialog(
             GUtil::Qt::Settings *,
@@ -41,7 +41,7 @@ public:
             QWidget *parent = 0);
     ~GetPasswordDialog();
 
-    GUtil::CryptoPP::Cryptor::Credentials const &GetCredentials() const{ return m_creds; }
+    Credentials const &GetCredentials() const{ return m_creds; }
 
     virtual void accept();
 

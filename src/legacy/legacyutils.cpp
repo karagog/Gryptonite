@@ -15,6 +15,7 @@ limitations under the License.*/
 #include "legacyutils.h"
 #include "encryption.h"
 #include "password_file.h"
+#include <cryptopp/cryptlib.h>
 #include <QFile>
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);
@@ -45,6 +46,7 @@ LegacyUtils::FileVersionEnum LegacyUtils::GetFileVersion(const char *file_path)
             return Version1;
         }
         version_string.append(c);
+        f.getChar(&c);
     }
 
     bool ok = false;
@@ -69,12 +71,45 @@ static int __read_four_chars_into_int(QFile *f)
     return ret;
 }
 
+
+void __add_children_to_database(V3::File_Entry *fe, PasswordDatabase &pdb, const EntryId &parent_id)
+{
+    GASSERT(fe->getType() == V3::File_Entry::directory);
+
+    for(uint i = 0; i < fe->getContents().size(); ++i)
+    {
+        V3::File_Entry *cur = fe->getContents()[i];
+        Entry e;
+        e.SetParentId(parent_id);
+        e.SetRow(cur->getRow());
+        e.SetName(cur->getLabel().getContent());
+        e.SetDescription(cur->getDescription().getContent());
+        e.SetFavoriteIndex(cur->getFavorite());
+        e.SetModifyDate(*cur->getModifyDate());
+
+        if(V3::File_Entry::password == cur->getType()){
+            for(const V3::Attribute &a : cur->getAttributes()){
+                SecretValue sv;
+                sv.SetName(a.getLabel());
+                sv.SetValue(a.getContent().toUtf8());
+                sv.SetIsHidden(a.secret);
+                sv.SetNotes(a.notes);
+                e.Values().append(sv);
+            }
+        }
+        pdb.AddEntry(e, true);
+
+        if(V3::File_Entry::directory == cur->getType())
+            __add_children_to_database(cur, pdb, e.GetId());
+    }
+}
+
 void LegacyUtils::UpdateFileToCurrentVersion(
         const char *file_path,
         FileVersionEnum file_version,
         const char *new_path,
-        const Cryptor::Credentials &old_creds,
-        const Cryptor::Credentials &new_creds)
+        const Credentials &old_creds,
+        const Credentials &new_creds)
 {
     if(0 == strcmp(file_path, new_path))
         throw Exception<>("Refusing to update if source and dest are the same");
@@ -91,6 +126,7 @@ void LegacyUtils::UpdateFileToCurrentVersion(
         while(f.getChar(&c) && c != '|');
     }
 
+    try{
     switch(file_version)
     {
     case Version1:
@@ -117,16 +153,20 @@ void LegacyUtils::UpdateFileToCurrentVersion(
         GASSERT(false);
         break;
     }
+    }
+    catch(const ::CryptoPP::Exception &ex){
+        throw Exception<>(ex.what());
+    }
 
     // Parse the XML using the legacy object
     V3::Password_File pf;
-    pf.readXML(xml);
+    pf.readXML(xml, file_version < 3);
 
     // Create the return database
-    PasswordDatabase ret(new_path, new_creds);
+    PasswordDatabase pdb(new_path, new_creds);
 
     // Iterate through the legacy object and populate the new object
-
+    __add_children_to_database(pf.getContents(), pdb, EntryId::Null());
 }
 
 

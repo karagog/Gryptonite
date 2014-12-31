@@ -380,25 +380,25 @@ public:
 class export_to_ps_command : public bg_worker_command
 {
 public:
-    export_to_ps_command(const char *filepath, const Cryptor::Credentials &creds)
+    export_to_ps_command(const char *filepath, const Credentials &creds)
         :bg_worker_command(ExportToPS),
           FilePath(filepath),
-          Credentials(creds)
+          Creds(creds)
     {}
     const QByteArray FilePath;
-    Cryptor::Credentials Credentials;
+    Credentials Creds;
 };
 
 class import_from_ps_command : public bg_worker_command
 {
 public:
-    import_from_ps_command(const char *filepath, const Cryptor::Credentials &creds)
+    import_from_ps_command(const char *filepath, const Credentials &creds)
         :bg_worker_command(ImportFromPS),
           FilePath(filepath),
-          Credentials(creds)
+          Creds(creds)
     {}
     const QByteArray FilePath;
-    Cryptor::Credentials Credentials;
+    Credentials Creds;
 };
 
 
@@ -419,7 +419,7 @@ static QString __create_connection(const QString &file_path, const QString &forc
     return conn_str;
 }
 
-void PasswordDatabase::_init_cryptor(const Cryptor::Credentials &creds, const byte *s, GUINT32 s_l)
+void PasswordDatabase::_init_cryptor(const Credentials &creds, const byte *s, GUINT32 s_l)
 {
     G_D;
     GASSERT(!d->cryptor);
@@ -479,7 +479,7 @@ void PasswordDatabase::ValidateDatabase(const char *file_path)
 }
 
 PasswordDatabase::PasswordDatabase(const char *file_path,
-                                   const Cryptor::Credentials &creds,
+                                   const Credentials &creds,
                                    QObject *par)
     :QObject(par)
 {
@@ -587,7 +587,7 @@ PasswordDatabase::~PasswordDatabase()
     G_D_UNINIT();
 }
 
-bool PasswordDatabase::CheckCredentials(const Cryptor::Credentials &creds) const
+bool PasswordDatabase::CheckCredentials(const Credentials &creds) const
 {
     G_D;
     bool ret = false;
@@ -1202,7 +1202,7 @@ void PasswordDatabase::ExportFile(const FileId &id, const char *export_path)
 }
 
 void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
-                                            const Cryptor::Credentials &creds)
+                                            const Credentials &creds)
 {
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
@@ -1211,7 +1211,7 @@ void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
 }
 
 void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
-                                              const Cryptor::Credentials &creds)
+                                              const Credentials &creds)
 {
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
@@ -1480,13 +1480,13 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
                 case bg_worker_command::ExportToPS:
                 {
                     export_to_ps_command *e2ps = static_cast<export_to_ps_command *>(cmd.Data());
-                    _fw_export_to_gps(conn_str, *bgCryptor, e2ps->FilePath, e2ps->Credentials);
+                    _fw_export_to_gps(conn_str, *bgCryptor, e2ps->FilePath, e2ps->Creds);
                 }
                     break;
                 case bg_worker_command::ImportFromPS:
                 {
                     import_from_ps_command *ifps = static_cast<import_from_ps_command *>(cmd.Data());
-                    _fw_import_from_gps(conn_str, *bgCryptor, ifps->FilePath, ifps->Credentials);
+                    _fw_import_from_gps(conn_str, *bgCryptor, ifps->FilePath, ifps->Creds);
                 }
                     break;
                 default:
@@ -1633,7 +1633,7 @@ static void __append_children_to_xml(QDomDocument &xdoc, QDomNode &n,
 void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
                                          GUtil::CryptoPP::Cryptor &my_cryptor,
                                          const char *ps_filepath,
-                                         const Cryptor::Credentials &creds)
+                                         const Credentials &creds)
 {
     int progress_counter = 0;
     m_curTaskString = QString(tr("Exporting to Portable Safe: %1"))
@@ -1724,7 +1724,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
 void PasswordDatabase::_fw_import_from_gps(const QString &conn_str,
                                            GUtil::CryptoPP::Cryptor &my_cryptor,
                                            const char *ps_filepath,
-                                           const GUtil::CryptoPP::Cryptor::Credentials &creds)
+                                           const Credentials &creds)
 {
     // Always notify that the task is complete, even if it's an error
     //finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });

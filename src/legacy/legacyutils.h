@@ -55,8 +55,8 @@ public:
     static void UpdateFileToCurrentVersion(
             const char *file_path, FileVersionEnum file_version,
             const char *new_path,
-            const GUtil::CryptoPP::Cryptor::Credentials &old_creds,
-            const GUtil::CryptoPP::Cryptor::Credentials &new_creds);
+            const Credentials &old_creds,
+            const Credentials &new_creds);
 
 };
 

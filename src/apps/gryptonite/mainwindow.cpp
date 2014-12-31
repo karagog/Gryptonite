@@ -23,6 +23,7 @@ limitations under the License.*/
 #include "grypto_entry_popup.h"
 #include "grypto_cryptotransformswindow.h"
 #include "grypto_cleanupfileswindow.h"
+#include "../../legacy/legacyutils.h"
 #include <gutil/qt_settings.h>
 #include <gutil/widget.h>
 #include <QFileDialog>
@@ -40,6 +41,7 @@ USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL1(CryptoPP);
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GRYPTO;
+USING_NAMESPACE_GRYPTO1(Legacy);
 using namespace std;
 
 #define STATUSBAR_MSG_TIMEOUT 5000
@@ -266,15 +268,63 @@ void MainWindow::_update_recent_files(const QString &latest_path)
 
 void MainWindow::_new_open_database(const QString &path)
 {
-    Cryptor::Credentials creds;
+    Credentials creds;
+    QString open_path = path;
     if(QFile::exists(path))
     {
         QFileInfo fi(path);
-        GetPasswordDialog dlg(m_settings, fi.fileName(), this);
-        if(QDialog::Rejected == dlg.exec())
-            return;
+        bool file_updated = false;
 
-        creds = dlg.GetCredentials();
+        // Check the file's version and update if necessary
+        try{
+            PasswordDatabase::ValidateDatabase(path.toUtf8().constData());
+        }
+        catch(...){
+            /** \todo Do this inside a plugin... */
+            LegacyUtils::FileVersionEnum version =
+                    LegacyUtils::GetFileVersion(open_path.toUtf8().constData());
+            if(LegacyUtils::CurrentVersion != version){
+                if(QMessageBox::No == QMessageBox::warning(this, tr("Old file detected"),
+                                     QString("The file you selected is either unrecognized, or in an older format."
+                                             " Would you like to attempt to update it?  (The original file will be preserved)"),
+                                     QMessageBox::Yes | QMessageBox::No, QMessageBox::No)){
+                    return;
+                }
+
+                open_path = QFileDialog::getSaveFileName(this, tr("Select updated file path"), QString(),
+                                                                 "Grypto DB (*.gdb);;All Files (*)");
+                if(!open_path.contains('.'))
+                    open_path.append(".gdb");
+
+                {
+                    GetPasswordDialog dlg(m_settings, fi.fileName(), this);
+                    if(QDialog::Rejected == dlg.exec())
+                        return;
+                    creds = dlg.GetCredentials();
+                }
+                Credentials new_creds;
+                {
+                    NewPasswordDialog dlg(m_settings, this);
+                    if(QDialog::Rejected == dlg.exec())
+                        return;
+                    new_creds = dlg.GetCredentials();
+                }
+
+                LegacyUtils::UpdateFileToCurrentVersion(path.toUtf8(), version,
+                                                        open_path.toUtf8(),
+                                                        creds, new_creds);
+                creds = new_creds;
+                file_updated = true;
+            }
+        }
+
+        if(!file_updated){
+            GetPasswordDialog dlg(m_settings, fi.fileName(), this);
+            if(QDialog::Rejected == dlg.exec())
+                return;
+
+            creds = dlg.GetCredentials();
+        }
     }
     else
     {
@@ -289,7 +339,7 @@ void MainWindow::_new_open_database(const QString &path)
 
     DatabaseModel *dbm = NULL;
     try{
-        dbm = new DatabaseModel(path.toUtf8(), creds, this);
+        dbm = new DatabaseModel(open_path.toUtf8(), creds, this);
     }
     catch(const GUtil::AuthenticationException<> &){
         __show_access_denied(this, tr("Invalid Key"));
@@ -306,10 +356,10 @@ void MainWindow::_new_open_database(const QString &path)
 
     ui->view_entry->SetDatabaseModel(dbm);
 
-    m_fileLabel->setText(path);
+    m_fileLabel->setText(open_path);
 
     // Add this to the recent files list
-    _update_recent_files(path);
+    _update_recent_files(open_path);
 
     // Wire up the progress bar control
     connect(&m_progressBar, SIGNAL(Clicked()), dbm, SLOT(CancelAllBackgroundOperations()));

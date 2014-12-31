@@ -16,7 +16,7 @@ limitations under the License.*/
 #define GRYPTO_NEWPASSWORD_H
 
 #include <gutil/qt_settings.h>
-#include <gutil/cryptopp_cryptor.h>
+#include <grypto_globals.h>
 #include <QDialog>
 
 namespace Ui{
@@ -32,13 +32,13 @@ class NewPasswordDialog :
     Q_OBJECT
     Ui::NewPassword *ui;
     GUtil::Qt::Settings *m_settings;
-    GUtil::CryptoPP::Cryptor::Credentials m_creds;
+    Credentials m_creds;
 public:
 
     NewPasswordDialog(GUtil::Qt::Settings *, QWidget *par = 0);
     ~NewPasswordDialog();
 
-    GUtil::CryptoPP::Cryptor::Credentials const &GetCredentials() const{ return m_creds; }
+    Credentials const &GetCredentials() const{ return m_creds; }
 
     virtual void accept();
 

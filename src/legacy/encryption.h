@@ -30,7 +30,6 @@ namespace V1{
 class Encryption
 {
 public:
-    static QString EncryptString(const char *instr, const char *passPhrase);
     static QString DecryptString(const char *instr, const char *passPhrase);
 };
 
@@ -42,7 +41,6 @@ namespace V2{
 class Encryption
 {
 public:
-    static std::string EncryptString(const std::string &instr, const std::string &passPhrase);
     static std::string DecryptString(const std::string &instr, const std::string &passPhrase);
 };
 
@@ -54,7 +52,6 @@ namespace V3{
 class Encryption
 {
 public:
-    static std::string EncryptString(const std::string &instr, const std::string &passPhrase);
     static std::string DecryptString(const std::string &instr, const std::string &passPhrase);
 };
 

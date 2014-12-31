@@ -18,23 +18,13 @@ limitations under the License.*/
 #include <cryptopp/default.h>
 #include <cryptopp/hex.h>
 #include <cryptopp/cryptlib.h>
+#include <cryptopp/gzip.h>
 using namespace std;
 
 namespace Grypt{ namespace Legacy{
 
 
 namespace V1{
-
-QString Encryption::EncryptString(const char *instr, const char *passPhrase)
-{
-    std::string outstr;
-
-    CryptoPP::DefaultEncryptorWithMAC encryptor(passPhrase, new CryptoPP::HexEncoder(new CryptoPP::StringSink(outstr)));
-    encryptor.Put((byte *)instr, strlen(instr));
-    encryptor.MessageEnd();
-
-    return QString::fromStdString(outstr);
-}
 
 QString Encryption::DecryptString(const char *instr, const char *passPhrase)
 {
@@ -52,42 +42,14 @@ QString Encryption::DecryptString(const char *instr, const char *passPhrase)
 
 namespace V2{
 
-string Encryption::EncryptString(const string &instr, const string &passPhrase)
-{
-    string outstr;
-
-    CryptoPP::DefaultEncryptorWithMAC encryptor(passPhrase.c_str(),
-                                                new CryptoPP::StringSink(outstr));
-
-    try
-    {
-        encryptor.Put((byte *)instr.c_str(), instr.length());
-        encryptor.MessageEnd();
-    }
-    catch(CryptoPP::Exception ex)
-    {
-        return "";
-    }
-
-    return outstr;
-}
-
 string Encryption::DecryptString(const string &instr, const string &passPhrase)
 {
     string outstr;
 
     CryptoPP::DefaultDecryptorWithMAC decryptor(passPhrase.c_str(),
                                                 new CryptoPP::StringSink(outstr));
-
-    try
-    {
-        decryptor.Put((byte *)instr.c_str(), instr.length());
-        decryptor.MessageEnd();
-    }
-    catch(CryptoPP::Exception ex)
-    {
-        return "";
-    }
+    decryptor.Put((byte *)instr.c_str(), instr.length());
+    decryptor.MessageEnd();
 
     return outstr;
 }
@@ -97,14 +59,19 @@ string Encryption::DecryptString(const string &instr, const string &passPhrase)
 
 namespace V3{
 
-string Encryption::EncryptString(const string &instr, const string &passPhrase)
-{
-    return V2::Encryption::EncryptString(instr, passPhrase);
-}
-
 string Encryption::DecryptString(const string &instr, const string &passPhrase)
 {
-    return V2::Encryption::DecryptString(instr, passPhrase);
+    string data = V2::Encryption::DecryptString(instr, passPhrase);
+    string decompressed;
+    if(data[0] == '1')
+    {
+        data = data.substr(1);
+        CryptoPP::StringSource(data, true, new CryptoPP::Gunzip(new CryptoPP::StringSink(decompressed)));
+    }
+    else{
+        decompressed = data;
+    }
+    return decompressed;
 }
 
 }

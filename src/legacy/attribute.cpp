@@ -14,7 +14,6 @@ limitations under the License.*/
 
 #include "attribute.h"
 #include "default_attribute_info.h"
-#include "encryption_utils.h"
 #include <gutil/exception.h>
 #include <gutil/string.h>
 #include <QXmlStreamReader>

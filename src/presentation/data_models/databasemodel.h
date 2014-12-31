@@ -38,14 +38,14 @@ class DatabaseModel :
 public:
 
     explicit DatabaseModel(const char *file_path,
-                           const GUtil::CryptoPP::Cryptor::Credentials &,
+                           const Credentials &,
                            QObject *parent = 0);
     ~DatabaseModel();
 
     QByteArray const &FilePath() const;
 
     /** Returns true if this is the correct password for the database. */
-    bool CheckCredentials(const GUtil::CryptoPP::Cryptor::Credentials &) const;
+    bool CheckCredentials(const Credentials &) const;
 
     /** Returns a reference to the cryptor used by the database object. */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
@@ -104,11 +104,11 @@ public:
 
     /** Exports the entire database in the portable safe format. */
     void ExportToPortableSafe(const char *export_filename,
-                              const GUtil::CryptoPP::Cryptor::Credentials &);
+                              const Credentials &);
 
     /** Imports data from the portable safe file. */
     void ImportFromPortableSafe(const char *export_filename,
-                                const GUtil::CryptoPP::Cryptor::Credentials &);
+                                const Credentials &);
 
     /** Loads all entries from the database. */
     void FetchAllEntries();

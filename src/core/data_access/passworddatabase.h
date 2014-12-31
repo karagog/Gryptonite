@@ -44,7 +44,7 @@ public:
      *  Throws an AuthenticationException if the password is wrong.
     */
     PasswordDatabase(const char *file_path,
-                     const GUtil::CryptoPP::Cryptor::Credentials &creds,
+                     const Credentials &creds,
                      QObject * = NULL);
 
     ~PasswordDatabase();
@@ -53,7 +53,7 @@ public:
     QByteArray const &FilePath() const;
 
     /** Returns true if the password and keyfile are correct. */
-    bool CheckCredentials(const GUtil::CryptoPP::Cryptor::Credentials &) const;
+    bool CheckCredentials(const Credentials &) const;
 
     /** Returns a reference to the cryptor for you to use (but not change). */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
@@ -138,11 +138,11 @@ public:
 
     /** Exports the entire database in the portable safe format. */
     void ExportToPortableSafe(const char *export_filename,
-                              const GUtil::CryptoPP::Cryptor::Credentials &);
+                              const Credentials &);
 
     /** Imports data from the portable safe file. */
     void ImportFromPortableSafe(const char *export_filename,
-                                const GUtil::CryptoPP::Cryptor::Credentials &);
+                                const Credentials &);
 
 
 public slots:
@@ -178,7 +178,7 @@ protected:
 private:
 
     // Main thread methods
-    void _init_cryptor(const GUtil::CryptoPP::Cryptor::Credentials &, const byte *salt, GUINT32 salt_len);
+    void _init_cryptor(const Credentials &, const byte *salt, GUINT32 salt_len);
 
     // Worker thread bodies
     void _file_worker(GUtil::CryptoPP::Cryptor *);
@@ -188,8 +188,8 @@ private:
     void _fw_add_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
     void _fw_exp_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
     void _fw_del_file(const QString &, const FileId &);
-    void _fw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const GUtil::CryptoPP::Cryptor::Credentials &);
-    void _fw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const GUtil::CryptoPP::Cryptor::Credentials &);
+    void _fw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
+    void _fw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
     void _fw_fail_if_cancelled();
     int m_progressMin, m_progressMax;
     QString m_curTaskString;

@@ -43,16 +43,14 @@ public:
     void readXml(QXmlStreamReader *);
     void writeXml(QXmlStreamWriter *) const;
 
-protected:
     bool secret;
+    QString notes;
 
 private:
     QString label;       //i.e.  Description, username, password, url, etc...
     QString content;     // the actual stuff to remember
     bool binary;
     bool broken_binary_data_reference;
-
-    QString notes;
 };
 
 

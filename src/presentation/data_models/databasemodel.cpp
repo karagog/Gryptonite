@@ -154,7 +154,7 @@ EntryContainer::~EntryContainer()
 
 
 DatabaseModel::DatabaseModel(const char *f,
-                             const Cryptor::Credentials &creds,
+                             const Credentials &creds,
                              QObject *parent)
     :QAbstractItemModel(parent),
       m_db(new PasswordDatabase(f, creds))
@@ -543,7 +543,7 @@ QByteArray const &DatabaseModel::FilePath() const
     return m_db->FilePath();
 }
 
-bool DatabaseModel::CheckCredentials(const Cryptor::Credentials &creds) const
+bool DatabaseModel::CheckCredentials(const Credentials &creds) const
 {
     return m_db->CheckCredentials(creds);
 }
@@ -569,13 +569,13 @@ void DatabaseModel::ExportFile(const FileId &id, const char *export_file_path)
 }
 
 void DatabaseModel::ExportToPortableSafe(const char *export_filename,
-                                         const Cryptor::Credentials &creds)
+                                         const Credentials &creds)
 {
     m_db->ExportToPortableSafe(export_filename, creds);
 }
 
 void DatabaseModel::ImportFromPortableSafe(const char *export_filename,
-                                           const Cryptor::Credentials &creds)
+                                           const Credentials &creds)
 {
     m_db->ImportFromPortableSafe(export_filename, creds);
 }

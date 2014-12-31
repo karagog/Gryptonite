@@ -13,6 +13,7 @@ DEFINES += GUTIL_CORE_QT_ADAPTERS
 INCLUDEPATH += $$TOP_DIR/include $$TOP_DIR/gutil/include
 
 LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
+    -lgrypto_legacy \
     -lgrypto_ui \
     -lgrypto_core \
     -lGUtilQt \

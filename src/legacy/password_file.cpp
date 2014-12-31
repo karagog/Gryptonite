@@ -14,8 +14,6 @@ limitations under the License.*/
 
 #include "password_file.h"
 #include "default_attribute_info.h"
-#include "encryption_utils.h"
-#include "xmlhelpers.h"
 #include <gutil/string.h>
 #include <gutil/exception.h>
 #include <QXmlStreamWriter>
@@ -24,7 +22,6 @@ limitations under the License.*/
 #include <QDateTime>
 #include <QTextStream>
 USING_NAMESPACE_GUTIL;
-USING_NAMESPACE_GUTIL1(QtUtil);
 using namespace std;
 
 namespace Grypt{ namespace Legacy{ namespace V3{
@@ -369,66 +366,66 @@ void Password_File::deletion_helpers::
 bool Password_File::dropMimeData(const QMimeData *data, Qt::DropAction action,
                                  int r, int c, const QModelIndex &par)
 {
-    if (action == Qt::IgnoreAction)
-        return true;
+//    if (action == Qt::IgnoreAction)
+//        return true;
 
-    // We don't do copying
-    if(action == Qt::CopyAction)
-        return false;
+//    // We don't do copying
+//    if(action == Qt::CopyAction)
+//        return false;
 
-    if (!data->hasFormat("Gryptonite/entry_tree"))
-        return false;
+//    if (!data->hasFormat("Gryptonite/entry_tree"))
+//        return false;
 
-    if (c > 0)
-    {
-        // If the user drops on the second column, then we treat it as if they dropped it on the first column
-        c = 0;
-    }
+//    if (c > 0)
+//    {
+//        // If the user drops on the second column, then we treat it as if they dropped it on the first column
+//        c = 0;
+//    }
 
-    File_Entry * ref;
-    if(!par.isValid())
-    {
-        ref = contents;
-    }
-    else
-    {
-        ref = (File_Entry *)par.internalPointer();
-        Q_ASSERT(ref != 0);
-    }
+//    File_Entry * ref;
+//    if(!par.isValid())
+//    {
+//        ref = contents;
+//    }
+//    else
+//    {
+//        ref = (File_Entry *)par.internalPointer();
+//        Q_ASSERT(ref != 0);
+//    }
 
-    QByteArray dat = data->data("Gryptonite/entry_tree");
-    GXmlStreamReader doc(dat);
-    doc.readNextStartElement();
+//    QByteArray dat = data->data("Gryptonite/entry_tree");
+//    QXmlStreamReader doc(dat);
+//    doc.readNextStartElement();
 
-    if(r == -1)
-        r = ref->countRows();
+//    if(r == -1)
+//        r = ref->countRows();
 
-    int cnt = doc.attributes().value("count").toString().toInt();
-    if(cnt <= 0)
-        return false;
+//    int cnt = doc.attributes().value("count").toString().toInt();
+//    if(cnt <= 0)
+//        return false;
 
-    insertRows(r, cnt, par);
+//    insertRows(r, cnt, par);
 
-    //File_Entry *selection_representative = 0;
-    bool is_root = ref == contents;
-    int i = 0;
-    while(doc.readNextStartElement())
-    {
-        QString xml_part = doc.InnerXml();
-        QXmlStreamReader x(xml_part);
+//    //File_Entry *selection_representative = 0;
+//    bool is_root = ref == contents;
+//    int i = 0;
+//    while(doc.readNextStartElement())
+//    {
+//        QString xml_part = doc.InnerXml();
+//        QXmlStreamReader x(xml_part);
 
-        File_Entry *te = ref->getContents().at(r+i);
-        readXML(&x, te, false, is_root, true);
+//        File_Entry *te = ref->getContents().at(r+i);
+//        readXML(&x, te, false, is_root, true);
 
-        // We want to be able to select one of the items that changed, so we emit
-        //  this information in a signal at the end
-//        if(i == 0)
-//            selection_representative = te;
+//        // We want to be able to select one of the items that changed, so we emit
+//        //  this information in a signal at the end
+////        if(i == 0)
+////            selection_representative = te;
 
-        dataChanged(index(r + i, 0, par), index(r + i, 0, par));
+//        dataChanged(index(r + i, 0, par), index(r + i, 0, par));
 
-        i++;
-    }
+//        i++;
+//    }
 
     return true;
 }
@@ -830,8 +827,8 @@ void Password_File::create_new_file_password(const QString &newp)
     if(newp.length() == 0)
     {
         // This password is twice as long as a normal one
-        files_password = Encryption_Utils::generate_random_string() +
-                         Encryption_Utils::generate_random_string();
+//        files_password = Encryption_Utils::generate_random_string() +
+//                         Encryption_Utils::generate_random_string();
     }
     else
     {

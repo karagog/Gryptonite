@@ -29,7 +29,7 @@ class Password_File : public QAbstractItemModel
 {
     Q_OBJECT
 public:
-    Password_File(QObject *);
+    Password_File(QObject * = 0);
     Password_File(QObject *, const Password_File&);
     virtual ~Password_File();
 

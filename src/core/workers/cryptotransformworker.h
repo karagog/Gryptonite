@@ -15,9 +15,9 @@ limitations under the License.*/
 #ifndef GRYPTO_CRYPTOTRANSFORM_WORKER_H
 #define	GRYPTO_CRYPTOTRANSFORM_WORKER_H
 
-#include "gutil_cryptopp_cryptor.h"
-#include "gutil_cryptopp_hash.h"
-#include "gutil_smartpointer.h"
+#include <gutil/cryptopp_cryptor.h>
+#include <gutil/cryptopp_hash.h>
+#include <gutil/smartpointer.h>
 #include <QThread>
 
 namespace Grypt

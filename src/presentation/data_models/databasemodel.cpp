@@ -14,7 +14,6 @@ limitations under the License.*/
 
 #include "databasemodel.h"
 #include "grypto_passworddatabase.h"
-#include "gutil_globals.h"
 #include <QFont>
 #include <QSet>
 #include <QMimeData>
@@ -22,6 +21,7 @@ limitations under the License.*/
 #include <unordered_map>
 //#include "../gutil/src/test/modeltest.h"
 USING_NAMESPACE_GUTIL;
+USING_NAMESPACE_GUTIL1(CryptoPP);
 using namespace std;
 
 NAMESPACE_GRYPTO;
@@ -153,9 +153,11 @@ EntryContainer::~EntryContainer()
 }
 
 
-DatabaseModel::DatabaseModel(const char *f, const char *p, const char *k, QObject *parent)
+DatabaseModel::DatabaseModel(const char *f,
+                             const Cryptor::Credentials &creds,
+                             QObject *parent)
     :QAbstractItemModel(parent),
-      m_db(new PasswordDatabase(f, p, k))
+      m_db(new PasswordDatabase(f, creds))
 {
     connect(m_db.data(), SIGNAL(NotifyFavoritesUpdated()),
             this, SIGNAL(NotifyFavoritesUpdated()));
@@ -541,9 +543,9 @@ QByteArray const &DatabaseModel::FilePath() const
     return m_db->FilePath();
 }
 
-bool DatabaseModel::CheckPassword(const char *password, const char *keyfile) const
+bool DatabaseModel::CheckCredentials(const Cryptor::Credentials &creds) const
 {
-    return m_db->CheckPassword(password, keyfile);
+    return m_db->CheckCredentials(creds);
 }
 
 void DatabaseModel::UpdateFile(const FileId &id, const char *filepath)
@@ -567,17 +569,15 @@ void DatabaseModel::ExportFile(const FileId &id, const char *export_file_path)
 }
 
 void DatabaseModel::ExportToPortableSafe(const char *export_filename,
-                                         const char *password,
-                                         const char *keyfile)
+                                         const Cryptor::Credentials &creds)
 {
-    m_db->ExportToPortableSafe(export_filename, password, keyfile);
+    m_db->ExportToPortableSafe(export_filename, creds);
 }
 
 void DatabaseModel::ImportFromPortableSafe(const char *export_filename,
-                                           const char *password,
-                                           const char *keyfile)
+                                           const Cryptor::Credentials &creds)
 {
-    m_db->ImportFromPortableSafe(export_filename, password, keyfile);
+    m_db->ImportFromPortableSafe(export_filename, creds);
 }
 
 vector<pair<FileId, quint32> > DatabaseModel::GetFileSummary()

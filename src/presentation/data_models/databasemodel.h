@@ -16,14 +16,11 @@ limitations under the License.*/
 #define GRYPTO_DATABASEMODEL_H
 
 #include "grypto_globals.h"
-#include "gutil_undostack.h"
+#include <gutil/undostack.h>
+#include <gutil/cryptopp_cryptor.h>
 #include <memory>
 #include <QScopedPointer>
 #include <QAbstractItemModel>
-
-namespace GUtil{ namespace CryptoPP{
-class Cryptor;
-}}
 
 namespace Grypt
 {
@@ -41,15 +38,14 @@ class DatabaseModel :
 public:
 
     explicit DatabaseModel(const char *file_path,
-                           const char *password,
-                           const char *keyfile_path,
+                           const GUtil::CryptoPP::Cryptor::Credentials &,
                            QObject *parent = 0);
     ~DatabaseModel();
 
     QByteArray const &FilePath() const;
 
     /** Returns true if this is the correct password for the database. */
-    bool CheckPassword(const char *password, const char *keyfile) const;
+    bool CheckCredentials(const GUtil::CryptoPP::Cryptor::Credentials &) const;
 
     /** Returns a reference to the cryptor used by the database object. */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
@@ -108,13 +104,11 @@ public:
 
     /** Exports the entire database in the portable safe format. */
     void ExportToPortableSafe(const char *export_filename,
-                              const char *password,
-                              const char *keyfile = NULL);
+                              const GUtil::CryptoPP::Cryptor::Credentials &);
 
     /** Imports data from the portable safe file. */
     void ImportFromPortableSafe(const char *export_filename,
-                                const char *password,
-                                const char *keyfile = NULL);
+                                const GUtil::CryptoPP::Cryptor::Credentials &);
 
     /** Loads all entries from the database. */
     void FetchAllEntries();

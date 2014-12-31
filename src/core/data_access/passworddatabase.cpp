@@ -14,14 +14,13 @@ limitations under the License.*/
 
 #include "passworddatabase.h"
 #include "xmlconverter.h"
-#include "gutil_cryptopp_cryptor.h"
-#include "gutil_cryptopp_rng.h"
-#include "gutil_gpsutils.h"
-#include "gutil_databaseutils.h"
-#include "gutil_sourcesandsinks.h"
-#include "gutil_qtsourcesandsinks.h"
-#include "gutil_smartpointer.h"
-#include "gutil_file.h"
+#include <gutil/cryptopp_rng.h>
+#include <gutil/gpsutils.h>
+#include <gutil/databaseutils.h>
+#include <gutil/sourcesandsinks.h>
+#include <gutil/qtsourcesandsinks.h>
+#include <gutil/smartpointer.h>
+#include <gutil/file.h>
 #include <queue>
 #include <unordered_map>
 #include <thread>
@@ -381,29 +380,25 @@ public:
 class export_to_ps_command : public bg_worker_command
 {
 public:
-    export_to_ps_command(const char *filepath, const char *password, const char *keyfile)
+    export_to_ps_command(const char *filepath, const Cryptor::Credentials &creds)
         :bg_worker_command(ExportToPS),
           FilePath(filepath),
-          Password(password),
-          KeyFile(keyfile)
+          Credentials(creds)
     {}
     const QByteArray FilePath;
-    const QByteArray Password;
-    const QByteArray KeyFile;
+    Cryptor::Credentials Credentials;
 };
 
 class import_from_ps_command : public bg_worker_command
 {
 public:
-    import_from_ps_command(const char *filepath, const char *password, const char *keyfile)
+    import_from_ps_command(const char *filepath, const Cryptor::Credentials &creds)
         :bg_worker_command(ImportFromPS),
           FilePath(filepath),
-          Password(password),
-          KeyFile(keyfile)
+          Credentials(creds)
     {}
     const QByteArray FilePath;
-    const QByteArray Password;
-    const QByteArray KeyFile;
+    Cryptor::Credentials Credentials;
 };
 
 
@@ -424,11 +419,11 @@ static QString __create_connection(const QString &file_path, const QString &forc
     return conn_str;
 }
 
-void PasswordDatabase::_init_cryptor(const char *p, const char *k, const byte *s, GUINT32 s_l)
+void PasswordDatabase::_init_cryptor(const Cryptor::Credentials &creds, const byte *s, GUINT32 s_l)
 {
     G_D;
     GASSERT(!d->cryptor);
-    d->cryptor = new GUtil::CryptoPP::Cryptor(p, k, NONCE_LENGTH, new Cryptor::DefaultKeyDerivation(s, s_l));
+    d->cryptor = new GUtil::CryptoPP::Cryptor(creds, NONCE_LENGTH, new Cryptor::DefaultKeyDerivation(s, s_l));
 }
 
 // Tells the entry worker to cache the child entries of the given parent
@@ -440,7 +435,52 @@ void __command_cache_entries_by_parentid(d_t *d, const EntryId &id)
     d->wc_entry_thread.notify_one();
 }
 
-PasswordDatabase::PasswordDatabase(const char *file_path, const char *password, const char *keyfile, QObject *par)
+static void __check_version(const QString &dbstring)
+{
+    QSqlQuery q(QSqlDatabase::database(dbstring));
+    q.prepare("SELECT Version FROM Version");
+    DatabaseUtils::ExecuteQuery(q);
+
+    int cnt = 0;
+    while(q.next()){
+        if(++cnt > 1)
+            throw Exception<>("Found multiple version rows; there should be exactly one");
+
+        QString ver = q.record().value("Version").toString();
+        if(ver != GRYPTO_VERSION_STRING)
+            throw Exception<>(String::Format("Wrong database version: %s", ver.toUtf8().constData()));
+    }
+    if(cnt == 0)
+        throw Exception<>("Did not find a version row");
+}
+
+void PasswordDatabase::ValidateDatabase(const char *file_path)
+{
+    if(!File::Exists(file_path))
+        throw Exception<>(String::Format("File does not exist: %s", file_path));
+
+    // This will fail with an exception if the database is invalid sqlite
+    QString dbstring = __create_connection(file_path);
+
+    // Make sure that all the tables are there
+    QStringList tables = QSqlDatabase::database(dbstring).tables();
+    const char *expected_tables[] = {
+        "Version", "Entry", "File"
+    };
+    for(uint i = 0; i < sizeof(expected_tables)/sizeof(const char *); ++i){
+        if(!tables.contains(expected_tables[i], ::Qt::CaseInsensitive))
+            throw Exception<>(String::Format("Table not found: %s", expected_tables[i]));
+    }
+
+    // Now check the version string
+    __check_version(dbstring);
+
+    QSqlDatabase::removeDatabase(dbstring);
+}
+
+PasswordDatabase::PasswordDatabase(const char *file_path,
+                                   const Cryptor::Credentials &creds,
+                                   QObject *par)
     :QObject(par)
 {
     G_D_INIT();
@@ -470,7 +510,7 @@ PasswordDatabase::PasswordDatabase(const char *file_path, const char *password, 
             // Prepare some salt and create the cryptor
             byte salt[SALT_LENGTH];
             GUtil::CryptoPP::RNG().Fill(salt, SALT_LENGTH);
-            _init_cryptor(password, keyfile, salt, SALT_LENGTH);
+            _init_cryptor(creds, salt, SALT_LENGTH);
 
             // Prepare the keycheck data
             QByteArray keycheck_ct;
@@ -493,21 +533,16 @@ PasswordDatabase::PasswordDatabase(const char *file_path, const char *password, 
         }
 
         // Check the version record to see if it is valid
-        q.prepare("SELECT Version,KeyCheck,Salt FROM Version");
+        __check_version(d->dbString);
+
+        // Validate the keycheck information
+        q.prepare("SELECT KeyCheck,Salt FROM Version");
         DatabaseUtils::ExecuteQuery(q);
 
-        int cnt = 0;
-        while(q.next()){
-            if(++cnt > 1)
-                throw Exception<>("Found too many version rows; there should be exactly one");
-
-            QString ver = q.record().value("Version").toString();
-            if(ver != GRYPTO_VERSION_STRING)
-                throw Exception<>(QString("Wrong database version: %1").arg(ver).toUtf8());
-
+        if(q.next()){
             if(!d->cryptor){
                 QByteArray salt_ba = q.record().value("Salt").toByteArray();
-                _init_cryptor(password, keyfile, (byte const *)salt_ba.constData(), salt_ba.length());
+                _init_cryptor(creds, (byte const *)salt_ba.constData(), salt_ba.length());
             }
 
             QByteArrayInput bai_ct(q.record().value("KeyCheck").toByteArray());
@@ -516,8 +551,6 @@ PasswordDatabase::PasswordDatabase(const char *file_path, const char *password, 
             // This will throw an exception if the key was bad
             d->cryptor->DecryptData(NULL, &bai_ct, &auth_in);
         }
-        if(cnt == 0)
-            throw Exception<>("Did not find a version row");
     }
     catch(...)
     {
@@ -554,7 +587,7 @@ PasswordDatabase::~PasswordDatabase()
     G_D_UNINIT();
 }
 
-bool PasswordDatabase::CheckPassword(const char *password, const char *keyfile) const
+bool PasswordDatabase::CheckCredentials(const Cryptor::Credentials &creds) const
 {
     G_D;
     bool ret = false;
@@ -563,7 +596,7 @@ bool PasswordDatabase::CheckPassword(const char *password, const char *keyfile) 
     QSqlQuery q("SELECT Salt FROM Version", QSqlDatabase::database(d->dbString));
     if(q.next()){
         QByteArray salt = q.record().value(0).toByteArray();
-        ret = d->cryptor->CheckPassword(password, keyfile);
+        ret = d->cryptor->CheckCredentials(creds);
     }
     return ret;
 }
@@ -1169,22 +1202,20 @@ void PasswordDatabase::ExportFile(const FileId &id, const char *export_path)
 }
 
 void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
-                                            const char *password,
-                                            const char *keyfile)
+                                            const Cryptor::Credentials &creds)
 {
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
-    d->file_thread_commands.push(new export_to_ps_command(export_filename, password, keyfile));
+    d->file_thread_commands.push(new export_to_ps_command(export_filename, creds));
     d->wc_file_thread.notify_one();
 }
 
 void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
-                                              const char *password,
-                                              const char *keyfile)
+                                              const Cryptor::Credentials &creds)
 {
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
-    d->file_thread_commands.push(new import_from_ps_command(import_filename, password, keyfile));
+    d->file_thread_commands.push(new import_from_ps_command(import_filename, creds));
     d->wc_file_thread.notify_one();
 }
 
@@ -1449,13 +1480,13 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
                 case bg_worker_command::ExportToPS:
                 {
                     export_to_ps_command *e2ps = static_cast<export_to_ps_command *>(cmd.Data());
-                    _fw_export_to_gps(conn_str, *bgCryptor, e2ps->FilePath, e2ps->Password, e2ps->KeyFile);
+                    _fw_export_to_gps(conn_str, *bgCryptor, e2ps->FilePath, e2ps->Credentials);
                 }
                     break;
                 case bg_worker_command::ImportFromPS:
                 {
-                    import_from_ps_command *e2ps = static_cast<import_from_ps_command *>(cmd.Data());
-                    _fw_import_from_gps(conn_str, *bgCryptor, e2ps->FilePath, e2ps->Password, e2ps->KeyFile);
+                    import_from_ps_command *ifps = static_cast<import_from_ps_command *>(cmd.Data());
+                    _fw_import_from_gps(conn_str, *bgCryptor, ifps->FilePath, ifps->Credentials);
                 }
                     break;
                 default:
@@ -1602,7 +1633,7 @@ static void __append_children_to_xml(QDomDocument &xdoc, QDomNode &n,
 void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
                                          GUtil::CryptoPP::Cryptor &my_cryptor,
                                          const char *ps_filepath,
-                                         const char *password, const char *keyfile)
+                                         const Cryptor::Credentials &creds)
 {
     int progress_counter = 0;
     m_curTaskString = QString(tr("Exporting to Portable Safe: %1"))
@@ -1631,7 +1662,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
         _fw_fail_if_cancelled();
 
         // Open the target file
-        GPSFile_Export gps_file(ps_filepath, password, keyfile);
+        GPSFile_Export gps_file(ps_filepath, creds);
         emit NotifyProgressUpdated(progress_counter+=5, m_curTaskString);
         _fw_fail_if_cancelled();
 
@@ -1693,7 +1724,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
 void PasswordDatabase::_fw_import_from_gps(const QString &conn_str,
                                            GUtil::CryptoPP::Cryptor &my_cryptor,
                                            const char *ps_filepath,
-                                           const char *password, const char *keyfile)
+                                           const GUtil::CryptoPP::Cryptor::Credentials &creds)
 {
     // Always notify that the task is complete, even if it's an error
     //finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });

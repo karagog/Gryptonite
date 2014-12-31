@@ -17,7 +17,6 @@ limitations under the License.*/
 
 #include "grypto_globals.h"
 #include "grypto_secret_value.h"
-#include "gutil_macros.h"
 #include <QList>
 #include <QDateTime>
 

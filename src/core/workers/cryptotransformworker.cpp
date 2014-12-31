@@ -14,8 +14,7 @@ limitations under the License.*/
 
 #include "cryptotransformworker.h"
 #include "grypto_globals.h"
-#include "gutil_globals.h"
-#include "gutil_file.h"
+#include <gutil/file.h>
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);
 using namespace std;

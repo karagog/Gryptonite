@@ -95,8 +95,8 @@ void GetPasswordDialog::accept()
                 return;
         }
     }
-    password = tmp_password;
-    keyfile = tmp_keyfile;
+    m_creds.Password = tmp_password.constData();
+    m_creds.Keyfile = tmp_keyfile.constData();
     m_settings->SetValue(SETTING_LAST_CB_INDEX, ui->comboBox->currentIndex());
     m_settings->CommitChanges();
     QDialog::accept();

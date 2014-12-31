@@ -17,13 +17,13 @@ limitations under the License.*/
 #include "grypto_globals.h"
 #include "newpassworddialog.h"
 #include "getpassworddialog.h"
-#include "gutil_sourcesandsinks.h"
-#include "gutil_qtsourcesandsinks.h"
+#include <gutil/sourcesandsinks.h>
+#include <gutil/qtsourcesandsinks.h>
 #include "grypto_cryptotransformworker.h"
-#include "gutil_cryptopp_cryptor.h"
-#include "gutil_file.h"
-#include "gutil_smartpointer.h"
-#include "gutil_qt_settings.h"
+#include <gutil/cryptopp_cryptor.h>
+#include <gutil/file.h>
+#include <gutil/smartpointer.h>
+#include <gutil/qt_settings.h>
 #include <QMessageBox>
 #include <QFileDialog>
 USING_NAMESPACE_GUTIL;
@@ -139,9 +139,9 @@ void CryptoTransformsWindow::_change_password()
     NewPasswordDialog dlg(m_settings, this);
     if(QDialog::Accepted == dlg.exec()){
         if(m_cryptor)
-            m_cryptor->ChangePassword(dlg.Password(), dlg.KeyFile());
+            m_cryptor->ChangeCredentials(dlg.GetCredentials());
         else
-            m_cryptor = new Cryptor(dlg.Password(), dlg.KeyFile());
+            m_cryptor = new Cryptor(dlg.GetCredentials());
     }
     _update_key_status();
 }
@@ -152,7 +152,7 @@ void CryptoTransformsWindow::_test_password()
     if(QDialog::Accepted == dlg.exec()){
         if(!m_cryptor)
             QMessageBox::critical(this, tr("No Key"), tr("No key has been set"));
-        else if(m_cryptor->CheckPassword(dlg.Password(), dlg.KeyFile()))
+        else if(m_cryptor->CheckCredentials(dlg.GetCredentials()))
             QMessageBox::information(this, tr("OK"), tr("Key is correct"));
         else
             QMessageBox::critical(this, tr("Failed"), tr("Key is incorrect"));

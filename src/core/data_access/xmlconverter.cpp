@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "xmlconverter.h"
 #include "grypto_entry.h"
-#include "gutil_databaseutils.h"
+#include <gutil/databaseutils.h>
 #include <QDomDocument>
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL;

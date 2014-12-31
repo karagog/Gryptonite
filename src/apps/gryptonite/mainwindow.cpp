@@ -23,8 +23,8 @@ limitations under the License.*/
 #include "grypto_entry_popup.h"
 #include "grypto_cryptotransformswindow.h"
 #include "grypto_cleanupfileswindow.h"
-#include "gutil_qt_settings.h"
-#include "gutil_widget.h"
+#include <gutil/qt_settings.h>
+#include <gutil/widget.h>
 #include <QFileDialog>
 #include <QPushButton>
 #include <QMessageBox>
@@ -37,6 +37,7 @@ limitations under the License.*/
 #include <QLabel>
 #include <QStandardPaths>
 USING_NAMESPACE_GUTIL1(Qt);
+USING_NAMESPACE_GUTIL1(CryptoPP);
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GRYPTO;
 using namespace std;
@@ -265,7 +266,7 @@ void MainWindow::_update_recent_files(const QString &latest_path)
 
 void MainWindow::_new_open_database(const QString &path)
 {
-    QByteArray password, keyfile;
+    Cryptor::Credentials creds;
     if(QFile::exists(path))
     {
         QFileInfo fi(path);
@@ -273,8 +274,7 @@ void MainWindow::_new_open_database(const QString &path)
         if(QDialog::Rejected == dlg.exec())
             return;
 
-        password = dlg.Password();
-        keyfile = dlg.KeyFile();
+        creds = dlg.GetCredentials();
     }
     else
     {
@@ -282,15 +282,14 @@ void MainWindow::_new_open_database(const QString &path)
         if(QDialog::Rejected == dlg.exec())
             return;
 
-        password = dlg.Password();
-        keyfile = dlg.KeyFile();
+        creds = dlg.GetCredentials();
     }
 
     _close_database();
 
     DatabaseModel *dbm = NULL;
     try{
-        dbm = new DatabaseModel(path.toUtf8(), password, keyfile, this);
+        dbm = new DatabaseModel(path.toUtf8(), creds, this);
     }
     catch(const GUtil::AuthenticationException<> &){
         __show_access_denied(this, tr("Invalid Key"));
@@ -382,7 +381,7 @@ void MainWindow::_export_to_portable_safe()
     if(QDialog::Accepted != dlg.exec())
         return;
 
-    _get_database_model()->ExportToPortableSafe(fn.toUtf8(), dlg.Password(), dlg.KeyFile());
+    _get_database_model()->ExportToPortableSafe(fn.toUtf8(), dlg.GetCredentials());
 }
 
 void MainWindow::_import_from_portable_safe()
@@ -398,7 +397,7 @@ void MainWindow::_import_from_portable_safe()
     if(QDialog::Accepted != dlg.exec())
         return;
 
-    _get_database_model()->ImportFromPortableSafe(fn.toUtf8(), dlg.Password(), dlg.KeyFile());
+    _get_database_model()->ImportFromPortableSafe(fn.toUtf8(), dlg.GetCredentials());
 }
 
 void MainWindow::_new_entry()
@@ -726,7 +725,7 @@ void MainWindow::RequestUnlock()
     GetPasswordDialog dlg(m_settings, _get_database_model()->FilePath(), this);
     if(QDialog::Accepted == dlg.exec())
     {
-        if(_get_database_model()->CheckPassword(dlg.Password(), dlg.KeyFile()))
+        if(_get_database_model()->CheckCredentials(dlg.GetCredentials()))
             _lock_unlock_interface(false);
         else
             __show_access_denied(this, tr("Invalid Password"));

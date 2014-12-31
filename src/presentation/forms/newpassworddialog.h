@@ -15,7 +15,8 @@ limitations under the License.*/
 #ifndef GRYPTO_NEWPASSWORD_H
 #define GRYPTO_NEWPASSWORD_H
 
-#include "gutil_qt_settings.h"
+#include <gutil/qt_settings.h>
+#include <gutil/cryptopp_cryptor.h>
 #include <QDialog>
 
 namespace Ui{
@@ -31,18 +32,13 @@ class NewPasswordDialog :
     Q_OBJECT
     Ui::NewPassword *ui;
     GUtil::Qt::Settings *m_settings;
-    QByteArray password;
-    QByteArray keyfile;
+    GUtil::CryptoPP::Cryptor::Credentials m_creds;
 public:
 
     NewPasswordDialog(GUtil::Qt::Settings *, QWidget *par = 0);
     ~NewPasswordDialog();
 
-    /** Returns the password that was entered by the user. */
-    QByteArray const &Password() const{ return password; }
-
-    /** Returns the path to the keyfile that was chosen. */
-    QByteArray const &KeyFile() const{ return keyfile; }
+    GUtil::CryptoPP::Cryptor::Credentials const &GetCredentials() const{ return m_creds; }
 
     virtual void accept();
 

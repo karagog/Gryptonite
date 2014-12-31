@@ -16,8 +16,8 @@ limitations under the License.*/
 #define APPLICATION_H
 
 #include "mainwindow.h"
-#include "gutil_qt_settings.h"
-#include "gutil_application.h"
+#include <gutil/qt_settings.h>
+#include <gutil/application.h>
 
 namespace CryptoPP{
 class Exception;

@@ -15,19 +15,16 @@ limitations under the License.*/
 #ifndef GRYPTO_PASSWORDDATABASE_H
 #define GRYPTO_PASSWORDDATABASE_H
 
-#include "gutil_exception.h"
-#include "gutil_smartpointer.h"
-#include "gutil_iprogresshandler.h"
+#include <gutil/exception.h>
+#include <gutil/smartpointer.h>
+#include <gutil/iprogresshandler.h>
+#include <gutil/cryptopp_cryptor.h>
 #include "grypto_entry.h"
 #include <QString>
 #include <memory>
 
 class QSqlRecord;
 class QSqlQuery;
-
-NAMESPACE_GUTIL1(CryptoPP);
-class Cryptor;
-END_NAMESPACE_GUTIL1;
 
 namespace Grypt{
 
@@ -47,8 +44,7 @@ public:
      *  Throws an AuthenticationException if the password is wrong.
     */
     PasswordDatabase(const char *file_path,
-                     const char *password,
-                     const char *keyfile = NULL,
+                     const GUtil::CryptoPP::Cryptor::Credentials &creds,
                      QObject * = NULL);
 
     ~PasswordDatabase();
@@ -57,10 +53,15 @@ public:
     QByteArray const &FilePath() const;
 
     /** Returns true if the password and keyfile are correct. */
-    bool CheckPassword(const char *password, const char *keyfile = 0) const;
+    bool CheckCredentials(const GUtil::CryptoPP::Cryptor::Credentials &) const;
 
     /** Returns a reference to the cryptor for you to use (but not change). */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
+
+    /** This function does a sanity check on the database to see if it is
+     *  the right format for this software version.
+    */
+    static void ValidateDatabase(const char *file_path);
 
 
     /** \name Entry Access
@@ -137,13 +138,11 @@ public:
 
     /** Exports the entire database in the portable safe format. */
     void ExportToPortableSafe(const char *export_filename,
-                              const char *password,
-                              const char *keyfile = NULL);
+                              const GUtil::CryptoPP::Cryptor::Credentials &);
 
     /** Imports data from the portable safe file. */
     void ImportFromPortableSafe(const char *export_filename,
-                                const char *password,
-                                const char *keyfile = NULL);
+                                const GUtil::CryptoPP::Cryptor::Credentials &);
 
 
 public slots:
@@ -179,7 +178,7 @@ protected:
 private:
 
     // Main thread methods
-    void _init_cryptor(const char *password, const char *keyfile, const byte *salt, GUINT32 salt_len);
+    void _init_cryptor(const GUtil::CryptoPP::Cryptor::Credentials &, const byte *salt, GUINT32 salt_len);
 
     // Worker thread bodies
     void _file_worker(GUtil::CryptoPP::Cryptor *);
@@ -189,8 +188,8 @@ private:
     void _fw_add_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
     void _fw_exp_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
     void _fw_del_file(const QString &, const FileId &);
-    void _fw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const char *password, const char *keyfile);
-    void _fw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const char *password, const char *keyfile);
+    void _fw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const GUtil::CryptoPP::Cryptor::Credentials &);
+    void _fw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const GUtil::CryptoPP::Cryptor::Credentials &);
     void _fw_fail_if_cancelled();
     int m_progressMin, m_progressMax;
     QString m_curTaskString;

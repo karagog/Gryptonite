@@ -14,12 +14,12 @@ limitations under the License.*/
 
 #include "application.h"
 #include "grypto_globals.h"
-#include "gutil_messageboxlogger.h"
-#include "gutil_cryptopp_rng.h"
-#include "gutil_globallogger.h"
-#include "gutil_grouplogger.h"
-#include "gutil_filelogger.h"
-#include "gutil_messageboxlogger.h"
+#include <gutil/messageboxlogger.h>
+#include <gutil/cryptopp_rng.h>
+#include <gutil/globallogger.h>
+#include <gutil/grouplogger.h>
+#include <gutil/filelogger.h>
+#include <gutil/messageboxlogger.h>
 #include <QStandardPaths>
 #include <QMessageBox>
 USING_NAMESPACE_GUTIL;

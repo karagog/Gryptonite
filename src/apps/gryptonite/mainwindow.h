@@ -18,8 +18,8 @@ limitations under the License.*/
 #include "lockout.h"
 #include "grypto_clipboardaccess.h"
 #include "grypto_databasemodel.h"
-#include "gutil_smartpointer.h"
-#include "gutil_progressbarcontrol.h"
+#include <gutil/smartpointer.h>
+#include <gutil/progressbarcontrol.h>
 #include <QMainWindow>
 #include <QUndoStack>
 #include <QSystemTrayIcon>

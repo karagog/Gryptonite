@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef CLEANUPFILESWINDOW_H
 #define CLEANUPFILESWINDOW_H
 
-#include "gutil_qt_settings.h"
+#include <gutil/qt_settings.h>
 #include <QWidget>
 
 namespace Ui {

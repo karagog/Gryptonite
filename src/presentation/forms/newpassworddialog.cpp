@@ -79,7 +79,7 @@ void NewPasswordDialog::accept()
 {
     int cb_ind = ui->comboBox->currentIndex();
     QByteArray tmp_password;
-    QString tmp_keyfile;
+    QByteArray tmp_keyfile;
     if(cb_ind == 0 || cb_ind == 2)
     {
         QString pw1 = ui->lineEdit->text();
@@ -114,7 +114,7 @@ void NewPasswordDialog::accept()
 
     if(cb_ind == 1 || cb_ind == 2)
     {
-        tmp_keyfile = ui->le_filePath->text().trimmed();
+        tmp_keyfile = ui->le_filePath->text().trimmed().toUtf8();
         QFile kf(tmp_keyfile);
         if(kf.fileName().isEmpty()){
             QMessageBox::critical(this, tr("No Keyfile"),
@@ -123,7 +123,7 @@ void NewPasswordDialog::accept()
         }
         if(!kf.exists()){
             QMessageBox::critical(this, tr("Keyfile Not Found"),
-                                  QString(tr("Could not find the keyfile: %1")).arg(tmp_keyfile));
+                                  QString(tr("Could not find the keyfile: %1")).arg(tmp_keyfile.constData()));
             return;
         }
 
@@ -147,8 +147,8 @@ void NewPasswordDialog::accept()
         }
     }
 
-    password = tmp_password;
-    keyfile = tmp_keyfile.toUtf8();
+    m_creds.Password = tmp_password.constData();
+    m_creds.Keyfile = tmp_keyfile.constData();
     m_settings->SetValue(SETTING_LAST_CB_INDEX, ui->comboBox->currentIndex());
     m_settings->CommitChanges();
     QDialog::accept();

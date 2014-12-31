@@ -17,7 +17,7 @@ limitations under the License.*/
 
 #include <QWidget>
 #include <QProgressDialog>
-#include "gutil_smartpointer.h"
+#include <gutil/smartpointer.h>
 
 namespace Ui {
 class CryptoTransformsWindow;

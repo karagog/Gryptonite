@@ -15,8 +15,8 @@ limitations under the License.*/
 #ifndef GRYPTO_GLOBALS_H
 #define GRYPTO_GLOBALS_H
 
-#include "gutil_id.h"
-#include "gutil_exception.h"
+#include <gutil/id.h>
+#include <gutil/exception.h>
 #include <QMetaType>
 
 

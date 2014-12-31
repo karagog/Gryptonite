@@ -46,6 +46,8 @@ GetPasswordDialog::GetPasswordDialog(
     }
     else
         _combobox_indexchanged(ui->comboBox->currentIndex());
+
+    ui->le_password->setFocus();
 }
 
 GetPasswordDialog::~GetPasswordDialog()

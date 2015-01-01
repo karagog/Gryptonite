@@ -14,6 +14,7 @@ limitations under the License.*/
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "preferences_edit.h"
 #include "grypto_globals.h"
 #include "grypto_newpassworddialog.h"
 #include "grypto_getpassworddialog.h"
@@ -106,6 +107,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
     connect(ui->actionCleanup_Files, SIGNAL(triggered()), this, SLOT(_cleanup_files()));
     connect(ui->action_cryptoTransform, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
+    connect(ui->action_Preferences, SIGNAL(triggered()), this, SLOT(_show_preferences()));
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
 
     //connect(&m_undostack, SIGNAL(indexChanged(int)), this, SLOT(_update_undo_text()));
@@ -836,4 +838,13 @@ void MainWindow::_progress_updated(int progress, const QString &task_name)
 
     if(progress == 100)
         ui->statusbar->showMessage(QString(tr("Finished %1")).arg(task_name), STATUSBAR_MSG_TIMEOUT);
+}
+
+void MainWindow::_show_preferences()
+{
+    PreferencesEdit dlg(m_settings, this);
+    if(QDialog::Accepted == dlg.exec()){
+        // Update ourselves to reflect the new settings...
+
+    }
 }

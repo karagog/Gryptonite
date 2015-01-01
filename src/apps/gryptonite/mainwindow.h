@@ -123,6 +123,8 @@ private slots:
     void _entry_row_activated(int);
     void _progress_updated(int, const QString &);
 
+    void _show_preferences();
+
 
 private:
     Ui::MainWindow *ui;

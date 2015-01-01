@@ -26,14 +26,18 @@ HEADERS += \
     mainwindow.h \
     lockout.h \
     application.h \
-    about.h
+    about.h \
+    preferences_edit.h \
+    settings.h
 
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
     lockout.cpp \
     application.cpp \
-    about.cpp
+    about.cpp \
+    preferences_edit.cpp
 
 FORMS += \
-    mainwindow.ui
+    mainwindow.ui \
+    preferences_edit.ui

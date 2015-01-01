@@ -15,6 +15,7 @@ limitations under the License.*/
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "preferences_edit.h"
+#include "settings.h"
 #include "grypto_globals.h"
 #include "grypto_newpassworddialog.h"
 #include "grypto_getpassworddialog.h"
@@ -128,9 +129,12 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
 
     // Set up the recent files list and open the most recent
     _update_recent_files();
-    QList<QAction *> al = ui->menu_Recent_Files->actions();
-    if(al.length() > 0 && QFile::exists(al[0]->data().toString()))
-        al[0]->trigger();
+
+    if(m_settings->Value(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE).toBool()){
+        QList<QAction *> al = ui->menu_Recent_Files->actions();
+        if(al.length() > 0 && QFile::exists(al[0]->data().toString()))
+            al[0]->trigger();
+    }
 }
 
 MainWindow::~MainWindow()
@@ -356,7 +360,9 @@ void MainWindow::_new_open_database(const QString &path)
     fm->setSourceModel(dbm);
     ui->treeView->setModel(fm);
     _update_ui_file_opened(true);
-    m_lockoutTimer.StartLockoutTimer(30);
+
+    if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT))
+        m_lockoutTimer.StartLockoutTimer(m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt());
 
     ui->view_entry->SetDatabaseModel(dbm);
 
@@ -802,7 +808,8 @@ void MainWindow::_reset_lockout_timer(QEvent *e)
     case QEvent::KeyPress:
     case QEvent::MouseButtonPress:
     case QEvent::Wheel:
-        m_lockoutTimer.ResetLockoutTimer(30);
+        if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT))
+            m_lockoutTimer.ResetLockoutTimer(m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt());
 
         // For better debugging of this event, let's hear a beep whenever we reset the timer
         //QApplication::beep();

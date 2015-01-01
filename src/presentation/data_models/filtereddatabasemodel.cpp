@@ -69,28 +69,22 @@ bool FilteredDatabaseModel::_update_index(const QModelIndex &src_ind, const QReg
     if(sourceModel()->canFetchMore(src_ind))
         sourceModel()->fetchMore(src_ind);
 
-    int rc = sourceModel()->rowCount(src_ind);
-    for(int i = 0; i < rc; ++i)
-    {
-        show_anyway |= _update_index(sourceModel()->index(i, 0, src_ind), rx, fi);
-    }
-
     // Figure out if this row matches
+    Entry const *e = m->GetEntryFromIndex(src_ind);
     if(src_ind.isValid())
     {
-        Entry const &e = *m->GetEntryFromIndex(src_ind);
         bool matches_time = true;
 
         // If it's outside the given date range then it doesn't match
         if(fi.StartTime.isValid() || fi.EndTime.isValid())
         {
             if(fi.StartTime.isValid() && fi.EndTime.isValid())
-                matches_time = fi.StartTime <= e.GetModifyDate() &&
-                        e.GetModifyDate() <= fi.EndTime;
+                matches_time = fi.StartTime <= e->GetModifyDate() &&
+                        e->GetModifyDate() <= fi.EndTime;
             else if(fi.StartTime.isValid())
-                matches_time = fi.StartTime <= e.GetModifyDate();
+                matches_time = fi.StartTime <= e->GetModifyDate();
             else
-                matches_time = e.GetModifyDate() <= fi.EndTime;
+                matches_time = e->GetModifyDate() <= fi.EndTime;
         }
 
         if(matches_time)
@@ -100,20 +94,41 @@ bool FilteredDatabaseModel::_update_index(const QModelIndex &src_ind, const QReg
             else
             {
                 row_matches =
-                        -1 != e.GetName().indexOf(rx) ||
-                        -1 != e.GetDescription().indexOf(rx);
+                        -1 != e->GetName().indexOf(rx) ||
+                        -1 != e->GetDescription().indexOf(rx);
 
-                for(int i = 0; !row_matches && i < e.Values().count(); ++i)
+                for(int i = 0; !row_matches && i < e->Values().count(); ++i)
                 {
-                    row_matches = -1 != e.Values()[i].GetNotes().indexOf(rx);
+                    row_matches = -1 != e->Values()[i].GetNotes().indexOf(rx);
                 }
             }
         }
 
-        m_index.insert(e.GetId(), filtered_state_t(show_anyway, row_matches));
+        // Show a row if any of its ancestors matches
+        if(!row_matches && !show_anyway && !e->GetParentId().IsNull())
+        {
+            QModelIndex par = src_ind.parent();
+            while(!show_anyway && par.isValid()){
+                if(m_index[m->GetEntryFromIndex(par)->GetId()].row_matches)
+                    show_anyway = true;
+                par = par.parent();
+            }
+        }
+
+        m_index.insert(e->GetId(), filtered_state_t(show_anyway, row_matches));
     }
 
-    return row_matches || show_anyway;
+    // After updating the index with this node, descend to the child nodes
+    bool show_afterwards = false;
+    for(int i = 0; i < sourceModel()->rowCount(src_ind); ++i){
+        if(_update_index(sourceModel()->index(i, 0, src_ind), rx, fi))
+            show_afterwards = true;
+    }
+
+    if(src_ind.isValid() && !show_anyway && show_afterwards)
+        m_index[e->GetId()].show_anyway = true;
+
+    return show_anyway || show_afterwards || row_matches;
 }
 
 bool FilteredDatabaseModel::filterAcceptsRow(int src_row, const QModelIndex &src_par) const
@@ -125,7 +140,7 @@ bool FilteredDatabaseModel::filterAcceptsRow(int src_row, const QModelIndex &src
                 GetEntryFromIndex(sourceModel()->index(src_row, 0, src_par));
 
         if(m_index.contains(e->GetId())){
-            filtered_state_t fs = m_index[e->GetId()];
+            const filtered_state_t &fs = m_index[e->GetId()];
             ret = fs.show_anyway | fs.row_matches;
         }
     }

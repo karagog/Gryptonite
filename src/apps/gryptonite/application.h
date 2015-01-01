@@ -38,6 +38,7 @@ protected:
 
     virtual void about_to_quit();
     virtual void handle_exception(std::exception &);
+    virtual void show_about(QWidget *);
 
 };
 

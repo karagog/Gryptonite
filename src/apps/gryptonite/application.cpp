@@ -13,7 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "application.h"
-#include "grypto_globals.h"
+#include "about.h"
+#include <grypto_globals.h>
 #include <gutil/messageboxlogger.h>
 #include <gutil/cryptopp_rng.h>
 #include <gutil/globallogger.h>
@@ -71,4 +72,9 @@ void Application::handle_exception(std::exception &ex)
     else{
         GUtil::Qt::Application::handle_exception(ex);
     }
+}
+
+void Application::show_about(QWidget *)
+{
+    ::About().ShowAbout();
 }

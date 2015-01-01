@@ -26,6 +26,7 @@ limitations under the License.*/
 #include "../../legacy/legacyutils.h"
 #include <gutil/qt_settings.h>
 #include <gutil/widget.h>
+#include <gutil/application.h>
 #include <QFileDialog>
 #include <QPushButton>
 #include <QMessageBox>
@@ -105,6 +106,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
     connect(ui->actionCleanup_Files, SIGNAL(triggered()), this, SLOT(_cleanup_files()));
     connect(ui->action_cryptoTransform, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
+    connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
 
     //connect(&m_undostack, SIGNAL(indexChanged(int)), this, SLOT(_update_undo_text()));
     connect(&m_navStack, SIGNAL(indexChanged(int)), this, SLOT(_nav_index_changed(int)));

@@ -32,7 +32,6 @@ RESOURCES += grypto_ui.qrc
 include(controls/controls.pri)
 include(custom/custom.pri)
 include(data_models/data_models.pri)
-include(data_objects/data_objects.pri)
 include(forms/forms.pri)
 include(ui/ui.pri)
 include(utils/utils.pri)

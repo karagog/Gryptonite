@@ -25,13 +25,15 @@ LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
 HEADERS += \
     mainwindow.h \
     lockout.h \
-    application.h
+    application.h \
+    about.h
 
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
     lockout.cpp \
-    application.cpp
+    application.cpp \
+    about.cpp
 
 FORMS += \
     mainwindow.ui

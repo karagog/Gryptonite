@@ -12,23 +12,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#include "ui_About_Window.h"
+#include <gutil/about.h>
 
-class QCloseEvent;
-class QApplication;
-class QResizeEvent;
 
-class about_window : public QWidget
+class About : public GUtil::Qt::About
 {
     Q_OBJECT
 public:
-    about_window(QApplication *, QWidget *p = 0);
-    ~about_window();
-
-protected:
-    void closeEvent(QCloseEvent *);
-    void showEvent(QShowEvent *);
-
-private:
-    Ui::aboutWindow widget;
+    About(QWidget *p = 0);
 };

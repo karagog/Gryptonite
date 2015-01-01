@@ -144,9 +144,16 @@
     <addaction name="separator"/>
     <addaction name="actionCleanup_Files"/>
    </widget>
+   <widget class="QMenu" name="menu_Help">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="action_About"/>
+   </widget>
    <addaction name="menu_File"/>
    <addaction name="menuEntry"/>
    <addaction name="menu_Tools"/>
+   <addaction name="menu_Help"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dw_treeView">
@@ -316,6 +323,11 @@
   <action name="action_import_ps">
    <property name="text">
     <string>&amp;Portable Safe</string>
+   </property>
+  </action>
+  <action name="action_About">
+   <property name="text">
+    <string>&amp;About</string>
    </property>
   </action>
  </widget>

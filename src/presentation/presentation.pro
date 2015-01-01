@@ -20,7 +20,7 @@ else {
 }
 
 
-INCLUDEPATH += $$TOP_DIR/include $$TOP_DIR/gutil/include
+INCLUDEPATH += $$TOP_DIR/gutil/include $$TOP_DIR/include
 LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
     -lgrypto_core \
     -lGUtilQt \

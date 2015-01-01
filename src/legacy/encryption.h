@@ -30,7 +30,7 @@ namespace V1{
 class Encryption
 {
 public:
-    static QString DecryptString(const char *instr, const char *passPhrase);
+    static std::string DecryptString(const std::string &instr, const char *passPhrase);
 };
 
 }

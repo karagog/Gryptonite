@@ -13,7 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include <string>
-#include <QString>
 #include "encryption.h"
 #include <cryptopp/default.h>
 #include <cryptopp/hex.h>
@@ -26,15 +25,15 @@ namespace Grypt{ namespace Legacy{
 
 namespace V1{
 
-QString Encryption::DecryptString(const char *instr, const char *passPhrase)
+string Encryption::DecryptString(const string &instr, const char *passPhrase)
 {
-    std::string outstr;
+    string outstr;
 
     CryptoPP::HexDecoder decryptor(new CryptoPP::DefaultDecryptorWithMAC(passPhrase, new CryptoPP::StringSink(outstr)));
-    decryptor.Put((byte *)instr, strlen(instr));
+    decryptor.Put((byte *)instr.data(), instr.length());
     decryptor.MessageEnd();
 
-    return QString::fromStdString(outstr);
+    return outstr;
 }
 
 }

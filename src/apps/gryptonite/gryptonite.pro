@@ -10,7 +10,7 @@ QMAKE_CXXFLAGS += -std=c++0x
 
 DEFINES += GUTIL_CORE_QT_ADAPTERS
 
-INCLUDEPATH += $$TOP_DIR/include $$TOP_DIR/gutil/include
+INCLUDEPATH += $$TOP_DIR/gutil/include $$TOP_DIR/include
 
 LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
     -lgrypto_legacy \

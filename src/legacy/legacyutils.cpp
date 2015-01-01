@@ -115,7 +115,7 @@ void LegacyUtils::UpdateFileToCurrentVersion(
         throw Exception<>("Refusing to update if source and dest are the same");
 
     // First make sure we can parse the input file
-    QString xml;
+    std::string xml;
     std::string file_data;
     QFile f(file_path);
     f.open(QFile::ReadOnly);
@@ -127,32 +127,37 @@ void LegacyUtils::UpdateFileToCurrentVersion(
     }
 
     try{
-    switch(file_version)
-    {
-    case Version1:
-        // In version 1 the whole file is encrypted, with no version identifier
-        file_data = f.readAll().toStdString();
-        file_data.append((char)0);  // Make sure it's null-terminated
-        xml = V1::Encryption::DecryptString(file_data.data(), old_creds.Password);
-        break;
-    case Version2:
-        file_data = f.readAll().toStdString();
-        xml = QString::fromStdString(V2::Encryption::DecryptString(file_data, old_creds.Password));
-        break;
-    case Version3:
-    {
-        // In version 3 we also need to know the length of the payload
-        uint len = __read_four_chars_into_int(&f);
-        file_data = f.read(len).toStdString();
-        if(file_data.length() != len)
-            throw Exception<>("Error while reading file");
-        xml = QString::fromStdString(V3::Encryption::DecryptString(file_data, old_creds.Password));
-    }
-        break;
-    default:
-        GASSERT(false);
-        break;
-    }
+        QByteArray ba;
+
+        switch(file_version)
+        {
+        case Version1:
+            // In version 1 the whole file is encrypted, with no version identifier
+            ba = f.readAll();
+            file_data = string(ba.constData(), ba.length());
+            file_data.append((char)0);  // Make sure it's null-terminated
+            xml = V1::Encryption::DecryptString(file_data.data(), old_creds.Password);
+            break;
+        case Version2:
+            ba = f.readAll();
+            file_data = string(ba.constData(), ba.length());
+            xml = V2::Encryption::DecryptString(file_data, old_creds.Password);
+            break;
+        case Version3:
+        {
+            // In version 3 we also need to know the length of the payload
+            uint len = __read_four_chars_into_int(&f);
+            ba = f.read(len);
+            file_data = string(ba.constData(), ba.length());
+            if(file_data.length() != len)
+                throw Exception<>("Error while reading file");
+            xml = V3::Encryption::DecryptString(file_data, old_creds.Password);
+        }
+            break;
+        default:
+            GASSERT(false);
+            break;
+        }
     }
     catch(const ::CryptoPP::Exception &ex){
         throw Exception<>(ex.what());
@@ -160,7 +165,7 @@ void LegacyUtils::UpdateFileToCurrentVersion(
 
     // Parse the XML using the legacy object
     V3::Password_File pf;
-    pf.readXML(xml, file_version < 3);
+    pf.readXML(QByteArray(xml.data(), xml.length()), file_version < 3);
 
     // Create the return database
     PasswordDatabase pdb(new_path, new_creds);

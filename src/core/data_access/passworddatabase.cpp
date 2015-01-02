@@ -46,7 +46,7 @@ using namespace std;
 #define SALT_LENGTH 32
 
 // The length of the nonce used by the cryptor
-#define NONCE_LENGTH 8
+#define NONCE_LENGTH 10
 
 namespace Grypt{
 class bg_worker_command;
@@ -221,28 +221,10 @@ static void __delete_file_by_id(const QString &conn_str, const FileId &id)
     DatabaseUtils::ExecuteQuery(q);
 }
 
-static void __int_to_nonce(GINT64 i, byte n[NONCE_LENGTH])
+// Generates a random nonce
+static void __get_nonce(byte nonce[NONCE_LENGTH])
 {
-    GASSERT(NONCE_LENGTH == sizeof(i));
-    for(int j = NONCE_LENGTH - 1; j >= 0; --j){
-        n[j] = i & 0x0FF;
-        i = i >> 8;
-    }
-}
-
-// Returns the current nonce and increments it in the database
-//  This should be used inside a transaction
-static void __get_nonce(const QString &conn_str, byte nonce[NONCE_LENGTH])
-{
-    QSqlQuery q("SELECT Nonce FROM Version", QSqlDatabase::database(conn_str));
-    if(q.next()){
-        GINT64 n = q.record().value(0).toLongLong();
-        __int_to_nonce(n++, nonce);
-
-        q.prepare("UPDATE Version SET Nonce=?");
-        q.addBindValue(n);
-        DatabaseUtils::ExecuteQuery(q);
-    }
+    GlobalRNG()->Fill(nonce, NONCE_LENGTH);
 }
 
 
@@ -515,7 +497,7 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
             // Prepare the keycheck data
             QByteArray keycheck_ct;
             byte nonce[NONCE_LENGTH];
-            __int_to_nonce(GINT64_MIN, nonce);
+            __get_nonce(nonce);
             {
                 ByteArrayInput auth_in(__keycheck_string, sizeof(__keycheck_string));
                 QByteArrayOutput ba_out(keycheck_ct);
@@ -523,10 +505,9 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
             }
 
             // Insert a version record
-            q.prepare("INSERT INTO Version (Version,Nonce,Salt,KeyCheck)"
-                        " VALUES (?,?,?,?)");
+            q.prepare("INSERT INTO Version (Version,Salt,KeyCheck)"
+                        " VALUES (?,?,?)");
             q.addBindValue(GRYPTO_VERSION_STRING);
-            q.addBindValue(GINT64_MIN + 1);  // The first nonce was already used in the keycheck
             q.addBindValue(QByteArray((const char *)salt, sizeof(salt)));
             q.addBindValue(keycheck_ct);
             DatabaseUtils::ExecuteQuery(q);
@@ -637,7 +618,7 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
         {
             // Get a fresh nonce
             byte nonce[NONCE_LENGTH];
-            __get_nonce(conn_str, nonce);
+            __get_nonce(nonce);
 
             QByteArrayInput i(XmlConverter::ToXmlString(e));
             QByteArrayOutput o(crypttext);
@@ -698,7 +679,7 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, GUtil::CryptoPP
         {
             // Get a fresh nonce
             byte nonce[NONCE_LENGTH];
-            __get_nonce(conn_str, nonce);
+            __get_nonce(nonce);
 
             QByteArrayOutput o(er.crypttext);
             QByteArrayInput i(XmlConverter::ToXmlString(e));
@@ -1522,14 +1503,7 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
 
         // Get a fresh nonce
         byte nonce[NONCE_LENGTH];
-        db.transaction();
-        try{
-            __get_nonce(conn_str, nonce);
-        } catch(...) {
-            db.rollback();
-            throw;
-        }
-        db.commit();
+        __get_nonce(nonce);
 
         m_progressMin = 0, m_progressMax = 75;
         m_curTaskString = QString("Download and encrypt: %1").arg(filename);

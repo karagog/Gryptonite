@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS Version (
     Version     TEXT NOT NULL,
     Salt        BLOB NOT NULL,
     KeyCheck    BLOB NOT NULL,
-    Nonce       INTEGER NOT NULL,
     Lock        BLOB
 );
 

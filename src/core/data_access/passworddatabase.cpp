@@ -499,7 +499,7 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
             byte nonce[NONCE_LENGTH];
             __get_nonce(nonce);
             {
-                ByteArrayInput auth_in(__keycheck_string, sizeof(__keycheck_string));
+                ByteArrayInput auth_in(__keycheck_string, strlen(__keycheck_string));
                 QByteArrayOutput ba_out(keycheck_ct);
                 d->cryptor->EncryptData(&ba_out, NULL, &auth_in, nonce);
             }
@@ -527,7 +527,7 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
             }
 
             QByteArrayInput bai_ct(q.record().value("KeyCheck").toByteArray());
-            ByteArrayInput auth_in(__keycheck_string, sizeof(__keycheck_string));
+            ByteArrayInput auth_in(__keycheck_string, strlen(__keycheck_string));
 
             // This will throw an exception if the key was bad
             d->cryptor->DecryptData(NULL, &bai_ct, &auth_in);

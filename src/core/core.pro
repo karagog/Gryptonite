@@ -21,11 +21,13 @@ DEFINES += GUTIL_CORE_QT_ADAPTERS
 
 INCLUDEPATH += $$TOP_DIR/gutil/include $$TOP_DIR/include
 
+win32{
 LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
     -lGUtilQt \
     -lGUtilCryptoPP \
     -lGUtil \
     -lcryptopp
+}
 
 SOURCES +=
 

@@ -22,11 +22,13 @@ DEFINES += GUTIL_CORE_QT_ADAPTERS
 
 INCLUDEPATH += $$TOP_DIR/include $$TOP_DIR/gutil/include
 
+win32{
 LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
     -lcryptopp \
     -lGUtilCryptoPP \
     -lGUtil \
     -lgrypto_core
+}
 
 SOURCES += \
     password_file.cpp \

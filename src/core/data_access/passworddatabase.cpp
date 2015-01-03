@@ -646,16 +646,19 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
             d->wc_index.notify_all();
         }
 
-        q.prepare(QString("INSERT INTO Entry (ID,%1Row,Favorite,FileID,Data)"
-                  " VALUES (?,%2?,?,?,?)")
-                  .arg(pid_isnull ? "" : "ParentID,")
-                  .arg(pid_isnull ? "" : "?,"));
+        q.prepare("INSERT INTO Entry (ID,ParentID,Row,Favorite,FileID,Data)"
+                  " VALUES (?,?,?,?,?,?)");
         q.addBindValue((QByteArray)e.GetId());
-        if(!pid_isnull)
+        if(e.GetParentId().IsNull())
+            q.addBindValue(QByteArray());
+        else
             q.addBindValue((QByteArray)e.GetParentId());
         q.addBindValue(row);
         q.addBindValue(e.GetFavoriteIndex());
-        q.addBindValue((QByteArray)e.GetFileId());
+        if(e.GetFileId().IsNull())
+            q.addBindValue(QByteArray());
+        else
+            q.addBindValue((QByteArray)e.GetFileId());
         q.addBindValue(crypttext);
         DatabaseUtils::ExecuteQuery(q);
 
@@ -710,7 +713,10 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, GUtil::CryptoPP
         q.prepare("UPDATE Entry SET Data=?,Favorite=?,FileID=? WHERE Id=?");
         q.addBindValue(er.crypttext);
         q.addBindValue(er.favoriteindex);
-        q.addBindValue((QByteArray)e.GetFileId());
+        if(e.GetFileId().IsNull())
+            q.addBindValue(QByteArray());
+        else
+            q.addBindValue((QByteArray)e.GetFileId());
         q.addBindValue((QByteArray)e.GetId());
         DatabaseUtils::ExecuteQuery(q);
     } catch(...) {

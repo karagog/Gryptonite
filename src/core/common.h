@@ -1,4 +1,4 @@
-/*Copyright 2010 George Karagoulis
+/*Copyright 2010-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#ifndef GRYPTO_GLOBALS_H
-#define GRYPTO_GLOBALS_H
+#ifndef GRYPTO_COMMON_H
+#define GRYPTO_COMMON_H
 
 #include <gutil/id.h>
 #include <gutil/exception.h>

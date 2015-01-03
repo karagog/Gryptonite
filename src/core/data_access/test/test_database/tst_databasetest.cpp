@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,9 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#include "grypto_passworddatabase.h"
-#include "grypto_xmlconverter.h"
-#include "gutil_databaseutils.h"
+#include <grypto_passworddatabase.h>
+#include <grypto_xmlconverter.h>
+#include <grypto_entry.h>
+#include <gutil/databaseutils.h>
 #include <QString>
 #include <QtTest>
 using namespace std;
@@ -23,6 +24,8 @@ USING_NAMESPACE_GRYPTO;
 
 #define TEST_FILEPATH  "testdb.sqlite"
 #define TEST_PASSWORD "password...shhh"
+
+Grypt::Credentials creds;
 
 class DatabaseTest : public QObject
 {
@@ -44,7 +47,9 @@ private Q_SLOTS:
 
 DatabaseTest::DatabaseTest()
     :db(0)
-{}
+{
+    creds.Password = TEST_PASSWORD;
+}
 
 void DatabaseTest::initTestCase()
 {
@@ -54,7 +59,7 @@ void DatabaseTest::initTestCase()
     bool no_exception = true;
     try
     {
-        db = new PasswordDatabase(TEST_FILEPATH, TEST_PASSWORD);
+        db = new PasswordDatabase(TEST_FILEPATH, creds);
     }
     catch(...)
     {
@@ -67,9 +72,11 @@ void DatabaseTest::test_create()
 {
     // Try opening the database with the wrong key
     bool exception_hit = false;
+    Credentials bad_creds;
+    bad_creds.Password = "wrong password";
     try
     {
-        PasswordDatabase newdb(TEST_FILEPATH, "wrong password");
+        PasswordDatabase newdb(TEST_FILEPATH, bad_creds);
     }
     catch(const AuthenticationException<> &ex)
     {
@@ -78,7 +85,7 @@ void DatabaseTest::test_create()
     QVERIFY(exception_hit);
 
     // Try opening the database with the right key (No exception)
-    PasswordDatabase newdb(TEST_FILEPATH, TEST_PASSWORD);
+    PasswordDatabase newdb(TEST_FILEPATH, creds);
 }
 
 bool __compare_entries(const Entry &lhs, const Entry &rhs)

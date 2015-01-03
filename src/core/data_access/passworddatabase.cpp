@@ -14,6 +14,7 @@ limitations under the License.*/
 
 #include "passworddatabase.h"
 #include "xmlconverter.h"
+#include <grypto_entry.h>
 #include <gutil/cryptopp_rng.h>
 #include <gutil/gpsutils.h>
 #include <gutil/databaseutils.h>

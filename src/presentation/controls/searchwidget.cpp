@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "searchwidget.h"
 #include "ui_searchwidget.h"
-#include "grypto_globals.h"
+#include "grypto_common.h"
 
 NAMESPACE_GRYPTO;
 

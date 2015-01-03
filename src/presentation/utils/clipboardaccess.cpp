@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "clipboardaccess.h"
-#include "grypto_globals.h"
+#include "grypto_common.h"
 #include <QClipboard>
 #include <QApplication>
 #include <QTimerEvent>

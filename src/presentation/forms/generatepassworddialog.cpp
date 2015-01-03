@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "generatepassworddialog.h"
 #include "ui_generatepassworddialog.h"
-#include "grypto_globals.h"
+#include "grypto_common.h"
 #include <gutil/cryptopp_rng.h>
 #include <cmath>
 USING_NAMESPACE_GUTIL;

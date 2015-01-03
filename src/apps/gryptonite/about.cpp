@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "about.h"
-#include <grypto_globals.h>
+#include <grypto_common.h>
 
 
 About::About(QWidget *p)

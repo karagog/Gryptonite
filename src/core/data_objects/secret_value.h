@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef GRYPTO_SECRETVALUE_H
 #define	GRYPTO_SECRETVALUE_H
 
-#include "grypto_globals.h"
+#include "grypto_common.h"
 #include <QVariant>
 
 NAMESPACE_GRYPTO;

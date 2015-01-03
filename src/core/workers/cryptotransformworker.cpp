@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "cryptotransformworker.h"
-#include "grypto_globals.h"
+#include "grypto_common.h"
 #include <gutil/file.h>
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);

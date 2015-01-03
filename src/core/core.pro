@@ -31,7 +31,8 @@ LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
 
 SOURCES +=
 
-HEADERS += globals.h
+HEADERS += \
+    common.h
 
 include(data_access/data_access.pri)
 include(data_objects/data_objects.pri)

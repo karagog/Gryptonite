@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef FILEENTRYMODEL_H
 #define FILEENTRYMODEL_H
 
-#include "grypto_globals.h"
+#include "grypto_common.h"
 #include "grypto_entry.h"
 #include <QAbstractTableModel>
 

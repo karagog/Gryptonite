@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "ui_entry_popup.h"
-#include "grypto_globals.h"
+#include "grypto_common.h"
 #include "entry_popup.h"
 #include "grypto_entrymodel.h"
 #include <QCloseEvent>

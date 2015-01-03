@@ -15,6 +15,7 @@ limitations under the License.*/
 #include "legacyutils.h"
 #include "encryption.h"
 #include "password_file.h"
+#include <grypto_entry.h>
 #include <cryptopp/cryptlib.h>
 #include <QFile>
 USING_NAMESPACE_GUTIL;

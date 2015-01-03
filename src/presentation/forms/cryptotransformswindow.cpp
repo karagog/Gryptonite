@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "cryptotransformswindow.h"
 #include "ui_cryptotransformswindow.h"
-#include "grypto_globals.h"
+#include "grypto_common.h"
 #include "newpassworddialog.h"
 #include "getpassworddialog.h"
 #include <gutil/sourcesandsinks.h>

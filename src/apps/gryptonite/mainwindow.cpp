@@ -16,7 +16,7 @@ limitations under the License.*/
 #include "ui_mainwindow.h"
 #include "preferences_edit.h"
 #include "settings.h"
-#include "grypto_globals.h"
+#include "grypto_common.h"
 #include "grypto_newpassworddialog.h"
 #include "grypto_getpassworddialog.h"
 #include "grypto_databasemodel.h"

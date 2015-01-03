@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef GRYPTO_DATABASEMODEL_H
 #define GRYPTO_DATABASEMODEL_H
 
-#include "grypto_globals.h"
+#include "grypto_common.h"
 #include <gutil/undostack.h>
 #include <gutil/cryptopp_cryptor.h>
 #include <memory>

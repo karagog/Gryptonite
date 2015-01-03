@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "application.h"
 #include "about.h"
-#include <grypto_globals.h>
+#include <grypto_common.h>
 #include <gutil/messageboxlogger.h>
 #include <gutil/cryptopp_rng.h>
 #include <gutil/globallogger.h>

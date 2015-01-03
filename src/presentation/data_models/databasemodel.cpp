@@ -14,6 +14,7 @@ limitations under the License.*/
 
 #include "databasemodel.h"
 #include "grypto_passworddatabase.h"
+#include <grypto_entry.h>
 #include <QFont>
 #include <QSet>
 #include <QMimeData>

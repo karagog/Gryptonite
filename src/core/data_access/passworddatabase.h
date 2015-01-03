@@ -18,15 +18,16 @@ limitations under the License.*/
 #include <gutil/exception.h>
 #include <gutil/smartpointer.h>
 #include <gutil/iprogresshandler.h>
-#include <gutil/cryptopp_cryptor.h>
-#include "grypto_entry.h"
+#include <grypto_common.h>
 #include <QString>
+#include <QObject>
 #include <memory>
 
 class QSqlRecord;
 class QSqlQuery;
 
 namespace Grypt{
+class Entry;
 
 
 /** Manages access to the password file.

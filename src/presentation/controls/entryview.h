@@ -56,6 +56,7 @@ protected:
 private slots:
 
     void _export_file();
+    void _index_doubleClicked(const QModelIndex &);
 
 
 private:

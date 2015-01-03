@@ -123,8 +123,25 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>tableView</sender>
+   <signal>doubleClicked(QModelIndex)</signal>
+   <receiver>EntryView</receiver>
+   <slot>_index_doubleClicked(QModelIndex)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>203</x>
+     <y>198</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>169</x>
+     <y>89</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>_export_file()</slot>
+  <slot>_index_doubleClicked(QModelIndex)</slot>
  </slots>
 </ui>

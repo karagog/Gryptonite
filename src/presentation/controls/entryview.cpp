@@ -91,6 +91,15 @@ bool EntryView::eventFilter(QObject *, QEvent *ev)
     return ret;
 }
 
+void EntryView::_index_doubleClicked(const QModelIndex &ind)
+{
+    if(ind.isValid()){
+        int row = ind.row();
+        GASSERT(0 <= row);
+        emit RowActivated(row);
+    }
+}
+
 void EntryView::_export_file()
 {
     GASSERT(NULL != m_dbModel);

@@ -32,13 +32,15 @@ ClipboardAccess::ClipboardAccess(QObject *parent)
 
 void ClipboardAccess::SetText(const QString &txt, int timeout_ms)
 {
-    qApp->clipboard()->setText(txt);
-    if(timeout_ms > 0)
-    {
-        m_counter = timeout_ms;
+    if(m_timerId != -1){
+        killTimer(m_timerId);
+        m_timerId = -1;
+    }
 
-        if(m_timerId == -1)
-            m_timerId = startTimer(TIMER_RESOLUTION);
+    qApp->clipboard()->setText(txt);
+    if(0 < timeout_ms){
+        m_counter = timeout_ms;
+        m_timerId = startTimer(TIMER_RESOLUTION);
     }
 }
 

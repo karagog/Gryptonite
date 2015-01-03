@@ -48,7 +48,6 @@ USING_NAMESPACE_GRYPTO1(Legacy);
 using namespace std;
 
 #define STATUSBAR_MSG_TIMEOUT 5000
-#define CLIPBOARD_TIMEOUT 30000
 #define RECENT_FILE_LIMIT 5
 
 #define SETTING_RECENT_FILES "recent_files"
@@ -108,8 +107,10 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
     connect(ui->actionCleanup_Files, SIGNAL(triggered()), this, SLOT(_cleanup_files()));
     connect(ui->action_cryptoTransform, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
-    connect(ui->action_Preferences, SIGNAL(triggered()), this, SLOT(_show_preferences()));
+    connect(ui->action_Preferences, SIGNAL(triggered()), this, SLOT(_edit_preferences()));
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
+
+    connect(ui->view_entry, SIGNAL(RowActivated(int)), this, SLOT(_entry_row_activated(int)));
 
     //connect(&m_undostack, SIGNAL(indexChanged(int)), this, SLOT(_update_undo_text()));
     connect(&m_navStack, SIGNAL(indexChanged(int)), this, SLOT(_nav_index_changed(int)));
@@ -611,9 +612,12 @@ void MainWindow::_treeview_doubleclicked(const QModelIndex &ind)
 
 void MainWindow::_entry_row_activated(int r)
 {
-    if(0 < r){
+    if(0 <= r){
         const SecretValue &v = ui->view_entry->GetEntry().Values()[r];
-        m_clipboard.SetText(v.GetValue(), v.GetIsHidden() ? CLIPBOARD_TIMEOUT : 0);
+        m_clipboard.SetText(v.GetValue(),
+                            v.GetIsHidden() ?
+                                m_settings->Value(GRYPTONITE_SETTING_CLIPBOARD_TIMEOUT).toInt() * 1000 :
+                                0);
         ui->statusbar->showMessage(QString("Copied %1 to clipboard").arg(v.GetName()),
                                    STATUSBAR_MSG_TIMEOUT);
     }
@@ -847,11 +851,10 @@ void MainWindow::_progress_updated(int progress, const QString &task_name)
         ui->statusbar->showMessage(QString(tr("Finished %1")).arg(task_name), STATUSBAR_MSG_TIMEOUT);
 }
 
-void MainWindow::_show_preferences()
+void MainWindow::_edit_preferences()
 {
     PreferencesEdit dlg(m_settings, this);
     if(QDialog::Accepted == dlg.exec()){
         // Update ourselves to reflect the new settings...
-
     }
 }

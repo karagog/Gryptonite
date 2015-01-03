@@ -33,7 +33,7 @@ public:
     /** Exports the text to clipboard and optionally
      * clears it after a given timeout.
     */
-    void SetText(const QString &, int timeout_ms = 0);
+    void SetText(const QString &, int timeout_ms);
 
     /** Returns the current text in the clipboard */
     QString GetText() const;

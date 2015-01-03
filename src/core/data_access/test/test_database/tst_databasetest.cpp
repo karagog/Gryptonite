@@ -15,6 +15,7 @@ limitations under the License.*/
 #include <grypto_passworddatabase.h>
 #include <grypto_xmlconverter.h>
 #include <grypto_entry.h>
+#include <gutil/cryptopp_rng.h>
 #include <gutil/databaseutils.h>
 #include <QString>
 #include <QtTest>
@@ -24,6 +25,9 @@ USING_NAMESPACE_GRYPTO;
 
 #define TEST_FILEPATH  "testdb.sqlite"
 #define TEST_PASSWORD "password...shhh"
+
+static GUtil::CryptoPP::RNG __cryptopp_rng;
+static GUtil::RNG_Initializer __rng_init(&__cryptopp_rng);
 
 Grypt::Credentials creds;
 

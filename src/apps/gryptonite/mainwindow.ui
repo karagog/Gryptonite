@@ -178,9 +178,6 @@
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
       <widget class="GUtil::Qt::TreeView" name="treeView">
-       <property name="styleSheet">
-        <string notr="true">background-color: qlineargradient(spread:pad, x1:0.01, y1:0, x2:1, y2:1, stop:0 rgba(186, 186, 186, 255), stop:1 rgba(211, 211, 211, 255))</string>
-       </property>
        <property name="editTriggers">
         <set>QAbstractItemView::NoEditTriggers</set>
        </property>

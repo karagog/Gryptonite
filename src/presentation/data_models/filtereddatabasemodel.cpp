@@ -95,7 +95,8 @@ bool FilteredDatabaseModel::_update_index(const QModelIndex &src_ind, const QReg
             {
                 row_matches =
                         -1 != e->GetName().indexOf(rx) ||
-                        -1 != e->GetDescription().indexOf(rx);
+                        -1 != e->GetDescription().indexOf(rx) ||
+                        -1 != e->GetFileName().indexOf(rx);
 
                 for(int i = 0; !row_matches && i < e->Values().count(); ++i)
                 {

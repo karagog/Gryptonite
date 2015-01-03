@@ -19,6 +19,7 @@ limitations under the License.*/
 #include <QFile>
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);
+using namespace std;
 
 namespace Grypt{ namespace Legacy{
 
@@ -72,12 +73,18 @@ static int __read_four_chars_into_int(QFile *f)
 }
 
 
-void __add_children_to_database(V3::File_Entry *fe, PasswordDatabase &pdb, const EntryId &parent_id)
+void __add_children_to_database(V3::File_Entry *fe,
+                                PasswordDatabase &pdb,
+                                const EntryId &parent_id,
+                                int &entry_ctr,
+                                function<void(int)> progress_cb)
 {
     GASSERT(fe->getType() == V3::File_Entry::directory);
 
     for(uint i = 0; i < fe->getContents().size(); ++i)
     {
+        progress_cb(++entry_ctr);
+
         V3::File_Entry *cur = fe->getContents()[i];
         Entry e;
         e.SetParentId(parent_id);
@@ -99,9 +106,23 @@ void __add_children_to_database(V3::File_Entry *fe, PasswordDatabase &pdb, const
         }
         pdb.AddEntry(e, true);
 
+        // We want to show true progress, which means waiting
+        //  after each item until the background thread is done adding it
+        pdb.WaitForEntryThreadIdle();
+
         if(V3::File_Entry::directory == cur->getType())
-            __add_children_to_database(cur, pdb, e.GetId());
+            __add_children_to_database(cur, pdb, e.GetId(), entry_ctr, progress_cb);
     }
+}
+
+static int __count_legacy_entries(V3::File_Entry *fe)
+{
+    int ret = fe->getContents().size();
+    if(0 < ret){
+        for(V3::File_Entry *fec : fe->getContents())
+            ret += __count_legacy_entries(fec);
+    }
+    return ret;
 }
 
 void LegacyUtils::UpdateFileToCurrentVersion(
@@ -109,10 +130,14 @@ void LegacyUtils::UpdateFileToCurrentVersion(
         FileVersionEnum file_version,
         const char *new_path,
         const Credentials &old_creds,
-        const Credentials &new_creds)
+        const Credentials &new_creds,
+        function<void(int, const QString &)> progress_cb)
 {
     if(0 == strcmp(file_path, new_path))
         throw Exception<>("Refusing to update if source and dest are the same");
+
+    QString progress_msg = QObject::tr("Parsing legacy database...");
+    progress_cb(0, progress_msg);
 
     // First make sure we can parse the input file
     std::string xml;
@@ -125,6 +150,8 @@ void LegacyUtils::UpdateFileToCurrentVersion(
         char c;
         while(f.getChar(&c) && c != '|');
     }
+
+    progress_cb(3, progress_msg);
 
     try{
         QByteArray ba;
@@ -163,15 +190,33 @@ void LegacyUtils::UpdateFileToCurrentVersion(
         throw Exception<>(ex.what());
     }
 
+    progress_cb(7, progress_msg);
+
     // Parse the XML using the legacy object
     V3::Password_File pf;
     pf.readXML(QByteArray(xml.data(), xml.length()), file_version < 3);
+
+    // Count the number of items so we know how much progress we're making
+    int entry_cnt = __count_legacy_entries(pf.getContents());
+    int entry_ctr = 0;
+
+    progress_msg = QObject::tr("Populating new database...");
+    progress_cb(10, progress_msg);
 
     // Create the return database
     PasswordDatabase pdb(new_path, new_creds);
 
     // Iterate through the legacy object and populate the new object
-    __add_children_to_database(pf.getContents(), pdb, EntryId::Null());
+    __add_children_to_database(pf.getContents(), pdb, EntryId::Null(), entry_ctr,
+        [&](int entry_ctr){
+            progress_msg = QString(QObject::tr("Populating new database (entry %1 of %2)..."))
+                    .arg(entry_ctr)
+                    .arg(entry_cnt);
+            progress_cb(10 + 90.0 * ((float)entry_ctr / entry_cnt), progress_msg);
+    });
+
+    progress_msg = QObject::tr("Updated database");
+    progress_cb(100, progress_msg);
 }
 
 

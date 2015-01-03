@@ -63,6 +63,11 @@ public:
     */
     static void ValidateDatabase(const char *file_path);
 
+    /** This function allows you to synchronize with the background entry thread.
+     *  Call this to wait until the background thread is done working.
+    */
+    void WaitForEntryThreadIdle();
+
 
     /** \name Entry Access
         \{

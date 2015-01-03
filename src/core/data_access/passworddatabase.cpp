@@ -92,10 +92,12 @@ struct d_t
     condition_variable wc_file_thread;
     queue<Grypt::bg_worker_command *> file_thread_commands;
     bool cancel_file_thread;
+    bool file_thread_idle;
 
     mutex entry_thread_lock;
     condition_variable wc_entry_thread;
     queue<Grypt::bg_worker_command *> entry_thread_commands;
+    bool entry_thread_idle;
 
     bool closing;
 
@@ -109,6 +111,8 @@ struct d_t
 
     d_t()
         :cancel_file_thread(false),
+          file_thread_idle(true),
+          entry_thread_idle(true),
           closing(false)
     {}
 };
@@ -1341,10 +1345,15 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
     unique_lock<mutex> lkr(d->entry_thread_lock);
     while(!d->closing)
     {
+        // Tell everyone who's waiting that we're going idle
+        d->entry_thread_idle = true;
+        d->wc_entry_thread.notify_all();
+
         // Wait for something to do
         d->wc_entry_thread.wait(lkr, [&]{
             return d->closing || !d->entry_thread_commands.empty();
         });
+        d->entry_thread_idle = false;
 
         // Empty the command queue, even if closing
         while(!d->entry_thread_commands.empty())
@@ -1416,6 +1425,7 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
         }
     }
     QSqlDatabase::removeDatabase(conn_str);
+    d->entry_thread_idle = true;
 }
 
 void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
@@ -1429,11 +1439,16 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
     unique_lock<mutex> lkr(d->file_thread_lock);
     while(!d->closing)
     {
+        // Tell everyone who's waiting that we're going idle
+        d->file_thread_idle = true;
+        d->wc_file_thread.notify_all();
+
         // Wait for something to do
         d->wc_file_thread.wait(lkr, [&]{
             d->cancel_file_thread = false;
             return d->closing || !d->file_thread_commands.empty();
         });
+        d->file_thread_idle = false;
 
         // Empty the command queue, even if closing
         while(!d->file_thread_commands.empty())
@@ -1488,6 +1503,7 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
         }
     }
     QSqlDatabase::removeDatabase(conn_str);
+    d->file_thread_idle = true;
 }
 
 void PasswordDatabase::_fw_add_file(const QString &conn_str,
@@ -1746,6 +1762,15 @@ GUtil::CryptoPP::Cryptor const &PasswordDatabase::Cryptor() const
 {
     G_D;
     return *d->cryptor;
+}
+
+void PasswordDatabase::WaitForEntryThreadIdle()
+{
+    G_D;
+    unique_lock<mutex> lkr(d->entry_thread_lock);
+    d->wc_entry_thread.wait(lkr, [&]{
+        return d->entry_thread_idle;
+    });
 }
 
 

@@ -16,6 +16,7 @@ limitations under the License.*/
 #define GRYPTO_LEGACY_UTILS_H
 
 #include <grypto_passworddatabase.h>
+#include <functional>
 
 namespace Grypt{ namespace Legacy{
 
@@ -51,12 +52,14 @@ public:
      *  \param new_path The export path for the updated file
      *  \param old_creds The credentials to unlock the source file
      *  \param new_creds The credentials to lock the updated file
+     *  \param progress_callback A callback function to monitor progress between 0 and 100
     */
     static void UpdateFileToCurrentVersion(
             const char *file_path, FileVersionEnum file_version,
             const char *new_path,
             const Credentials &old_creds,
-            const Credentials &new_creds);
+            const Credentials &new_creds,
+            std::function<void(int, const QString &)> progress_callback = [](int, const QString &){});
 
 };
 

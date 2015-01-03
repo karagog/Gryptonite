@@ -319,9 +319,21 @@ void MainWindow::_new_open_database(const QString &path)
                     new_creds = dlg.GetCredentials();
                 }
 
+                bool tmp = m_progressBar.IsCancellable();
+                m_progressBar.SetIsCancellable(false);
+                m_progressBar.show();
                 LegacyUtils::UpdateFileToCurrentVersion(path.toUtf8(), version,
                                                         open_path.toUtf8(),
-                                                        creds, new_creds);
+                                                        creds, new_creds,
+
+                    // The progress callback function...
+                    [&](int p, const QString &s){
+                        m_progressBar.SetProgress(p, s);
+                    }
+                );
+                m_progressBar.hide();
+                m_progressBar.SetIsCancellable(tmp);
+
                 creds = new_creds;
                 file_updated = true;
             }

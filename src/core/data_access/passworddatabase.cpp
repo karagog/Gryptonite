@@ -55,6 +55,7 @@ class bg_worker_command;
 // A cached entry row from the database
 struct entry_cache{
     Grypt::EntryId id, parentid;
+    Grypt::FileId file_id;
     uint row;
     int favoriteindex;
     QByteArray crypttext;
@@ -67,6 +68,7 @@ struct entry_cache{
     entry_cache(const Grypt::Entry &e)
         :id(e.GetId()),
           parentid(e.GetParentId()),
+          file_id(e.GetFileId()),
           row(e.GetRow()),
           favoriteindex(e.GetFavoriteIndex())
     {}
@@ -157,6 +159,7 @@ static entry_cache __convert_record_to_entry_cache(const QSqlRecord &rec)
     ret.row = rec.value("Row").toInt();
     ret.favoriteindex = rec.value("Favorite").toInt();
     ret.crypttext = rec.value("Data").toByteArray();
+    ret.file_id = rec.value("FileID").toByteArray();
     return ret;
 }
 
@@ -175,6 +178,7 @@ static Entry __convert_cache_to_entry(const entry_cache &er, Cryptor &cryptor)
     ret.SetId(er.id);
     ret.SetRow(er.row);
     ret.SetFavoriteIndex(er.favoriteindex);
+    ret.SetFileId(er.file_id);
     return ret;
 }
 
@@ -638,8 +642,8 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
             d->wc_index.notify_all();
         }
 
-        q.prepare(QString("INSERT INTO Entry (ID,%1Row,Favorite,Data)"
-                  " VALUES (?,%2?,?,?)")
+        q.prepare(QString("INSERT INTO Entry (ID,%1Row,Favorite,FileID,Data)"
+                  " VALUES (?,%2?,?,?,?)")
                   .arg(pid_isnull ? "" : "ParentID,")
                   .arg(pid_isnull ? "" : "?,"));
         q.addBindValue((QByteArray)e.GetId());
@@ -647,6 +651,7 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
             q.addBindValue((QByteArray)e.GetParentId());
         q.addBindValue(row);
         q.addBindValue(e.GetFavoriteIndex());
+        q.addBindValue((QByteArray)e.GetFileId());
         q.addBindValue(crypttext);
         DatabaseUtils::ExecuteQuery(q);
 
@@ -698,9 +703,10 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, GUtil::CryptoPP
         d->index_lock.unlock();
         d->wc_index.notify_all();
 
-        q.prepare("UPDATE Entry SET Data=?,Favorite=? WHERE Id=?");
+        q.prepare("UPDATE Entry SET Data=?,Favorite=?,FileID=? WHERE Id=?");
         q.addBindValue(er.crypttext);
         q.addBindValue(er.favoriteindex);
+        q.addBindValue((QByteArray)e.GetFileId());
         q.addBindValue((QByteArray)e.GetId());
         DatabaseUtils::ExecuteQuery(q);
     } catch(...) {

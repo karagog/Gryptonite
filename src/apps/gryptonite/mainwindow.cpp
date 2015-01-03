@@ -394,7 +394,7 @@ void MainWindow::_new_open_database()
 {
     QString path = QFileDialog::getSaveFileName(this, tr("File Location"),
                                                 QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-                                                "Grypto DB (*.gdb);;All Files (*)", 0, QFileDialog::DontConfirmOverwrite);
+                                                "Grypto DB (*.gdb *.GPdb);;All Files (*)", 0, QFileDialog::DontConfirmOverwrite);
     if(!path.isEmpty())
     {
         QFileInfo fi(path);

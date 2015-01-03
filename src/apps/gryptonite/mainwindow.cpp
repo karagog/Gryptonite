@@ -724,11 +724,10 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
 
 void MainWindow::_search()
 {
-    if(isMinimized()){
+    if(isMinimized() || isHidden())
         showNormal();
-        activateWindow();
-    }
 
+    activateWindow();
     ui->dw_search->show();
     ui->dw_search->raise();
     ui->searchWidget->setFocus();

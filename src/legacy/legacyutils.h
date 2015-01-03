@@ -50,6 +50,7 @@ public:
      *  \param file_path The location of the source file to be updated
      *  \param file_version The version of the source file, obtained by calling GetFileVersion()
      *  \param new_path The export path for the updated file
+     *      \warning If the new_path already exists, it will be deleted
      *  \param old_creds The credentials to unlock the source file
      *  \param new_creds The credentials to lock the updated file
      *  \param progress_callback A callback function to monitor progress between 0 and 100

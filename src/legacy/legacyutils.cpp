@@ -136,6 +136,10 @@ void LegacyUtils::UpdateFileToCurrentVersion(
     if(0 == strcmp(file_path, new_path))
         throw Exception<>("Refusing to update if source and dest are the same");
 
+    // Remove the target path if it exists
+    if(QFile::exists(new_path))
+        QFile::remove(new_path);
+
     QString progress_msg = QObject::tr("Parsing legacy database...");
     progress_cb(0, progress_msg);
 

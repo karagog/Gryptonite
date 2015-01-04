@@ -101,6 +101,9 @@ bool __compare_entries(const Entry &lhs, const Entry &rhs)
             lhs.GetId() == rhs.GetId() &&
             lhs.GetParentId() == rhs.GetParentId() &&
             lhs.GetRow() == rhs.GetRow() &&
+            lhs.GetFileId() == rhs.GetFileId() &&
+            lhs.GetFileName() == rhs.GetFileName() &&
+            lhs.GetFilePath() == rhs.GetFilePath() &&
             lhs.Values().count() == rhs.Values().count();
 
     for(int i = 0; ret && i < lhs.Values().count(); ++i)

@@ -20,7 +20,9 @@ TEMPLATE = app
 INCLUDEPATH += $$TOP_DIR/include $$TOP_DIR/gutil/include
 LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
     -lgrypto_ui \
-    -lgrypto_core
+    -lgrypto_core \
+    -lGUtilCryptoPP \
+    -lGUtil
 
 
 SOURCES += tst_databasemodeltest.cpp

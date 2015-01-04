@@ -68,6 +68,11 @@ public:
     */
     Entry const *GetEntryFromIndex(const QModelIndex &) const;
 
+    /** Blocks the current thread until the background thread goes idle. Use
+     *  this to guarantee that your operation has completed before proceeding.
+    */
+    void WaitForBackgroundThreadIdle();
+
     /** \name Undoable actions
      *  You can call Undo() and Redo() to undo and redo these actions
      *  \{

@@ -45,8 +45,9 @@ class AddEntryCommand : public IUndoableAction {
     Entry m_entry;
     DatabaseModel *m_model;
 public:
-    AddEntryCommand(const Entry &e, DatabaseModel *m) :m_entry(e), m_model(m) {
+    AddEntryCommand(Entry &e, DatabaseModel *m) :m_entry(e), m_model(m) {
         m_entry.SetId(EntryId::NewId());
+        e.SetId(m_entry.GetId());
     }
     void Do(){ m_model->_add_entry(m_entry, false); }
     void Undo(){ m_model->_del_entry(m_entry.GetId()); }
@@ -684,6 +685,11 @@ bool DatabaseModel::dropMimeData(const QMimeData *data,
 Qt::DropActions DatabaseModel::supportedDropActions() const
 {
     return Qt::MoveAction;
+}
+
+void DatabaseModel::WaitForBackgroundThreadIdle()
+{
+    m_db->WaitForEntryThreadIdle();
 }
 
 

@@ -727,7 +727,6 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, GUtil::CryptoPP
 void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
                                         const EntryId &id)
 {
-    G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
     QSqlQuery q(db);
     int old_favorite_index;
@@ -742,23 +741,6 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
         uint row = q.record().value(1).toInt();
         old_favorite_index = q.record().value(2).toInt();
         uint child_count = __count_entries_by_parent_id(q, pid);
-
-        // Remove it from the index
-        d->index_lock.lock();
-        {
-            auto i = d->index.find(id);
-            auto pi = d->parent_index.find(pid);
-            if(i != d->index.end()){
-                d->index.erase(i);
-                d->parent_index.erase(id);
-            }
-            if(pi != d->parent_index.end())
-                pi->second.RemoveAt(row);
-            if(old_favorite_index >= 0)
-                d->favorite_index.RemoveOne(id);
-        }
-        d->index_lock.unlock();
-        d->wc_index.notify_all();
 
         q.prepare("DELETE FROM Entry WHERE ID=?");
         q.addBindValue((QByteArray)id);
@@ -885,9 +867,10 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 
         entry_cache ec(e);
         ec.dirty = true;
-        d->index.emplace(e.GetId(), ec);
+        d->index[e.GetId()] = ec;
     }
     d->index_lock.unlock();
+    d->wc_index.notify_all();
 
     // Tell the worker thread to add it to the database
     d->entry_thread_lock.lock();
@@ -948,9 +931,13 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
                     ci->second.row = r;
             }
         }
+        int fi = d->favorite_index.IndexOf(id);
+        if(fi != -1)
+            d->favorite_index.RemoveAt(fi);
         d->index.erase(i);
     }
     d->index_lock.unlock();
+    d->wc_index.notify_all();
 
     // Remove it from the database
     d->entry_thread_lock.lock();

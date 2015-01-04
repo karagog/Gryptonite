@@ -44,16 +44,20 @@ public:
     template<class T>static T FromXmlNode(const QDomElement &);
 
     /** A generic function to serialize the object to XML.
+     *  \param everything If this is true, then some extra fields are included in the XML,
+     *              which are normally only in the database. This makes it so you can completely
+     *              reconstruct an entry from the XML, whereas without it you need those extra
+     *              fields which are stored in the database.
      *  \param pretty If it's true the XML will be nicely indented so humans can read it.
      *                  The default is false.
     */
-    template<class T>static QByteArray ToXmlString(const T &, bool pretty = false);
+    template<class T>static QByteArray ToXmlString(const T &, bool everything = false, bool pretty = false);
 
     /** A generic function to serialize the object to XML and append it
      *  to the children of the given node.
      *  \returns The node it just appended.
     */
-    template<class T>static QDomNode AppendToXmlNode(const T &, QDomNode &, QDomDocument &);
+    template<class T>static QDomNode AppendToXmlNode(const T &, QDomNode &, QDomDocument &, bool everything = false);
 
 };
 
@@ -63,8 +67,8 @@ public:
 */
 template<>Entry XmlConverter::FromXmlString(const QByteArray &xml);
 template<>Entry XmlConverter::FromXmlNode(const QDomElement &);
-template<>QByteArray XmlConverter::ToXmlString(const Entry &, bool);
-template<>QDomNode XmlConverter::AppendToXmlNode(const Entry &, QDomNode &, QDomDocument &);
+template<>QByteArray XmlConverter::ToXmlString(const Entry &, bool, bool);
+template<>QDomNode XmlConverter::AppendToXmlNode(const Entry &, QDomNode &, QDomDocument &, bool);
 /** \} */
 
 }

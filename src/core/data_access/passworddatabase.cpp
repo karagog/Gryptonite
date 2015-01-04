@@ -1703,7 +1703,7 @@ static void __append_children_to_xml(QDomDocument &xdoc, QDomNode &n,
     // Find my children and add them to xml
     Vector<Entry> child_list = __find_entries_by_parent_id(q, cryptor, eid);
     foreach(const Entry &e, child_list){
-        QDomNode new_node = XmlConverter::AppendToXmlNode(e, n, xdoc);
+        QDomNode new_node = XmlConverter::AppendToXmlNode(e, n, xdoc, true);
         __append_children_to_xml(xdoc, new_node, q, cryptor, e.GetId());
     }
 }

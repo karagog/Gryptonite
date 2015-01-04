@@ -25,14 +25,14 @@ USING_NAMESPACE_GUTIL;
 NAMESPACE_GRYPTO;
 
 
-template<>QByteArray XmlConverter::ToXmlString(const Entry &e, bool pretty)
+template<>QByteArray XmlConverter::ToXmlString(const Entry &e, bool everything, bool pretty)
 {
     QDomDocument xdoc;
-    AppendToXmlNode(e, xdoc, xdoc);
+    AppendToXmlNode(e, xdoc, xdoc, everything);
     return xdoc.toByteArray(pretty ? 1 : -1);
 }
 
-template<>QDomNode XmlConverter::AppendToXmlNode(const Entry &e, QDomNode &root, QDomDocument &xdoc)
+template<>QDomNode XmlConverter::AppendToXmlNode(const Entry &e, QDomNode &root, QDomDocument &xdoc, bool everything)
 {
     QDomNode ret;
     QDomElement entry_root = xdoc.createElement(ENTRY_XML_NAME);
@@ -41,8 +41,11 @@ template<>QDomNode XmlConverter::AppendToXmlNode(const Entry &e, QDomNode &root,
     entry_root.setAttribute("name", e.GetName().toUtf8().toBase64().constData());
     entry_root.setAttribute("desc", e.GetDescription().toUtf8().toBase64().constData());
     entry_root.setAttribute("modified", DatabaseUtils::ConvertDateToString(e.GetModifyDate()));
-    if(!e.GetFileId().IsNull())
+    if(!e.GetFileId().IsNull()){
         entry_root.setAttribute("file_name", e.GetFileName().toUtf8().toBase64().constData());
+        if(everything)
+            entry_root.setAttribute("file_id", e.GetFileId().ToQByteArray().toBase64().constData());
+    }
 
     foreach(const SecretValue &sv, e.Values())
     {
@@ -70,6 +73,8 @@ template<>Entry XmlConverter::FromXmlNode(const QDomElement &elt)
     ret.SetModifyDate(DatabaseUtils::ConvertStringToDate(elt.attribute("modified")));
     if(elt.attributes().contains("file_name"))
         ret.SetFileName(QByteArray::fromBase64(elt.attribute("file_name").toUtf8()));
+    if(elt.attributes().contains("file_id"))
+        ret.SetFileId(QByteArray::fromBase64(elt.attribute("file_id").toUtf8()));
 
     QDomNodeList nl = elt.childNodes();
     for(int i = 0; i < nl.count(); ++i)

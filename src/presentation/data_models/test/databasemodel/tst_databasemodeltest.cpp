@@ -61,8 +61,11 @@ public:
 
 private Q_SLOTS:
     void test_new_entry();
+    void test_new_entry_with_file();
     void test_update_entry();
+    void test_update_entry_with_file();
     void test_delete_entry();
+    void test_delete_entry_with_file();
     void test_move_entries_basic();
     void test_move_entries_down_same_parent();
     void test_move_entries_up_same_parent();
@@ -191,6 +194,11 @@ void DatabasemodelTest::test_new_entry()
     }
 }
 
+void DatabasemodelTest::test_new_entry_with_file()
+{
+    QVERIFY2(false, "Failure");
+}
+
 void DatabasemodelTest::test_update_entry()
 {
     _cleanup_database();
@@ -241,6 +249,11 @@ void DatabasemodelTest::test_update_entry()
         e = dbm.FindEntryById(e.GetId());
         QVERIFY(e.GetDescription() == "completely different");
     }
+}
+
+void DatabasemodelTest::test_update_entry_with_file()
+{
+    QVERIFY2(false, "Failure");
 }
 
 void DatabasemodelTest::test_delete_entry()
@@ -314,6 +327,11 @@ void DatabasemodelTest::test_delete_entry()
         // You can manually delete the orphans, but they don't affect us at the model level
         dbm.DeleteOrphans();
     }
+}
+
+void DatabasemodelTest::test_delete_entry_with_file()
+{
+    QVERIFY2(false, "Failure");
 }
 
 void DatabasemodelTest::test_move_entries_basic()
@@ -455,12 +473,176 @@ void DatabasemodelTest::test_move_entries_basic()
 
 void DatabasemodelTest::test_move_entries_down_same_parent()
 {
-    QVERIFY2(false, "Failure");
+    _cleanup_database();
+
+    Entry e1, e2, e3, e4, e5;
+    {
+        // Populate the initial hierarchy for the test
+        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        dbm.AddEntry(e1);
+        dbm.AddEntry(e2);
+        dbm.AddEntry(e3);
+        dbm.AddEntry(e4);
+        dbm.AddEntry(e5);
+
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetRow() == 0);
+        QVERIFY(e2.GetRow() == 1);
+        QVERIFY(e3.GetRow() == 2);
+        QVERIFY(e4.GetRow() == 3);
+        QVERIFY(e5.GetRow() == 4);
+
+
+        // Now move some entries down with respect to its siblings
+        dbm.MoveEntries(QModelIndex(), 1, 2,
+                        QModelIndex(), 4);
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetRow() == 0);
+        QVERIFY(e2.GetRow() == 2);
+        QVERIFY(e3.GetRow() == 3);
+        QVERIFY(e4.GetRow() == 1);
+        QVERIFY(e5.GetRow() == 4);
+
+        // Check that undoing works
+        dbm.Undo();
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetRow() == 0);
+        QVERIFY(e2.GetRow() == 1);
+        QVERIFY(e3.GetRow() == 2);
+        QVERIFY(e4.GetRow() == 3);
+        QVERIFY(e5.GetRow() == 4);
+
+        dbm.Redo();
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetRow() == 0);
+        QVERIFY(e2.GetRow() == 2);
+        QVERIFY(e3.GetRow() == 3);
+        QVERIFY(e4.GetRow() == 1);
+        QVERIFY(e5.GetRow() == 4);
+    }
 }
 
 void DatabasemodelTest::test_move_entries_up_same_parent()
 {
-    QVERIFY2(false, "Failure");
+    _cleanup_database();
+
+    Entry e1, e2, e3, e4, e5;
+    {
+        // Populate the initial hierarchy for the test
+        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        dbm.AddEntry(e1);
+        dbm.AddEntry(e2);
+        dbm.AddEntry(e3);
+        dbm.AddEntry(e4);
+        dbm.AddEntry(e5);
+
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetRow() == 0);
+        QVERIFY(e2.GetRow() == 1);
+        QVERIFY(e3.GetRow() == 2);
+        QVERIFY(e4.GetRow() == 3);
+        QVERIFY(e5.GetRow() == 4);
+
+
+        // Now move some entries up with respect to its siblings
+        dbm.MoveEntries(QModelIndex(), 2, 3,
+                        QModelIndex(), 1);
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetRow() == 0);
+        QVERIFY(e2.GetRow() == 3);
+        QVERIFY(e3.GetRow() == 1);
+        QVERIFY(e4.GetRow() == 2);
+        QVERIFY(e5.GetRow() == 4);
+
+        // Check that undoing works
+        dbm.Undo();
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetRow() == 0);
+        QVERIFY(e2.GetRow() == 1);
+        QVERIFY(e3.GetRow() == 2);
+        QVERIFY(e4.GetRow() == 3);
+        QVERIFY(e5.GetRow() == 4);
+
+        dbm.Redo();
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetRow() == 0);
+        QVERIFY(e2.GetRow() == 3);
+        QVERIFY(e3.GetRow() == 1);
+        QVERIFY(e4.GetRow() == 2);
+        QVERIFY(e5.GetRow() == 4);
+    }
 }
 
 

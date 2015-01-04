@@ -669,11 +669,11 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
             // Update the siblings in the index so they're no longer dirty
             auto pi = d->parent_index.find(e.GetParentId());
             GASSERT(pi != d->parent_index.end());
-            for(uint i = e.GetRow(); i < pi->second.children.Length(); ++i){
+            for(uint i = e.GetRow(); i <= child_count; ++i){
                 entry_cache &ec = d->index[pi->second.children[i]];
 
                 // All of these rows should have been marked dirty on the main thread, now they're clean
-                //GASSERT(ec.dirty);
+                GASSERT(ec.dirty);
 
                 // The rows should still be correct from when they were updated on the main thread
                 GASSERT(ec.row == i);

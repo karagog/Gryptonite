@@ -617,7 +617,7 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
     QSqlDatabase db = QSqlDatabase::database(conn_str);
     QSqlQuery q(db);
     db.transaction();
-    {
+    try{
         bool success = false;
         finally([&]{
             if(success) db.commit();
@@ -664,7 +664,22 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
 
             d->index[e.GetId()].crypttext = crypttext;
             d->index[e.GetId()].row = row;
-            d->index[e.GetId()].dirty = false;
+
+            // Update the siblings in the index so they're no longer dirty
+            auto pi = d->parent_index.find(e.GetParentId());
+            GASSERT(pi != d->parent_index.end());
+            for(uint i = e.GetRow(); i < pi->second.children.Length(); ++i){
+                entry_cache &ec = d->index[pi->second.children[i]];
+
+                // All of these rows should have been marked dirty on the main thread, now they're clean
+                GASSERT(ec.dirty);
+
+                // The rows should still be correct from when they were updated on the main thread
+                GASSERT(ec.row == i);
+
+                ec.dirty = false;
+            }
+
             d->wc_index.notify_all();
         }
 
@@ -680,6 +695,11 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
 
         success = true;
     }
+    catch(...){
+        db.rollback();
+        throw;
+    }
+    db.commit();
 
     if(e.IsFavorite())
         emit NotifyFavoritesUpdated();
@@ -866,28 +886,37 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
 void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 {
     G_D;
+    __command_cache_entries_by_parentid(d, e.GetParentId());
+
     if(gen_id)
         e.SetId(EntryId::NewId());
 
-    // Mark the index as dirty
-    d->index_lock.lock();
+    // Update the index
+    unique_lock<mutex> lkr(d->index_lock);
     {
+        // Wait here until the parent is loaded
+        d->wc_entry_thread.wait(lkr, [&]{
+            auto pi = d->parent_index.find(e.GetParentId());
+            return pi != d->parent_index.end() && pi->second.children_loaded;
+        });
+
         // Add to the appropriate parent
         auto pi = d->parent_index.find(e.GetParentId());
-        if(pi != d->parent_index.end() && pi->second.children_loaded){
-            Vector<EntryId> &child_ids = pi->second.children;
-            if((uint)e.GetRow() > child_ids.Length())
-                e.SetRow(child_ids.Length());
+        Vector<EntryId> &child_ids = pi->second.children;
+        if((uint)e.GetRow() > child_ids.Length())
+            e.SetRow(child_ids.Length());
 
-            child_ids.Insert(e.GetId(), e.GetRow());
+        child_ids.Insert(e.GetId(), e.GetRow());
 
-            // Adjust the siblings
-            for(uint i = e.GetRow() + 1; i < child_ids.Length(); ++i){
-                auto iter = d->index.find(child_ids[i]);
-                if(iter != d->index.end())
-                    iter->second.row = i;
+        // Adjust the siblings
+        for(uint i = e.GetRow() + 1; i < child_ids.Length(); ++i){
+            auto iter = d->index.find(child_ids[i]);
+            if(iter != d->index.end()){
+                iter->second.row = i;
+                iter->second.dirty = true;
             }
         }
+
         if(e.IsFavorite())
             d->favorite_index.PushBack(e.GetId());
 
@@ -898,7 +927,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
         GASSERT(d->parent_index.find(e.GetId()) == d->parent_index.end());
         d->parent_index[e.GetId()] = parent_cache();
     }
-    d->index_lock.unlock();
+    lkr.unlock();
     d->wc_index.notify_all();
 
     // Tell the worker thread to add it to the database
@@ -1257,7 +1286,9 @@ static void  __cache_children(QSqlQuery &q, d_t *d,
                 auto i = d->index.find(e.id);
                 if(i == d->index.end())
                     d->index.emplace(e.id, e);
-                else
+
+                // Don't update if it's dirty. Let the appropriate task handle it
+                else if(!i->second.dirty)
                     i->second = e;
             }
             pc.children_loaded = true;
@@ -1267,8 +1298,7 @@ static void  __cache_children(QSqlQuery &q, d_t *d,
         }
     }
     else if(cur_lvl < target_lvl){
-        bool parent_in_index = d->parent_index.find(parent_id) != d->parent_index.end();
-        GASSERT(parent_in_index);
+        GASSERT(d->parent_index.find(parent_id) != d->parent_index.end());
 
         // recurse one level deeper
         for(const EntryId &eid : d->parent_index[parent_id].children)

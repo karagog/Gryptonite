@@ -34,7 +34,6 @@ limitations under the License.*/
 #include <QMessageBox>
 #include <QKeyEvent>
 #include <QContextMenuEvent>
-#include <QSortFilterProxyModel>
 #include <QHeaderView>
 #include <QActionGroup>
 #include <QToolButton>

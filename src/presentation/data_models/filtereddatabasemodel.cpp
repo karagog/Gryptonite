@@ -21,7 +21,9 @@ NAMESPACE_GRYPTO;
 
 FilteredDatabaseModel::FilteredDatabaseModel(QObject *parent)
     :QSortFilterProxyModel(parent)
-{}
+{
+    setDynamicSortFilter(false);
+}
 
 void FilteredDatabaseModel::setSourceModel(QAbstractItemModel *m)
 {

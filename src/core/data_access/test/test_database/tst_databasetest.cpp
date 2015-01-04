@@ -201,6 +201,9 @@ void DatabaseTest::test_entry_delete()
 
 void DatabaseTest::test_entry_update()
 {
+    _cleanup_database();
+    _init_database();
+
     Entry e;
     db->AddEntry(e);
 

@@ -654,7 +654,8 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
             cryptor.EncryptData(&o, &i, NULL, nonce);
         }
 
-        // Update the index
+        // Update the index immediately now that we have everything we need
+        //  i.e. Do not wait to insert the actual entry
         {
             lock_guard<mutex> lkr(d->index_lock);
 
@@ -672,7 +673,7 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
                 entry_cache &ec = d->index[pi->second.children[i]];
 
                 // All of these rows should have been marked dirty on the main thread, now they're clean
-                GASSERT(ec.dirty);
+                //GASSERT(ec.dirty);
 
                 // The rows should still be correct from when they were updated on the main thread
                 GASSERT(ec.row == i);
@@ -768,9 +769,14 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, GUtil::CryptoPP
 void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
                                         const EntryId &id)
 {
+    G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
     QSqlQuery q(db);
     int old_favorite_index;
+    EntryId pid;
+    uint row;
+    uint child_count;
+
     db.transaction();
     try
     {
@@ -778,10 +784,10 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
         q.addBindValue((QByteArray)id);
         DatabaseUtils::ExecuteQuery(q);
         if(!q.next()) throw Exception<>("Entry not found");
-        EntryId pid = q.record().value(0).toByteArray();
-        uint row = q.record().value(1).toInt();
+        pid = q.record().value(0).toByteArray();
+        row = q.record().value(1).toInt();
         old_favorite_index = q.record().value(2).toInt();
-        uint child_count = __count_entries_by_parent_id(q, pid);
+        child_count = __count_entries_by_parent_id(q, pid);
 
         q.prepare("DELETE FROM Entry WHERE ID=?");
         q.addBindValue((QByteArray)id);
@@ -808,6 +814,18 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
         throw;
     }
     db.commit();
+
+    // Mark the siblings not dirty
+    d->index_lock.lock();
+    {
+        auto pi = d->parent_index.find(pid);
+        GASSERT(pi != d->parent_index.end() && pi->second.children_loaded);
+
+        for(uint i = row; i < pi->second.children.Length(); ++i)
+            d->index[pi->second.children[i]].dirty = false;
+    }
+    d->index_lock.unlock();
+    d->wc_index.notify_all();
 
     if(old_favorite_index >= 0)
         emit NotifyFavoritesUpdated();
@@ -894,10 +912,17 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
     {
-        // Wait here until the parent is loaded
+        // Wait here until the parent is loaded and no siblings are dirty
         d->wc_entry_thread.wait(lkr, [&]{
             auto pi = d->parent_index.find(e.GetParentId());
-            return pi != d->parent_index.end() && pi->second.children_loaded;
+            bool ret = false;
+            if(pi != d->parent_index.end() && pi->second.children_loaded){
+                bool any_siblings_dirty = false;
+                for(uint i = e.GetRow(); !any_siblings_dirty && i < pi->second.children.Length(); ++i)
+                    any_siblings_dirty = d->index[pi->second.children[i]].dirty;
+                ret = !any_siblings_dirty;
+            }
+            return ret;
         });
 
         // Add to the appropriate parent
@@ -947,16 +972,24 @@ void PasswordDatabase::UpdateEntry(Entry &e)
     // Mark the index as dirty
     {
         unique_lock<mutex> lkr(d->index_lock);
-        auto iter = d->index.find(e.GetId());
-        if(iter == d->index.end())
-            return; // The entry was already deleted
 
-        // Do not update a dirty record
+        // Wait until the entry is not dirty
+        bool already_deleted = false;
+        unordered_map<Grypt::EntryId, entry_cache>::iterator iter;
         d->wc_index.wait(lkr, [&]{
+            iter = d->index.find(e.GetId());
+            if(iter == d->index.end()){
+                already_deleted = true;
+                return true;
+            }
             return !iter->second.dirty;
         });
 
+        if(already_deleted)
+            return; // The entry was already deleted
+
         iter->second.dirty = true;
+        d->wc_index.notify_all();
     }
 
     d->entry_thread_lock.lock();
@@ -975,27 +1008,41 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
         return;
 
     // Update the index
-    d->index_lock.lock();
+    unique_lock<mutex> lkr(d->index_lock);
     auto i = d->index.find(id);
     if(i != d->index.end()){
-        auto pi = d->parent_index.find(i->second.parentid);
-        if(pi != d->parent_index.end() && pi->second.children_loaded){
-            pi->second.children.RemoveAt(i->second.row);
+        // Wait for the parent to be loaded, and for no siblings to be dirty
+        d->wc_index.wait(lkr, [&]{
+            auto pi = d->parent_index.find(i->second.parentid);
+            bool ret = false;
+            if(pi != d->parent_index.end() && pi->second.children_loaded){
+                bool any_siblings_dirty = false;
+                for(uint j = i->second.row; !any_siblings_dirty && j < pi->second.children.Length(); ++j)
+                    any_siblings_dirty = d->index[pi->second.children[j]].dirty;
+                ret = !any_siblings_dirty;
+            }
+            return ret;
+        });
 
-            // Update the siblings of the item we just removed
-            for(auto r = i->second.row; r < pi->second.children.Length(); ++r){
-                auto ci = d->index.find(pi->second.children[r]);
-                if(ci != d->index.end())
-                    ci->second.row = r;
+        auto pi = d->parent_index.find(i->second.parentid);
+        pi->second.children.RemoveAt(i->second.row);
+
+        // Update the siblings of the item we just removed
+        for(auto r = i->second.row; r < pi->second.children.Length(); ++r){
+            auto ci = d->index.find(pi->second.children[r]);
+            if(ci != d->index.end()){
+                ci->second.row = r;
+                ci->second.dirty = true;
             }
         }
+
         int fi = d->favorite_index.IndexOf(id);
         if(fi != -1)
             d->favorite_index.RemoveAt(fi);
         d->index.erase(i);
         d->parent_index.erase(id);
     }
-    d->index_lock.unlock();
+    lkr.unlock();
     d->wc_index.notify_all();
 
     // Remove it from the database
@@ -1269,9 +1316,8 @@ static void  __cache_children(QSqlQuery &q, d_t *d,
                               const EntryId &parent_id,
                               int cur_lvl, int target_lvl)
 {
-    // I don't need a read lock on the parent index, because I'm the only thread that is
-    //  allowed to write to it. Only when I write to it I need the write lock.
     if(cur_lvl == target_lvl){
+        unique_lock<mutex> lkr(d->index_lock);
         auto pi = d->parent_index.find(parent_id);
         if(pi == d->parent_index.end() || !pi->second.children_loaded){
             vector<entry_cache> child_rows = __fetch_entry_rows_by_parentid(q, parent_id);
@@ -1281,7 +1327,6 @@ static void  __cache_children(QSqlQuery &q, d_t *d,
 
             // Add the parent id with its children to the parent index, and add
             //  all the children to the main index
-            d->index_lock.lock();
             for(const entry_cache &e : child_rows){
                 auto i = d->index.find(e.id);
                 if(i == d->index.end())
@@ -1293,15 +1338,18 @@ static void  __cache_children(QSqlQuery &q, d_t *d,
             }
             pc.children_loaded = true;
             d->parent_index[parent_id] = pc;
-            d->index_lock.unlock();
             d->wc_index.notify_all();
         }
     }
     else if(cur_lvl < target_lvl){
+        d->index_lock.lock();
         GASSERT(d->parent_index.find(parent_id) != d->parent_index.end());
 
+        Vector<EntryId> children = d->parent_index[parent_id].children;
+        d->index_lock.unlock();
+
         // recurse one level deeper
-        for(const EntryId &eid : d->parent_index[parent_id].children)
+        for(const EntryId &eid : children)
             __cache_children(q, d, eid, cur_lvl + 1, target_lvl);
     }
 }

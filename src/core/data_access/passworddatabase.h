@@ -151,6 +151,13 @@ public:
                                 const Credentials &);
 
 
+    /** Call this function to iterate through all entries, deleting
+     *  those that don't have parents. Afterwards it will iterate through
+     *  files and delete those that are not referenced by an entry.
+    */
+    void DeleteOrphans();
+
+
 public slots:
 
     /** Instructs a background worker to refresh favorites. */
@@ -208,6 +215,7 @@ private:
     void _ew_cache_entries_by_parentid(const QString &, const EntryId &);
     void _ew_refresh_favorites(const QString &);
     void _ew_set_favorites(const QString &, const GUtil::Vector<EntryId> &sorted_favorites);
+    void _ew_dispatch_orphans(const QString &);
 
     // Any threads can use these methods:
     bool _file_exists(QSqlQuery &, const FileId &);

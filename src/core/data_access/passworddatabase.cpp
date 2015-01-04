@@ -28,6 +28,7 @@ limitations under the License.*/
 #include <mutex>
 #include <condition_variable>
 #include <QString>
+#include <QSet>
 #include <QFileInfo>
 #include <QResource>
 #include <QSqlDatabase>
@@ -256,7 +257,10 @@ public:
         DeleteFile,
         ExportFile,
         ExportToPS,
-        ImportFromPS
+        ImportFromPS,
+
+        // Misc commands
+        DispatchOrphans
     } CommandType;
 
     virtual ~bg_worker_command(){}
@@ -332,6 +336,14 @@ public:
     {}
 
     const Vector<EntryId> Favorites;
+};
+
+class dispatch_orphans_command : public bg_worker_command
+{
+public:
+    dispatch_orphans_command()
+        :bg_worker_command(DispatchOrphans)
+    {}
 };
 
 class update_file_command : public bg_worker_command
@@ -571,9 +583,9 @@ PasswordDatabase::~PasswordDatabase()
     d->wc_file_thread.notify_one();
     d->wc_entry_thread.notify_one();
 
-    QSqlDatabase::removeDatabase(d->dbString);
     d->entry_worker.join();
     d->file_worker.join();
+    QSqlDatabase::removeDatabase(d->dbString);
     G_D_UNINIT();
 }
 
@@ -1101,6 +1113,14 @@ vector<Entry> PasswordDatabase::FindFavoriteEntries()
     return ret;
 }
 
+void PasswordDatabase::DeleteOrphans()
+{
+    G_D;
+    unique_lock<mutex> lkr(d->entry_thread_lock);
+    d->entry_thread_commands.push(new dispatch_orphans_command());
+    d->wc_entry_thread.notify_one();
+}
+
 bool PasswordDatabase::FileExists(const FileId &id)
 {
     G_D;
@@ -1319,6 +1339,77 @@ void PasswordDatabase::_ew_set_favorites(const QString &conn_str, const Vector<E
     emit NotifyFavoritesUpdated();
 }
 
+void PasswordDatabase::_ew_dispatch_orphans(const QString &conn_str)
+{
+    G_D;
+    QSqlDatabase db(QSqlDatabase::database(conn_str));
+    QSqlQuery q("SELECT ID,ParentID,FileID FROM Entry", db);
+
+    vector<tuple<EntryId, EntryId, FileId>> ids;
+    QSet<EntryId> entry_ids;
+    while(q.next()){
+        EntryId cur_id = q.value("ID").toByteArray();
+
+        if(!entry_ids.contains(cur_id))
+            entry_ids.insert(cur_id);
+
+        ids.push_back(tuple<EntryId, EntryId, FileId>(
+                          cur_id,
+                          q.value("ParentID").toByteArray(),
+                          q.value("FileID").toByteArray()));
+    }
+
+    // Delete all entries whose parent ids are missing
+    vector<EntryId> delete_list_e;
+    bool recheck = true;
+    while(recheck){
+        recheck = false;
+        for(const tuple<EntryId, EntryId, FileId> &t : ids){
+            if(entry_ids.find(get<1>(t)) == entry_ids.end()){
+                delete_list_e.push_back(get<0>(t));
+                _ew_delete_entry(conn_str, get<0>(t));
+
+                // Every time we remove an id, we need to recheck the list
+                //  because that id could have been someone's parent
+                recheck = true;
+                entry_ids.remove(get<0>(t));
+            }
+        }
+    }
+
+    // Get the set of referenced file ids
+    QSet<FileId> all_file_ids;
+    for(const tuple<EntryId, EntryId, FileId> &t : ids){
+        if(entry_ids.find(get<0>(t)) != entry_ids.end())
+            all_file_ids.insert(get<2>(t));
+    }
+
+
+    // Now delete all the orphan files
+    q.prepare("SELECT ID FROM File");
+    DatabaseUtils::ExecuteQuery(q);
+
+    vector<FileId> delete_list_f;
+    while(q.next()){
+        FileId cur = q.value("ID").toByteArray();
+        if(!all_file_ids.contains(cur))
+            delete_list_f.push_back(cur);
+    }
+
+    for(FileId const &fid : delete_list_f)
+        _fw_del_file(conn_str, fid);
+
+
+    // Finally update the index
+    d->index_lock.lock();
+    for(const EntryId &eid : delete_list_e){
+        d->index.erase(eid);
+        d->parent_index.erase(eid);
+    }
+    d->index_lock.unlock();
+    d->wc_index.notify_all();
+}
+
 
 void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
 {
@@ -1390,6 +1481,12 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
                 {
                     set_favorite_entries_command *sfe = static_cast<set_favorite_entries_command *>(cmd.Data());
                     _ew_set_favorites(conn_str, sfe->Favorites);
+                }
+                    break;
+                case bg_worker_command::DispatchOrphans:
+                {
+                    //dispatch_orphans_command *doc = static_cast<dispatch_orphans_command*>(cmd.Data());
+                    _ew_dispatch_orphans(conn_str);
                 }
                     break;
                 default:

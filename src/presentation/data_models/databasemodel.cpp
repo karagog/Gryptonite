@@ -692,5 +692,10 @@ void DatabaseModel::WaitForBackgroundThreadIdle()
     m_db->WaitForEntryThreadIdle();
 }
 
+void DatabaseModel::DeleteOrphans()
+{
+    m_db->DeleteOrphans();
+}
+
 
 END_NAMESPACE_GRYPTO;

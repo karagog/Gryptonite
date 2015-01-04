@@ -115,6 +115,9 @@ public:
     void ImportFromPortableSafe(const char *export_filename,
                                 const Credentials &);
 
+    /** Cleans up orphan entries and files. */
+    void DeleteOrphans();
+
     /** Loads all entries from the database. */
     void FetchAllEntries();
 

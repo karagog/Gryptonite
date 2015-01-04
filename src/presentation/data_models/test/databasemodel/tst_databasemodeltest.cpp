@@ -75,6 +75,8 @@ private:
 
 DatabasemodelTest::DatabasemodelTest()
 {
+    qRegisterMetaType<std::shared_ptr<GUtil::Exception<>>>("std::shared_ptr<GUtil::Exception<>>");
+
     m_creds.Password = "password";
     _cleanup_database();
 
@@ -243,7 +245,75 @@ void DatabasemodelTest::test_update_entry()
 
 void DatabasemodelTest::test_delete_entry()
 {
-    QVERIFY2(false, "Failure");
+    Entry e;
+    QDateTime modify_date(QDate(2015, 1, 3), QTime(20, 0, 0));
+    e.SetName("entry1");
+    e.SetDescription("description");
+    e.SetFavoriteIndex(0);
+    e.SetModifyDate(modify_date);
+    {
+        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        dbm.AddEntry(e);
+
+        dbm.RemoveEntry(e);
+        QVERIFY(!dbm.FindIndexById(e.GetId()).isValid());
+
+        // Check that undoing brings the entry back
+        dbm.Undo();
+        QVERIFY(dbm.FindIndexById(e.GetId()).isValid());
+        Entry e2 = dbm.FindEntryById(e.GetId());
+        QVERIFY(__compare_entries(e, e2));
+
+        // Redoing should delete it again
+        dbm.Redo();
+        QVERIFY(!dbm.FindIndexById(e.GetId()).isValid());
+    }
+
+    // Make sure the changes persist
+    {
+        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        QVERIFY(!dbm.FindIndexById(e.GetId()).isValid());
+    }
+
+
+    // Test that deleting a parent does not delete its children,
+    //  at least until you tell it to delete the orphans
+    Entry e2(e), e3(e);
+    {
+        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        dbm.AddEntry(e);
+
+        e2.SetParentId(e.GetId());
+        dbm.AddEntry(e2);
+
+        e3.SetParentId(e2.GetId());
+        dbm.AddEntry(e3);
+
+        e = dbm.FindEntryById(e.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        QVERIFY(e.GetParentId().IsNull());
+        QVERIFY(e2.GetParentId() == e.GetId());
+        QVERIFY(e3.GetParentId() == e2.GetId());
+
+        dbm.RemoveEntry(e);
+        QVERIFY(!dbm.FindIndexById(e.GetId()).isValid());
+
+        // the orphans are still there
+        QVERIFY(dbm.FindIndexById(e2.GetId()).isValid());
+        QVERIFY(dbm.FindIndexById(e3.GetId()).isValid());
+    }
+
+    // We deleted the parents, so the orphans will not be added to the
+    //  index when we create a new database model
+    {
+        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        QVERIFY(!dbm.FindIndexById(e2.GetId()).isValid());
+        QVERIFY(!dbm.FindIndexById(e3.GetId()).isValid());
+
+        // You can manually delete the orphans, but they don't affect us at the model level
+        dbm.DeleteOrphans();
+    }
 }
 
 void DatabasemodelTest::test_move_entries_basic()

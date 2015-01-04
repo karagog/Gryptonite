@@ -32,13 +32,13 @@ class Entry
 public:
 
     Entry()
-        :_p_Row(0),
+        :_p_Row(-1),
           _p_FavoriteIndex(-1)
     {}
 
     PROPERTY(Id, EntryId);
     PROPERTY(ParentId, EntryId);
-    PROPERTY(Row, quint32);
+    PROPERTY(Row, int);
 
     PROPERTY(Name, QString);
     PROPERTY(Description, QString);

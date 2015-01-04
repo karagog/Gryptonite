@@ -80,6 +80,8 @@ public:
     void AddEntry(Entry &);
     void UpdateEntry(const Entry &);
     void RemoveEntry(const Entry &);
+    void MoveEntries(const QModelIndex &src_parent, int src_first, int src_last,
+                     const QModelIndex &dest_parent, int dest_row);
     /** \} */
 
     inline bool CanUndo() const{ return m_undostack.CanUndo(); }

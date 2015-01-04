@@ -24,6 +24,12 @@ LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
     -lGUtilCryptoPP \
     -lGUtil
 
+unix{
+LIBS += \
+    -lGUtilQt \
+    -lcryptopp
+}
+
 
 SOURCES += tst_databasemodeltest.cpp
 DEFINES += SRCDIR=\\\"$$PWD/\\\"

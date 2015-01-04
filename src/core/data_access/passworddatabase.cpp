@@ -796,11 +796,13 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
     db.transaction();
     try
     {
+        QByteArray special_zero_id(EntryId::Size, (char)0);
+
         // First move the source rows to a dummy parent with ID=0
         for(int i = 0; i < row_cnt; ++i){
             q.prepare(QString("UPDATE Entry SET ParentID=?,Row=? WHERE ParentID%1 AND Row=?")
                       .arg(src_parent.IsNull() ? " IS NULL" : "=?"));
-            q.addBindValue(QByteArray(EntryId::Size, (char)0));
+            q.addBindValue(special_zero_id);
             q.addBindValue(row_dest + i);
             if(!src_parent.IsNull())
                 q.addBindValue(src_parent.ToQByteArray());
@@ -834,11 +836,8 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
 
         // Finally move the rows into the dest
         q.prepare("UPDATE Entry SET ParentID=? WHERE ParentID=?");
-        if(dest_parent.IsNull())
-            q.addBindValue(QByteArray());
-        else
-            q.addBindValue(dest_parent.ToQByteArray());
-        q.addBindValue(EntryId::Null().ToQByteArray());
+        q.addBindValue((QByteArray)dest_parent);
+        q.addBindValue(special_zero_id);
         DatabaseUtils::ExecuteQuery(q);
     }
     catch(...)
@@ -992,8 +991,10 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     // Insert the rows at the dest parent
     if(same_parents && row_dest > row_first)
         row_dest -= move_cnt;
-    for(int i = 0; i < move_cnt; ++i)
+    for(int i = 0; i < move_cnt; ++i){
         dest.Insert(moving_rows[i], row_dest + i);
+        d->index.find(moving_rows[i])->second.parentid = parentId_dest;
+    }
 
     // Update the siblings at the dest
     for(quint32 i = row_dest; i < dest.Length(); ++i)

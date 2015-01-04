@@ -48,6 +48,15 @@ public:
     AddEntryCommand(Entry &e, DatabaseModel *m) :m_entry(e), m_model(m) {
         m_entry.SetId(EntryId::NewId());
         e.SetId(m_entry.GetId());
+
+        if(-1 == e.GetRow()){
+            QModelIndex par_ind;
+            if(e.GetParentId().IsNull() ||
+                    (par_ind = m_model->FindIndexById(e.GetParentId())).isValid()){
+                e.SetRow(m_model->rowCount(par_ind));
+                m_entry.SetRow(e.GetRow());
+            }
+        }
     }
     void Do(){ m_model->_add_entry(m_entry, false); }
     void Undo(){ m_model->_del_entry(m_entry.GetId()); }
@@ -396,6 +405,20 @@ void DatabaseModel::fetchMore(const QModelIndex &par)
     }
 }
 
+static void __fetch_node_recursive(QAbstractItemModel *m, const QModelIndex &ind)
+{
+    for(int i = 0; i < m->rowCount(ind); ++i){
+        QModelIndex child = m->index(i, 0, ind);
+        m->fetchMore(child);
+        __fetch_node_recursive(m, child);
+    }
+}
+
+void DatabaseModel::FetchAllEntries()
+{
+    __fetch_node_recursive(this, QModelIndex());
+}
+
 void DatabaseModel::AddEntry(Entry &e)
 {
     m_undostack.Do(new AddEntryCommand(e, this));
@@ -676,10 +699,16 @@ bool DatabaseModel::dropMimeData(const QMimeData *data,
         if(!eind.isValid())
             throw Exception<>("Source Entry Id not found in model");
 
-        m_undostack.Do(new MoveEntryCommand(eind.parent(), eind.row(), eind.row(),
-                                            parent, row, this));
+        MoveEntries(eind.parent(), eind.row(), eind.row(), parent, row);
     }
     return false;
+}
+
+void DatabaseModel::MoveEntries(const QModelIndex &src_parent, int src_first, int src_last,
+                                const QModelIndex &dest_parent, int dest_row)
+{
+    m_undostack.Do(new MoveEntryCommand(src_parent, src_first, src_last,
+                                        dest_parent, dest_row, this));
 }
 
 Qt::DropActions DatabaseModel::supportedDropActions() const

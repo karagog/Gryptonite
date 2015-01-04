@@ -46,7 +46,23 @@ private Q_SLOTS:
     void test_entry_insert();
     void test_entry_delete();
     void test_entry_update();
+    void test_entry_move_basic();
+    void test_entry_move_up_same_parent();
+    void test_entry_move_down_same_parent();
     void cleanupTestCase();
+
+private:
+    void _cleanup_database(){
+        if(db){
+            delete db;
+            db = 0;
+        }
+        if(QFile::exists(TEST_FILEPATH))
+            QVERIFY(QFile::remove(TEST_FILEPATH));
+    }
+    void _init_database(){
+        db = new PasswordDatabase(TEST_FILEPATH, creds);
+    }
 };
 
 DatabaseTest::DatabaseTest()
@@ -57,13 +73,12 @@ DatabaseTest::DatabaseTest()
 
 void DatabaseTest::initTestCase()
 {
-    if(QFile::exists(TEST_FILEPATH))
-        QVERIFY(QFile::remove(TEST_FILEPATH));
+    _cleanup_database();
 
     bool no_exception = true;
     try
     {
-        db = new PasswordDatabase(TEST_FILEPATH, creds);
+        _init_database();
     }
     catch(...)
     {
@@ -196,6 +211,88 @@ void DatabaseTest::test_entry_update()
 
     Entry e2 = db->FindEntry(e.GetId());
     QVERIFY(__compare_entries(e, e2));
+}
+
+void DatabaseTest::test_entry_move_basic()
+{
+    _cleanup_database();
+    _init_database();
+
+    Entry   e0,       e1;
+    Entry e2, e3,   e4, e5;
+    {
+        // Populate the initial hierarchy for the test
+        db->AddEntry(e0);
+        db->AddEntry(e1);
+
+        e2.SetParentId(e0.GetId());
+        e3.SetParentId(e0.GetId());
+
+        e4.SetParentId(e1.GetId());
+        e5.SetParentId(e1.GetId());
+
+        db->AddEntry(e2);
+        db->AddEntry(e3);
+        db->AddEntry(e4);
+        db->AddEntry(e5);
+
+        e0 = db->FindEntry(e0.GetId());
+        e1 = db->FindEntry(e1.GetId());
+        e2 = db->FindEntry(e2.GetId());
+        e3 = db->FindEntry(e3.GetId());
+        e4 = db->FindEntry(e4.GetId());
+        e5 = db->FindEntry(e5.GetId());
+        QVERIFY(e0.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == e0.GetId());
+        QVERIFY(e3.GetParentId() == e0.GetId());
+        QVERIFY(e4.GetParentId() == e1.GetId());
+        QVERIFY(e5.GetParentId() == e1.GetId());
+        QVERIFY(e0.GetRow() == 0);
+        QVERIFY(e1.GetRow() == 1);
+        QVERIFY(e2.GetRow() == 0);
+        QVERIFY(e3.GetRow() == 1);
+        QVERIFY(e4.GetRow() == 0);
+        QVERIFY(e5.GetRow() == 1);
+    }
+
+
+//    // Now move an entry from the middle of one parent to the middle of another parent
+//    {
+//        DatabaseModel dbm(DATABASE_PATH, m_creds);
+//        dbm.FetchAllEntries();
+//        dbm.MoveEntries(dbm.FindIndexById(e0.GetId()), 0, 0,
+//                        dbm.FindIndexById(e1.GetId()), 1);
+
+//        e0 = dbm.FindEntryById(e0.GetId());
+//        e1 = dbm.FindEntryById(e1.GetId());
+//        e2 = dbm.FindEntryById(e2.GetId());
+//        e3 = dbm.FindEntryById(e3.GetId());
+//        e4 = dbm.FindEntryById(e4.GetId());
+//        e5 = dbm.FindEntryById(e5.GetId());
+//        QVERIFY(e0.GetParentId() == EntryId::Null());
+//        QVERIFY(e1.GetParentId() == EntryId::Null());
+//        QVERIFY(e2.GetParentId() == e1.GetId());
+//        QVERIFY(e3.GetParentId() == e0.GetId());
+//        QVERIFY(e4.GetParentId() == e1.GetId());
+//        QVERIFY(e5.GetParentId() == e1.GetId());
+//        QVERIFY(e0.GetRow() == 0);
+//        QVERIFY(e1.GetRow() == 1);
+//        QVERIFY(e3.GetRow() == 0);
+//        QVERIFY(e4.GetRow() == 0);
+//        QVERIFY(e2.GetRow() == 1);
+//        QVERIFY(e5.GetRow() == 2);
+//    }
+}
+
+void DatabaseTest::test_entry_move_up_same_parent()
+{
+    QVERIFY2(false, "Failure");
+}
+
+void DatabaseTest::test_entry_move_down_same_parent()
+{
+    QVERIFY2(false, "Failure");
 }
 
 void DatabaseTest::cleanupTestCase()

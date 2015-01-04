@@ -627,7 +627,7 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
         // Update the surrounding entries' rows before insertion
         int child_count = __count_entries_by_parent_id(q, e.GetParentId());
         int row = e.GetRow();
-        if(row > child_count)
+        if(0 > row || row > child_count)
             row = child_count;
 
         bool pid_isnull = e.GetParentId().IsNull();
@@ -663,6 +663,7 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
                 return;
 
             d->index[e.GetId()].crypttext = crypttext;
+            d->index[e.GetId()].row = row;
             d->index[e.GetId()].dirty = false;
             d->wc_index.notify_all();
         }
@@ -806,6 +807,14 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
     {
         QByteArray special_zero_id(EntryId::Size, (char)0);
 
+        // Have to make a special adjustment in case moving lower in the same parent
+        if(src_parent == dest_parent && row_dest > row_last){
+            row_dest -= row_cnt;
+        }
+
+        int src_siblings_cnt = __count_entries_by_parent_id(q, src_parent);
+        int dest_siblings_cnt = __count_entries_by_parent_id(q, dest_parent);
+
         // First move the source rows to a dummy parent with ID=0
         for(int i = 0; i < row_cnt; ++i){
             q.prepare(QString("UPDATE Entry SET ParentID=?,Row=? WHERE ParentID%1 AND Row=?")
@@ -819,8 +828,7 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
         }
 
         // Update the siblings at the source
-        int siblings_cnt = __count_entries_by_parent_id(q, src_parent);
-        for(int i = row_last + 1; i < siblings_cnt + row_cnt; ++i){
+        for(int i = row_last + 1; i < src_siblings_cnt + row_cnt; ++i){
             q.prepare(QString("UPDATE Entry SET Row=? WHERE ParentID%1 AND Row=?")
                       .arg(src_parent.IsNull() ? " IS NULL" : "=?"));
             q.addBindValue(i - row_cnt);
@@ -831,8 +839,7 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
         }
 
         // Update the siblings at the dest
-        siblings_cnt = __count_entries_by_parent_id(q, dest_parent);
-        for(int i = row_dest; i < siblings_cnt; ++i){
+        for(int i = row_dest; i < dest_siblings_cnt; ++i){
             q.prepare(QString("UPDATE Entry SET Row=? WHERE ParentID%1 AND Row=?")
                       .arg(dest_parent.IsNull() ? " IS NULL" : "=?"));
             q.addBindValue(i + row_cnt);
@@ -1081,7 +1088,7 @@ vector<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid)
                 loaded = true;
                 for(const EntryId &id : pi->second.children){
                     auto i = d->index.find(id);
-                    if(i == d->index.end() || i->second.dirty){
+                    if(i == d->index.end() || !i->second.exists || i->second.dirty){
                         loaded = false;
                         break;
                     }

@@ -155,7 +155,12 @@ void MainWindow::AboutToQuit()
 
 void MainWindow::closeEvent(QCloseEvent *ev)
 {
-    QMainWindow::closeEvent(ev);
+    if(m_settings->Value(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY).toBool()){
+        hide();
+    }
+    else{
+        QMainWindow::closeEvent(ev);
+    }
 }
 
 bool MainWindow::_handle_key_pressed(QKeyEvent *ev)

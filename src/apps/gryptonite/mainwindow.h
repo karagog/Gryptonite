@@ -24,6 +24,7 @@ limitations under the License.*/
 #include <QUndoStack>
 #include <QSystemTrayIcon>
 #include <QPointer>
+#include <QWinTaskbarButton>
 
 #define MAINWINDOW_GEOMETRY_SETTING "MAINWIN_GEOMETRY"
 #define MAINWINDOW_STATE_SETTING "MAINWIN_STATE"
@@ -121,7 +122,7 @@ private slots:
     void _treeview_doubleclicked(const QModelIndex &);
 
     void _entry_row_activated(int);
-    void _progress_updated(int, const QString &);
+    void _progress_updated(int, const QString & = QString::null);
 
     void _edit_preferences();
     void _tray_icon_activated(QSystemTrayIcon::ActivationReason);
@@ -136,6 +137,7 @@ private:
     QToolButton *btn_navBack;
     QToolButton *btn_navForward;
     GUtil::Qt::ProgressBarControl m_progressBar;
+    QWinTaskbarButton m_taskbarButton;
     QLabel *m_fileLabel;
     GUtil::Qt::Settings *m_settings;
     GUtil::SmartPointer<QActionGroup> m_recentFilesGroup;

@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "application.h"
+#include "mainwindow.h"
 #include "about.h"
 #include <grypto_common.h>
 #include <gutil/messageboxlogger.h>
@@ -35,8 +36,7 @@ static GUtil::RNG_Initializer __rng_init(&__cryptopp_rng);
 
 Application::Application(int &argc, char **argv)
     :GUtil::Qt::Application(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING),
-      settings("main"),
-      main_window(&settings)
+      settings("main")
 {
     // Log global messages to a logfile and a messagebox
     SetGlobalLogger(new GroupLogger{
@@ -57,19 +57,20 @@ Application::Application(int &argc, char **argv)
 
     setQuitOnLastWindowClosed(false);
     
-    main_window.show();
+    main_window = new MainWindow(&settings);
 }
 
 void Application::about_to_quit()
 {
-    main_window.AboutToQuit();
+    main_window->AboutToQuit();
+    main_window->deleteLater();
     SetGlobalLogger(NULL);
 }
 
 void Application::handle_exception(std::exception &ex)
 {
     if(0 != dynamic_cast<GUtil::CancelledOperationException<> *>(&ex)){
-        QMessageBox::information(&main_window, "Cancelled", "The operation has been cancelled");
+        QMessageBox::information(main_window, "Cancelled", "The operation has been cancelled");
     }
     else{
         GUtil::Qt::Application::handle_exception(ex);

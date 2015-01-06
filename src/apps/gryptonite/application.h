@@ -15,7 +15,6 @@ limitations under the License.*/
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
-#include "mainwindow.h"
 #include <gutil/qt_settings.h>
 #include <gutil/application.h>
 
@@ -23,12 +22,14 @@ namespace CryptoPP{
 class Exception;
 }
 
+class MainWindow;
+
 
 class Application :
         public GUtil::Qt::Application
 {
     GUtil::Qt::Settings settings;
-    MainWindow main_window;
+    MainWindow *main_window;
 public:
 
     Application(int &argc, char **argv);

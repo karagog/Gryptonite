@@ -39,6 +39,7 @@ limitations under the License.*/
 #include <QToolButton>
 #include <QLabel>
 #include <QStandardPaths>
+#include <QWinTaskbarProgress>
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL1(CryptoPP);
 USING_NAMESPACE_GUTIL;
@@ -62,6 +63,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
       ui(new Ui::MainWindow),
       m_trayIcon(QIcon(":/icons/main.png")),
       m_progressBar(true),
+      m_taskbarButton(this),
       m_fileLabel(new QLabel(this)),
       m_settings(s),
       m_isLocked(true),
@@ -139,6 +141,10 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
         if(al.length() > 0 && QFile::exists(al[0]->data().toString()))
             al[0]->trigger();
     }
+    
+    // The window must be shown before setting up the taskbar button
+    show();
+    m_taskbarButton.setWindow(this->windowHandle());
 }
 
 MainWindow::~MainWindow()
@@ -349,17 +355,17 @@ void MainWindow::_new_open_database(const QString &path)
 
                 bool tmp = m_progressBar.IsCancellable();
                 m_progressBar.SetIsCancellable(false);
-                m_progressBar.show();
+                _progress_updated(0);
+                
                 LegacyUtils::UpdateFileToCurrentVersion(path.toUtf8(), version,
                                                         open_path.toUtf8(),
                                                         creds, new_creds,
 
                     // The progress callback function...
                     [&](int p, const QString &s){
-                        m_progressBar.SetProgress(p, s);
+                        _progress_updated(p, s);
                     }
                 );
-                m_progressBar.hide();
                 m_progressBar.SetIsCancellable(tmp);
 
                 creds = new_creds;
@@ -896,9 +902,15 @@ void MainWindow::_cleanup_files()
 void MainWindow::_progress_updated(int progress, const QString &task_name)
 {
     m_progressBar.SetProgress(progress, task_name);
+    m_taskbarButton.progress()->setValue(progress);
 
-    if(progress == 100)
+    if(progress == 100){
         ui->statusbar->showMessage(QString(tr("Finished %1")).arg(task_name), STATUSBAR_MSG_TIMEOUT);
+        m_taskbarButton.progress()->hide();
+    }
+    else if(!m_taskbarButton.progress()->isVisible()){
+        m_taskbarButton.progress()->show();
+    }
 }
 
 void MainWindow::_edit_preferences()

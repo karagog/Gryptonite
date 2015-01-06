@@ -1,5 +1,9 @@
 QT += widgets network sql xml
 
+win32{
+QT += winextras
+}
+
 TEMPLATE = app
 
 TOP_DIR = ../../..

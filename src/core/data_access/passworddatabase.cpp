@@ -669,14 +669,11 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
             // Update the siblings in the index so they're no longer dirty
             auto pi = d->parent_index.find(e.GetParentId());
             GASSERT(pi != d->parent_index.end());
-            for(uint i = e.GetRow(); i <= child_count; ++i){
+            for(int i = e.GetRow(); i <= child_count; ++i){
                 entry_cache &ec = d->index[pi->second.children[i]];
 
-                // All of these rows should have been marked dirty on the main thread, now they're clean
-                GASSERT(ec.dirty);
-
                 // The rows should still be correct from when they were updated on the main thread
-                GASSERT(ec.row == i);
+                GASSERT((int)ec.row == i);
 
                 ec.dirty = false;
             }
@@ -936,10 +933,8 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
         // Adjust the siblings
         for(uint i = e.GetRow() + 1; i < child_ids.Length(); ++i){
             auto iter = d->index.find(child_ids[i]);
-            if(iter != d->index.end()){
+            if(iter != d->index.end())
                 iter->second.row = i;
-                iter->second.dirty = true;
-            }
         }
 
         if(e.IsFavorite())
@@ -1030,10 +1025,8 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
         // Update the siblings of the item we just removed
         for(auto r = i->second.row; r < pi->second.children.Length(); ++r){
             auto ci = d->index.find(pi->second.children[r]);
-            if(ci != d->index.end()){
+            if(ci != d->index.end())
                 ci->second.row = r;
-                ci->second.dirty = true;
-            }
         }
 
         int fi = d->favorite_index.IndexOf(id);
@@ -1331,10 +1324,6 @@ static void  __cache_children(QSqlQuery &q, d_t *d,
                 auto i = d->index.find(e.id);
                 if(i == d->index.end())
                     d->index.emplace(e.id, e);
-
-                // Don't update if it's dirty. Let the appropriate task handle it
-                else if(!i->second.dirty)
-                    i->second = e;
             }
             pc.children_loaded = true;
             d->parent_index[parent_id] = pc;

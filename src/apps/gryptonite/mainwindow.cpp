@@ -64,7 +64,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
       m_progressBar(true),
       m_fileLabel(new QLabel(this)),
       m_settings(s),
-      m_isLocked(true)
+      m_isLocked(true),
+      m_minimize_msg_shown(false)
 {
     ui->setupUi(this);
     setWindowTitle(GRYPTO_APP_NAME);
@@ -108,6 +109,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->action_cryptoTransform, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
     connect(ui->action_Preferences, SIGNAL(triggered()), this, SLOT(_edit_preferences()));
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
+    connect(&m_trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
+            this, SLOT(_tray_icon_activated(QSystemTrayIcon::ActivationReason)));
 
     connect(ui->view_entry, SIGNAL(RowActivated(int)), this, SLOT(_entry_row_activated(int)));
 
@@ -153,13 +156,33 @@ void MainWindow::AboutToQuit()
     m_settings->CommitChanges();
 }
 
+void MainWindow::_hide()
+{
+    hide();
+    if(!m_minimize_msg_shown){
+        m_trayIcon.showMessage(tr("Minimized to Tray"),
+                               tr(GRYPTO_APP_NAME" has been minimized to tray."
+                                  "\nClick icon to reopen."));
+        m_minimize_msg_shown = true;
+    }
+}
+
+void MainWindow::_show()
+{
+    showNormal();
+    activateWindow();
+}
+
 void MainWindow::closeEvent(QCloseEvent *ev)
 {
-    if(m_settings->Value(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY).toBool()){
-        hide();
+    if(m_settings->Value(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY).toBool() &&
+            IsFileOpen())
+    {
+        _hide();
     }
     else{
         QMainWindow::closeEvent(ev);
+        QApplication::exit();
     }
 }
 
@@ -872,5 +895,20 @@ void MainWindow::_edit_preferences()
     PreferencesEdit dlg(m_settings, this);
     if(QDialog::Accepted == dlg.exec()){
         // Update ourselves to reflect the new settings...
+    }
+}
+
+void MainWindow::_tray_icon_activated(QSystemTrayIcon::ActivationReason ar)
+{
+    switch(ar)
+    {
+    case QSystemTrayIcon::Trigger:
+        if(isVisible() && isActiveWindow())
+            _hide();
+        else
+            _show();
+        break;
+    default:
+        break;
     }
 }

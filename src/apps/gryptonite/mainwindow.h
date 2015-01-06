@@ -124,6 +124,10 @@ private slots:
     void _progress_updated(int, const QString &);
 
     void _edit_preferences();
+    void _tray_icon_activated(QSystemTrayIcon::ActivationReason);
+
+    void _hide();
+    void _show();
 
 
 private:
@@ -143,6 +147,7 @@ private:
     GUtil::SmartPointer<QWidget> m_encryptDecryptWindow;
     GUtil::SmartPointer<QWidget> m_entryView;
     QPointer<QWidget> m_cleanupFilesWindow;
+    bool m_minimize_msg_shown;
 
     void _new_open_database(const QString &);
     void _update_ui_file_opened(bool);

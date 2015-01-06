@@ -147,7 +147,9 @@ private:
     GUtil::SmartPointer<QWidget> m_encryptDecryptWindow;
     GUtil::SmartPointer<QWidget> m_entryView;
     QPointer<QWidget> m_cleanupFilesWindow;
+
     bool m_minimize_msg_shown;
+    bool m_requesting_unlock;
 
     void _new_open_database(const QString &);
     void _update_ui_file_opened(bool);

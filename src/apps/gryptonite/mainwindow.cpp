@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -65,7 +65,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
       m_fileLabel(new QLabel(this)),
       m_settings(s),
       m_isLocked(true),
-      m_minimize_msg_shown(false)
+      m_minimize_msg_shown(false),
+      m_requesting_unlock(false)
 {
     ui->setupUi(this);
     setWindowTitle(GRYPTO_APP_NAME);
@@ -793,6 +794,11 @@ void MainWindow::_lock_unlock_interface(bool lock)
         ui->actionLockUnlock->setText(tr("&Unlock Interface"));
         ui->actionLockUnlock->setData(false);
         m_isLocked = true;
+
+        _hide();
+        m_trayIcon.showMessage(tr("Locked"),
+                               tr(GRYPTO_APP_NAME" has been locked."
+                                  "\nClick icon to unlock."));
     }
     else
     {
@@ -825,6 +831,10 @@ void MainWindow::_action_lock_unlock_interface()
 
 void MainWindow::RequestUnlock()
 {
+    if(m_requesting_unlock)
+        return;
+
+    m_requesting_unlock = true;
     GetPasswordDialog dlg(m_settings, _get_database_model()->FilePath(), this);
     if(QDialog::Accepted == dlg.exec())
     {
@@ -833,6 +843,7 @@ void MainWindow::RequestUnlock()
         else
             __show_access_denied(this, tr("Invalid Password"));
     }
+    m_requesting_unlock = false;
 }
 
 bool MainWindow::event(QEvent *e)
@@ -902,11 +913,15 @@ void MainWindow::_tray_icon_activated(QSystemTrayIcon::ActivationReason ar)
 {
     switch(ar)
     {
+    case QSystemTrayIcon::DoubleClick:
     case QSystemTrayIcon::Trigger:
         if(isVisible() && isActiveWindow())
             _hide();
-        else
+        else{
             _show();
+            if(IsLocked())
+                RequestUnlock();
+        }
         break;
     default:
         break;

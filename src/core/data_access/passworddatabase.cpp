@@ -36,6 +36,7 @@ limitations under the License.*/
 #include <QSqlRecord>
 #include <QSqlError>
 #include <QDomDocument>
+#include <QLockFile>
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL1(CryptoPP);
 USING_NAMESPACE_GUTIL;
@@ -464,7 +465,7 @@ static void __check_version(const QString &dbstring)
         throw Exception<>("Did not find a version row");
 }
 
-void PasswordDatabase::ValidateDatabase(const char *file_path)
+void PasswordDatabase::ValidateDatabase(const char *file_path, bool *is_locked)
 {
     if(!File::Exists(file_path))
         throw Exception<>(String::Format("File does not exist: %s", file_path));
@@ -490,6 +491,7 @@ void PasswordDatabase::ValidateDatabase(const char *file_path)
 
 PasswordDatabase::PasswordDatabase(const char *file_path,
                                    const Credentials &creds,
+                                   function<bool(const ProcessInfo &)> ask_for_lock_override,
                                    QObject *par)
     :QObject(par)
 {
@@ -503,9 +505,30 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
         QSqlDatabase db = QSqlDatabase::database(d->dbString);
         QSqlQuery q(db);
 
-        // Initialize the new database if it doesn't exist
-        if(!file_exists)
-        {
+        // Attempt to lock the database
+        QFileInfo fi(file_path);
+        m_lockfile = new QLockFile(QString("%1.LOCKFILE")
+                                       .arg(fi.absoluteFilePath()));
+        m_lockfile->setStaleLockTime(0);
+        if(!m_lockfile->tryLock(0)){
+            if(QLockFile::LockFailedError == m_lockfile->error()){
+                // The file is locked by another process. Ask the user if they want to override it.
+                ProcessInfo pi;
+                m_lockfile->getLockInfo(&pi.ProcessId, &pi.HostName, &pi.AppName);
+                if(ask_for_lock_override(pi)){
+                    if(!m_lockfile->removeStaleLockFile())
+                        throw LockException<>("Unable to remove lockfile (is the locking process still alive?)");
+                }
+                else
+                    throw LockException<>("Database Locked");
+            }
+            else{
+                throw LockException<>("Unknown error while locking the database");
+            }
+        }
+        
+        if(!file_exists){
+            // Initialize the new database if it doesn't exist
             __init_sql_resources();
             QResource rs(":/sql/create_db.sql");
             GASSERT(rs.isValid());
@@ -593,6 +616,8 @@ PasswordDatabase::~PasswordDatabase()
     d->entry_worker.join();
     d->file_worker.join();
     QSqlDatabase::removeDatabase(d->dbString);
+    
+    m_lockfile->unlock();
     G_D_UNINIT();
 }
 
@@ -1043,7 +1068,7 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     d->wc_entry_thread.notify_one();
 }
 
-Entry PasswordDatabase::FindEntry(const EntryId &id)
+Entry PasswordDatabase::FindEntry(const EntryId &id) const
 {
     G_D;
     __command_cache_entries_by_parentid(d, id);
@@ -1070,7 +1095,7 @@ Entry PasswordDatabase::FindEntry(const EntryId &id)
     return __convert_cache_to_entry(ec, *d->cryptor);
 }
 
-int PasswordDatabase::CountEntriesByParentId(const EntryId &id)
+int PasswordDatabase::CountEntriesByParentId(const EntryId &id) const
 {
     G_D;
     unique_lock<mutex> lkr(d->index_lock);
@@ -1085,7 +1110,7 @@ int PasswordDatabase::CountEntriesByParentId(const EntryId &id)
     return pi->second.children.Length();
 }
 
-vector<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid)
+vector<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
 {
     G_D;
     // Let the cache know we are accessing this parent id, even if it's
@@ -1124,7 +1149,7 @@ void PasswordDatabase::SetFavoriteEntries(const Vector<EntryId> &favs)
     d->wc_entry_thread.notify_one();
 }
 
-vector<Entry> PasswordDatabase::FindFavoriteEntries()
+vector<Entry> PasswordDatabase::FindFavoriteEntries() const
 {
     G_D;
     vector<entry_cache> rows;
@@ -1147,14 +1172,7 @@ void PasswordDatabase::DeleteOrphans()
     d->wc_entry_thread.notify_one();
 }
 
-bool PasswordDatabase::FileExists(const FileId &id)
-{
-    G_D;
-    QSqlQuery q(QSqlDatabase::database(d->dbString));
-    return _file_exists(q, id);
-}
-
-bool PasswordDatabase::_file_exists(QSqlQuery &q, const FileId &id)
+static bool __file_exists(QSqlQuery &q, const FileId &id)
 {
     bool ret = false;
     q.prepare("SELECT COUNT(*) FROM File WHERE ID=?");
@@ -1163,6 +1181,13 @@ bool PasswordDatabase::_file_exists(QSqlQuery &q, const FileId &id)
     if(q.next())
         ret = 0 < q.record().value(0).toInt();
     return ret;
+}
+
+bool PasswordDatabase::FileExists(const FileId &id) const
+{
+    G_D;
+    QSqlQuery q(QSqlDatabase::database(d->dbString));
+    return __file_exists(q, id);
 }
 
 void PasswordDatabase::CancelFileTasks()
@@ -1182,7 +1207,7 @@ void PasswordDatabase::CancelFileTasks()
     d->wc_file_thread.notify_one();
 }
 
-vector<pair<FileId, quint32> > PasswordDatabase::GetFileSummary()
+vector<pair<FileId, quint32> > PasswordDatabase::GetFileSummary() const
 {
     G_D;
     QSqlQuery q(QSqlDatabase::database(d->dbString));
@@ -1215,7 +1240,7 @@ void PasswordDatabase::DeleteFile(const FileId &id)
     d->wc_file_thread.notify_one();
 }
 
-void PasswordDatabase::ExportFile(const FileId &id, const char *export_path)
+void PasswordDatabase::ExportFile(const FileId &id, const char *export_path) const
 {
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
@@ -1224,7 +1249,7 @@ void PasswordDatabase::ExportFile(const FileId &id, const char *export_path)
 }
 
 void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
-                                            const Credentials &creds)
+                                            const Credentials &creds) const
 {
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
@@ -1650,7 +1675,7 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
 
     db.transaction();
     try{
-        bool exists = _file_exists(q, id);
+        bool exists = __file_exists(q, id);
         _fw_fail_if_cancelled();
         if(exists)
         {

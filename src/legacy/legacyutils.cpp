@@ -208,7 +208,7 @@ void LegacyUtils::UpdateFileToCurrentVersion(
     progress_msg = QObject::tr("Populating new database...");
     progress_cb(10, progress_msg);
 
-    // Create the return database
+    // Create the updated database
     PasswordDatabase pdb(new_path, new_creds);
 
     // Iterate through the legacy object and populate the new object

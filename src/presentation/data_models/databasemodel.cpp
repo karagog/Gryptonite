@@ -166,15 +166,16 @@ EntryContainer::~EntryContainer()
 
 DatabaseModel::DatabaseModel(const char *f,
                              const Credentials &creds,
+                             function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override,
                              QObject *parent)
     :QAbstractItemModel(parent),
-      m_db(new PasswordDatabase(f, creds))
+      m_db(f, creds, ask_for_lock_override)
 {
-    connect(m_db.data(), SIGNAL(NotifyFavoritesUpdated()),
+    connect(&m_db, SIGNAL(NotifyFavoritesUpdated()),
             this, SIGNAL(NotifyFavoritesUpdated()));
-    connect(m_db.data(), SIGNAL(NotifyExceptionOnBackgroundThread(const std::shared_ptr<GUtil::Exception<>> &)),
+    connect(&m_db, SIGNAL(NotifyExceptionOnBackgroundThread(const std::shared_ptr<GUtil::Exception<>> &)),
             this, SLOT(_handle_database_worker_exception(const std::shared_ptr<GUtil::Exception<>> &)));
-    connect(m_db.data(), SIGNAL(NotifyProgressUpdated(int, QString)),
+    connect(&m_db, SIGNAL(NotifyProgressUpdated(int, QString)),
             this, SIGNAL(NotifyProgressUpdated(int, QString)));
 
     // We need to manually fetch the root
@@ -188,7 +189,7 @@ DatabaseModel::~DatabaseModel()
 
 GUtil::CryptoPP::Cryptor const &DatabaseModel::Cryptor() const
 {
-    return m_db->Cryptor();
+    return m_db.Cryptor();
 }
 
 QModelIndex DatabaseModel::FindIndexById(const EntryId &id) const
@@ -204,12 +205,12 @@ QModelIndex DatabaseModel::FindIndexById(const EntryId &id) const
 
 Entry DatabaseModel::FindEntryById(const EntryId &id) const
 {
-    return m_db->FindEntry(id);
+    return m_db.FindEntry(id);
 }
 
 vector<Entry> DatabaseModel::FindFavorites() const
 {
-    return m_db->FindFavoriteEntries();
+    return m_db.FindFavoriteEntries();
 }
 
 Entry const *DatabaseModel::GetEntryFromIndex(const QModelIndex &ind) const
@@ -374,9 +375,9 @@ void DatabaseModel::fetchMore(const QModelIndex &par)
     QList<EntryContainer *> tmplist;
     try
     {
-        for(Entry const &e : m_db->FindEntriesByParentId(id))
+        for(Entry const &e : m_db.FindEntriesByParentId(id))
         {
-            int cnt = m_db->CountEntriesByParentId(e.GetId());
+            int cnt = m_db.CountEntriesByParentId(e.GetId());
             tmplist.append(new EntryContainer(e));
             tmplist.last()->child_count = cnt;
         }
@@ -436,7 +437,7 @@ void DatabaseModel::UpdateEntry(const Entry &e)
 
 void DatabaseModel::_add_entry(Entry &e, bool generate_id)
 {
-    m_db->AddEntry(e, generate_id);
+    m_db.AddEntry(e, generate_id);
 
     // Don't have to do anything if the parent is not present
     if(!e.GetParentId().IsNull() && !m_index.contains(e.GetParentId()))
@@ -470,7 +471,7 @@ void DatabaseModel::_add_entry(Entry &e, bool generate_id)
 
 void DatabaseModel::_del_entry(const EntryId &id)
 {
-    m_db->DeleteEntry(id);
+    m_db.DeleteEntry(id);
 
     // Don't have to do anything if the entry wasn't loaded
     if(!m_index.contains(id))
@@ -496,7 +497,7 @@ void DatabaseModel::_del_entry(const EntryId &id)
 
 void DatabaseModel::_edt_entry(Entry &e)
 {
-    m_db->UpdateEntry(e);
+    m_db.UpdateEntry(e);
 
     QModelIndex ind = FindIndexById(e.GetId());
     if(ind.isValid())
@@ -535,7 +536,7 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
     }
 
     // Move the entries in the database
-    m_db->MoveEntries(pid, r_first, r_last,
+    m_db.MoveEntries(pid, r_first, r_last,
                       pid_targ, r_dest);
 
 
@@ -565,49 +566,49 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
 
 QByteArray const &DatabaseModel::FilePath() const
 {
-    return m_db->FilePath();
+    return m_db.FilePath();
 }
 
 bool DatabaseModel::CheckCredentials(const Credentials &creds) const
 {
-    return m_db->CheckCredentials(creds);
+    return m_db.CheckCredentials(creds);
 }
 
 void DatabaseModel::UpdateFile(const FileId &id, const char *filepath)
 {
-    m_db->AddUpdateFile(id, filepath);
+    m_db.AddUpdateFile(id, filepath);
 }
 
 void DatabaseModel::DeleteFile(const FileId &id)
 {
-    m_db->DeleteFile(id);
+    m_db.DeleteFile(id);
 }
 
 bool DatabaseModel::FileExists(const FileId &id)
 {
-    return m_db->FileExists(id);
+    return m_db.FileExists(id);
 }
 
 void DatabaseModel::ExportFile(const FileId &id, const char *export_file_path)
 {
-    m_db->ExportFile(id, export_file_path);
+    m_db.ExportFile(id, export_file_path);
 }
 
 void DatabaseModel::ExportToPortableSafe(const char *export_filename,
                                          const Credentials &creds)
 {
-    m_db->ExportToPortableSafe(export_filename, creds);
+    m_db.ExportToPortableSafe(export_filename, creds);
 }
 
 void DatabaseModel::ImportFromPortableSafe(const char *export_filename,
                                            const Credentials &creds)
 {
-    m_db->ImportFromPortableSafe(export_filename, creds);
+    m_db.ImportFromPortableSafe(export_filename, creds);
 }
 
 vector<pair<FileId, quint32> > DatabaseModel::GetFileSummary()
 {
-    return m_db->GetFileSummary();
+    return m_db.GetFileSummary();
 }
 
 void DatabaseModel::_append_referenced_files(const QModelIndex &ind, QSet<QByteArray> &s)
@@ -634,7 +635,7 @@ QSet<QByteArray> DatabaseModel::GetReferencedFiles()
 
 void DatabaseModel::CancelAllBackgroundOperations()
 {
-    m_db->CancelFileTasks();
+    m_db.CancelFileTasks();
 }
 
 void DatabaseModel::_handle_database_worker_exception(const shared_ptr<Exception<>> &ex)
@@ -718,12 +719,12 @@ Qt::DropActions DatabaseModel::supportedDropActions() const
 
 void DatabaseModel::WaitForBackgroundThreadIdle()
 {
-    m_db->WaitForEntryThreadIdle();
+    m_db.WaitForEntryThreadIdle();
 }
 
 void DatabaseModel::DeleteOrphans()
 {
-    m_db->DeleteOrphans();
+    m_db.DeleteOrphans();
 }
 
 

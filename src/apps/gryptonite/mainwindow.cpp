@@ -394,7 +394,24 @@ void MainWindow::_new_open_database(const QString &path)
 
     DatabaseModel *dbm = NULL;
     try{
-        dbm = new DatabaseModel(open_path.toUtf8(), creds, this);
+        dbm = new DatabaseModel(open_path.toUtf8(), creds,
+        
+                // A function to confirm overriding the lockfile
+                [&](const PasswordDatabase::ProcessInfo &pi){
+                    return QMessageBox::Yes == QMessageBox::warning(this, 
+                        tr("Locked by another process"),
+                        QString(tr("The database is currently locked by another process:\n"
+                                   "\n\tProcess ID: %1"
+                                   "\n\tHost Name: %2"
+                                   "\n\tApp Name: %3\n"
+                                   "\nDo you want to override the lock and open the file anyways? (NOT recommended!)"))
+                        .arg(pi.ProcessId)
+                        .arg(pi.HostName)
+                        .arg(pi.AppName),
+                        QMessageBox::Yes | QMessageBox::Cancel,
+                        QMessageBox::Cancel);
+                },
+                this);
     }
     catch(const GUtil::AuthenticationException<> &){
         __show_access_denied(this, tr("Invalid Key"));

@@ -22,9 +22,11 @@ limitations under the License.*/
 #include <QString>
 #include <QObject>
 #include <memory>
+#include <functional>
 
 class QSqlRecord;
 class QSqlQuery;
+class QLockFile;
 
 namespace Grypt{
 class Entry;
@@ -39,13 +41,30 @@ class PasswordDatabase :
 {
     Q_OBJECT
     void *d;
+    GUtil::SmartPointer<QLockFile> m_lockfile;
 public:
 
-    /** Opens or creates the database with the password and/or key file.
+    /** Holds information about a process */
+    struct ProcessInfo{
+        qint64  ProcessId = -1;
+        QString HostName;
+        QString AppName;
+    };
+
+    /** Opens or creates the database with the credentials.
      *  Throws an AuthenticationException if the password is wrong.
+     *
+     *  \param ask_for_lock_override A function to ask the user if they want
+     *      to override the lock on the database. This is only called if the
+     *      database was locked when you tried to open it, and if it returns false
+     *      an exception will be thrown, thus aborting construction of the database object.
+     *      The default always returns false.
+     *      The argument contains information about the process that has locked the database.
     */
     PasswordDatabase(const char *file_path,
                      const Credentials &creds,
+                     std::function<bool(const ProcessInfo &)> ask_for_lock_override = 
+                            [](const ProcessInfo &){ return false; },
                      QObject * = NULL);
 
     ~PasswordDatabase();
@@ -78,19 +97,22 @@ public:
     void AddEntry(Entry &, bool generate_id = true);
 
     /** Returns the entry given by id or throws an exception if it can't be found. */
-    Entry FindEntry(const EntryId &);
+    Entry FindEntry(const EntryId &) const;
 
     /** Returns the number of children for the parent id. */
-    int CountEntriesByParentId(const EntryId &);
+    int CountEntriesByParentId(const EntryId &) const;
 
     /** Returns a list of entries for the given parent id sorted by row number. */
-    std::vector<Entry> FindEntriesByParentId(const EntryId &);
+    std::vector<Entry> FindEntriesByParentId(const EntryId &) const;
 
     /** Returns a sorted list of the user's favorite entries. */
-    std::vector<Entry> FindFavoriteEntries();
+    std::vector<Entry> FindFavoriteEntries() const;
 
     /** Sets the given entries as favorites, in the order they are given. */
     void SetFavoriteEntries(const GUtil::Vector<EntryId> &);
+    
+    /** Instructs a background worker to refresh favorites. */
+    void RefreshFavorites();
 
     /** Updates the given entry's data. Note this function is not used to move entries
      *  around the hierarchy.
@@ -121,10 +143,10 @@ public:
     */
 
     /** Returns true if the file exists in the database. */
-    bool FileExists(const FileId &);
+    bool FileExists(const FileId &) const;
 
     /** Decrypts and exports the file to the given path. */
-    void ExportFile(const FileId &, const char *export_path);
+    void ExportFile(const FileId &, const char *export_path) const;
 
     /** Adds a new file to the database, or updates an existing one.
      *  This works on a background thread.
@@ -135,7 +157,7 @@ public:
     void DeleteFile(const FileId &);
 
     /** Returns the complete list of file ids and associated file sizes. */
-    std::vector<std::pair<FileId, quint32> > GetFileSummary();
+    std::vector<std::pair<FileId, quint32> > GetFileSummary() const;
 
     /** \} */
 
@@ -144,7 +166,7 @@ public:
 
     /** Exports the entire database in the portable safe format. */
     void ExportToPortableSafe(const char *export_filename,
-                              const Credentials &);
+                              const Credentials &) const;
 
     /** Imports data from the portable safe file. */
     void ImportFromPortableSafe(const char *export_filename,
@@ -156,11 +178,6 @@ public:
      *  files and delete those that are not referenced by an entry.
     */
     void DeleteOrphans();
-
-public slots:
-
-    /** Instructs a background worker to refresh favorites. */
-    void RefreshFavorites();
 
 
 signals:
@@ -215,9 +232,6 @@ private:
     void _ew_refresh_favorites(const QString &);
     void _ew_set_favorites(const QString &, const GUtil::Vector<EntryId> &sorted_favorites);
     void _ew_dispatch_orphans(const QString &);
-
-    // Any threads can use these methods:
-    bool _file_exists(QSqlQuery &, const FileId &);
 
 };
 

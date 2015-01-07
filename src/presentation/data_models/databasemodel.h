@@ -15,18 +15,13 @@ limitations under the License.*/
 #ifndef GRYPTO_DATABASEMODEL_H
 #define GRYPTO_DATABASEMODEL_H
 
-#include "grypto_common.h"
+#include <grypto_passworddatabase.h>
 #include <gutil/undostack.h>
 #include <gutil/cryptopp_cryptor.h>
-#include <memory>
-#include <QScopedPointer>
 #include <QAbstractItemModel>
 
-namespace Grypt
-{
+namespace Grypt{
 
-class PasswordDatabase;
-class Entry;
 struct EntryContainer;
 
 
@@ -37,8 +32,13 @@ class DatabaseModel :
     Q_OBJECT
 public:
 
+    /** Constructs a database model and opens the database with an exclusive lock.
+        \param ask_for_lock_override A function to ask the user if they would like
+                to override the lock file (if needed).
+    */
     explicit DatabaseModel(const char *file_path,
                            const Credentials &,
+                           std::function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override,
                            QObject *parent = 0);
     ~DatabaseModel();
 
@@ -166,7 +166,7 @@ private slots:
 
 private:
 
-    QScopedPointer<PasswordDatabase> m_db;
+    PasswordDatabase m_db;
     QList<EntryContainer *> m_root;
     QHash<EntryId, EntryContainer *> m_index;
     GUtil::UndoStack m_undostack;

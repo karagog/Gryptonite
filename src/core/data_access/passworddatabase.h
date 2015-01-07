@@ -157,7 +157,6 @@ public:
     */
     void DeleteOrphans();
 
-
 public slots:
 
     /** Instructs a background worker to refresh favorites. */
@@ -208,8 +207,8 @@ private:
     QString m_curTaskString;
 
     // Entry worker methods
-    void _ew_add_entry(const QString &, GUtil::CryptoPP::Cryptor&, const Entry &);
-    void _ew_update_entry(const QString &, GUtil::CryptoPP::Cryptor&, const Entry &);
+    void _ew_add_entry(const QString &, const Entry &);
+    void _ew_update_entry(const QString &, const Entry &);
     void _ew_delete_entry(const QString &, const EntryId &);
     void _ew_move_entry(const QString &, const EntryId &, quint32, quint32, const EntryId &, quint32);
     void _ew_cache_entries_by_parentid(const QString &, const EntryId &);

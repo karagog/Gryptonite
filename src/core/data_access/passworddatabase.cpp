@@ -61,7 +61,6 @@ struct entry_cache{
     uint row;
     int favoriteindex;
     QByteArray crypttext;
-    bool dirty = false;
     bool exists = true;
 
     entry_cache() {}
@@ -611,7 +610,7 @@ bool PasswordDatabase::CheckCredentials(const Credentials &creds) const
     return ret;
 }
 
-void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::Cryptor &cryptor, const Entry &e)
+void PasswordDatabase::_ew_add_entry(const QString &conn_str, const Entry &e)
 {
     G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
@@ -642,42 +641,20 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
             DatabaseUtils::ExecuteQuery(q);
         }
 
-        // Generate the crypttext
-        QByteArray crypttext;
-        {
-            // Get a fresh nonce
-            byte nonce[NONCE_LENGTH];
-            __get_nonce(nonce);
-
-            QByteArrayInput i(XmlConverter::ToXmlString(e));
-            QByteArrayOutput o(crypttext);
-            cryptor.EncryptData(&o, &i, NULL, nonce);
-        }
 
         // Update the index immediately now that we have everything we need
         //  i.e. Do not wait to insert the actual entry
+        QByteArray crypttext;
         {
             lock_guard<mutex> lkr(d->index_lock);
 
             // If the index is not present, then it was already deleted
-            if(d->index.find(e.GetId()) == d->index.end())
+            auto iter = d->index.find(e.GetId());
+            if(iter == d->index.end())
                 return;
 
-            d->index[e.GetId()].crypttext = crypttext;
-            d->index[e.GetId()].row = row;
-
-            // Update the siblings in the index so they're no longer dirty
-            auto pi = d->parent_index.find(e.GetParentId());
-            GASSERT(pi != d->parent_index.end());
-            for(int i = e.GetRow(); i <= child_count; ++i){
-                entry_cache &ec = d->index[pi->second.children[i]];
-
-                // The rows should still be correct from when they were updated on the main thread
-                GASSERT((int)ec.row == i);
-
-                ec.dirty = false;
-            }
-
+            iter->second.row = row;
+            crypttext = iter->second.crypttext;
             d->wc_index.notify_all();
         }
 
@@ -706,44 +683,24 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, GUtil::CryptoPP::C
     __add_new_files(this, e);
 }
 
-void PasswordDatabase::_ew_update_entry(const QString &conn_str, GUtil::CryptoPP::Cryptor &cryptor, const Entry &e)
+void PasswordDatabase::_ew_update_entry(const QString &conn_str, const Entry &e)
 {
     G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
-    int old_favorite_index;
+    
+    // First get the entry out of the cache
+    entry_cache er;
+    d->index_lock.lock();
+    {
+        GASSERT(d->index.find(e.GetId()) != d->index.end());
+        er = d->index[e.GetId()];
+    }
+    d->index_lock.unlock();
+    
+    // Then update the database
     db.transaction();
     try{
         QSqlQuery q(db);
-        q.prepare("SELECT Favorite FROM Entry WHERE Id=?");
-        q.addBindValue((QByteArray)e.GetId());
-        DatabaseUtils::ExecuteQuery(q);
-        bool res = q.next();
-        GASSERT(res);
-        old_favorite_index = q.record().value(0).toInt();
-
-        entry_cache er = e;
-        {
-            // Get a fresh nonce
-            byte nonce[NONCE_LENGTH];
-            __get_nonce(nonce);
-
-            QByteArrayOutput o(er.crypttext);
-            QByteArrayInput i(XmlConverter::ToXmlString(e));
-            cryptor.EncryptData(&o, &i, NULL, nonce);
-        }
-
-        // Update the index
-        d->index_lock.lock();
-        d->index[e.GetId()] = er;
-        if(old_favorite_index != e.GetFavoriteIndex()){
-            if(e.IsFavorite() && old_favorite_index < 0)
-                d->favorite_index.PushBack(e.GetId());
-            else if(!e.IsFavorite() && old_favorite_index >= 0)
-                d->favorite_index.RemoveOne(e.GetId());
-        }
-        d->index_lock.unlock();
-        d->wc_index.notify_all();
-
         q.prepare("UPDATE Entry SET Data=?,Favorite=?,FileID=? WHERE Id=?");
         q.addBindValue(er.crypttext);
         q.addBindValue(er.favoriteindex);
@@ -756,9 +713,6 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, GUtil::CryptoPP
     }
     db.commit();
 
-    if(old_favorite_index != e.GetFavoriteIndex())
-        emit NotifyFavoritesUpdated();
-
     // We never remove old files, but we may add new ones here
     __add_new_files(this, e);
 }
@@ -766,7 +720,6 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, GUtil::CryptoPP
 void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
                                         const EntryId &id)
 {
-    G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
     QSqlQuery q(db);
     int old_favorite_index;
@@ -811,18 +764,6 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
         throw;
     }
     db.commit();
-
-    // Mark the siblings not dirty
-    d->index_lock.lock();
-    {
-        auto pi = d->parent_index.find(pid);
-        GASSERT(pi != d->parent_index.end() && pi->second.children_loaded);
-
-        for(uint i = row; i < pi->second.children.Length(); ++i)
-            d->index[pi->second.children[i]].dirty = false;
-    }
-    d->index_lock.unlock();
-    d->wc_index.notify_all();
 
     if(old_favorite_index >= 0)
         emit NotifyFavoritesUpdated();
@@ -898,6 +839,21 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
     db.commit();
 }
 
+static QByteArray __generate_crypttext(Cryptor &cryptor, const Entry &e)
+{
+    QByteArray crypttext;
+
+    // Get a fresh nonce
+    byte nonce[NONCE_LENGTH];
+    __get_nonce(nonce);
+
+    QByteArrayInput i(XmlConverter::ToXmlString(e));
+    QByteArrayOutput o(crypttext);
+    cryptor.EncryptData(&o, &i, NULL, nonce);
+
+    return crypttext;
+}
+
 void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 {
     G_D;
@@ -906,20 +862,16 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     if(gen_id)
         e.SetId(EntryId::NewId());
 
+    // Generate the crypttext
+    QByteArray crypttext = __generate_crypttext(*d->cryptor, e);
+
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
     {
-        // Wait here until the parent is loaded and no siblings are dirty
+        // Wait here until the parent is loaded
         d->wc_entry_thread.wait(lkr, [&]{
             auto pi = d->parent_index.find(e.GetParentId());
-            bool ret = false;
-            if(pi != d->parent_index.end() && pi->second.children_loaded){
-                bool any_siblings_dirty = false;
-                for(uint i = e.GetRow(); !any_siblings_dirty && i < pi->second.children.Length(); ++i)
-                    any_siblings_dirty = d->index[pi->second.children[i]].dirty;
-                ret = !any_siblings_dirty;
-            }
-            return ret;
+            return pi != d->parent_index.end() && pi->second.children_loaded;
         });
 
         // Add to the appropriate parent
@@ -941,7 +893,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
             d->favorite_index.PushBack(e.GetId());
 
         entry_cache ec(e);
-        ec.dirty = true;
+        ec.crypttext = crypttext;
         d->index[e.GetId()] = ec;
 
         GASSERT(d->parent_index.find(e.GetId()) == d->parent_index.end());
@@ -963,27 +915,28 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 void PasswordDatabase::UpdateEntry(Entry &e)
 {
     G_D;
+    __command_cache_entries_by_parentid(d, e.GetParentId());
 
-    // Mark the index as dirty
+    // Update the index
+    int old_favorite_index;
+    QByteArray crypttext = __generate_crypttext(*d->cryptor, e);
     {
         unique_lock<mutex> lkr(d->index_lock);
-
-        // Wait until the entry is not dirty
-        bool already_deleted = false;
-        unordered_map<Grypt::EntryId, entry_cache>::iterator iter;
         d->wc_index.wait(lkr, [&]{
-            iter = d->index.find(e.GetId());
-            if(iter == d->index.end()){
-                already_deleted = true;
-                return true;
-            }
-            return !iter->second.dirty;
+            auto pi = d->parent_index.find(e.GetParentId());
+            return pi != d->parent_index.end() && pi->second.children_loaded;
         });
 
-        if(already_deleted)
-            return; // The entry was already deleted
+        old_favorite_index = d->index[e.GetId()].favoriteindex;
 
-        iter->second.dirty = true;
+        d->index[e.GetId()] = e;
+        d->index[e.GetId()].crypttext = crypttext;
+        if(old_favorite_index != e.GetFavoriteIndex()){
+            if(e.IsFavorite() && old_favorite_index < 0)
+                d->favorite_index.PushBack(e.GetId());
+            else if(!e.IsFavorite() && old_favorite_index >= 0)
+                d->favorite_index.RemoveOne(e.GetId());
+        }
         d->wc_index.notify_all();
     }
 
@@ -994,6 +947,9 @@ void PasswordDatabase::UpdateEntry(Entry &e)
 
     // Clear the file path so we don't add the same file twice
     e.SetFilePath(QString::null);
+
+    if(old_favorite_index != e.GetFavoriteIndex())
+        emit NotifyFavoritesUpdated();
 }
 
 void PasswordDatabase::DeleteEntry(const EntryId &id)
@@ -1006,17 +962,10 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
     unique_lock<mutex> lkr(d->index_lock);
     auto i = d->index.find(id);
     if(i != d->index.end()){
-        // Wait for the parent to be loaded, and for no siblings to be dirty
+        // Wait for the parent to be loaded
         d->wc_index.wait(lkr, [&]{
             auto pi = d->parent_index.find(i->second.parentid);
-            bool ret = false;
-            if(pi != d->parent_index.end() && pi->second.children_loaded){
-                bool any_siblings_dirty = false;
-                for(uint j = i->second.row; !any_siblings_dirty && j < pi->second.children.Length(); ++j)
-                    any_siblings_dirty = d->index[pi->second.children[j]].dirty;
-                ret = !any_siblings_dirty;
-            }
-            return ret;
+            return pi != d->parent_index.end() && pi->second.children_loaded;
         });
 
         auto pi = d->parent_index.find(i->second.parentid);
@@ -1109,7 +1058,7 @@ Entry PasswordDatabase::FindEntry(const EntryId &id)
         // Wait 'til the entry is fully loaded
         d->wc_index.wait(lkr, [&]{
             auto i = d->index.find(id);
-            return i != d->index.end() && i->second.exists && !i->second.dirty;
+            return i != d->index.end() && i->second.exists;
         });
 
         auto i = d->index.find(id);
@@ -1151,19 +1100,8 @@ vector<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid)
 
         // Wait until the parent is fully loaded
         d->wc_index.wait(lkr, [&]{
-            bool loaded = false;
             auto pi = d->parent_index.find(pid);
-            if(pi != d->parent_index.end() && pi->second.children_loaded){
-                loaded = true;
-                for(const EntryId &id : pi->second.children){
-                    auto i = d->index.find(id);
-                    if(i == d->index.end() || !i->second.exists || i->second.dirty){
-                        loaded = false;
-                        break;
-                    }
-                }
-            }
-            return loaded;
+            return pi != d->parent_index.end() && pi->second.children_loaded;
         });
 
         foreach(const EntryId &child_id, d->parent_index[pid].children)
@@ -1536,13 +1474,13 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
                 case bg_worker_command::AddEntry:
                 {
                     add_entry_command *aec = static_cast<add_entry_command *>(cmd.Data());
-                    _ew_add_entry(conn_str, *bgCryptor, aec->entry);
+                    _ew_add_entry(conn_str, aec->entry);
                 }
                     break;
                 case bg_worker_command::EditEntry:
                 {
                     update_entry_command *uec = static_cast<update_entry_command *>(cmd.Data());
-                    _ew_update_entry(conn_str, *bgCryptor, uec->entry);
+                    _ew_update_entry(conn_str, uec->entry);
                 }
                     break;
                 case bg_worker_command::DeleteEntry:

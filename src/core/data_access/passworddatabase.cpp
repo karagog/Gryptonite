@@ -655,7 +655,6 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, const Entry &e)
 
             iter->second.row = row;
             crypttext = iter->second.crypttext;
-            d->wc_index.notify_all();
         }
 
         q.prepare("INSERT INTO Entry (ID,ParentID,Row,Favorite,FileID,Data)"
@@ -937,7 +936,6 @@ void PasswordDatabase::UpdateEntry(Entry &e)
             else if(!e.IsFavorite() && old_favorite_index >= 0)
                 d->favorite_index.RemoveOne(e.GetId());
         }
-        d->wc_index.notify_all();
     }
 
     d->entry_thread_lock.lock();

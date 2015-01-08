@@ -10,7 +10,7 @@ TOP_DIR = ../../..
 
 DESTDIR = $$TOP_DIR/bin
 TARGET = gryptonite
-QMAKE_CXXFLAGS += -std=c++0x
+QMAKE_CXXFLAGS += -std=c++11
 
 DEFINES += GUTIL_CORE_QT_ADAPTERS
 

@@ -1,5 +1,0 @@
-FORMS +=
-
-HEADERS +=
-
-SOURCES +=

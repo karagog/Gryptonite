@@ -36,7 +36,7 @@ static GUtil::RNG_Initializer __rng_init(&__cryptopp_rng);
 
 Application::Application(int &argc, char **argv)
     :GUtil::Qt::Application(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING),
-      settings("main")
+      settings(GRYPTO_SETTINGS_IDENTIFIER)
 {
     // Log global messages to a logfile and a messagebox
     SetGlobalLogger(new GroupLogger{

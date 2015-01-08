@@ -25,6 +25,8 @@ limitations under the License.*/
 
 #define GRYPTO_VERSION_STRING "3.0.0"
 
+#define GRYPTO_SETTINGS_IDENTIFIER "main"
+
 
 typedef unsigned char byte;
 

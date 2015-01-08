@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@ limitations under the License.*/
 
 #include "cryptotransformswindow.h"
 #include "ui_cryptotransformswindow.h"
-#include "grypto_common.h"
 #include "newpassworddialog.h"
 #include "getpassworddialog.h"
+#include <grypto_common.h>
+#include <grypto_cryptotransformworker.h>
 #include <gutil/sourcesandsinks.h>
 #include <gutil/qtsourcesandsinks.h>
-#include "grypto_cryptotransformworker.h"
 #include <gutil/cryptopp_cryptor.h>
 #include <gutil/file.h>
 #include <gutil/smartpointer.h>
@@ -30,17 +30,17 @@ USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL1(CryptoPP);
 
-#define SETTING_LAST_MODE           "ctw_last_mode"
+#define SETTING_LAST_MODE               "ctw_last_mode"
 
 #define SETTING_LAST_SOURCE             "ctw_last_source"
 #define SETTING_LAST_SOURCE_ENCODING    "ctw_last_source_encoding"
 
-#define SETTING_LAST_DEST           "ctw_last_dest"
-#define SETTING_LAST_DEST_ENCODING  "ctw_last_dest_encoding"
+#define SETTING_LAST_DEST               "ctw_last_dest"
+#define SETTING_LAST_DEST_ENCODING      "ctw_last_dest_encoding"
 
-#define SETTING_LAST_HASH           "ctw_last_hash"
+#define SETTING_LAST_HASH               "ctw_last_hash"
 
-#define SETTING_GEOMETRY            "ctw_geometry"
+#define SETTING_GEOMETRY                "ctw_geometry"
 
 NAMESPACE_GRYPTO;
 
@@ -48,9 +48,9 @@ NAMESPACE_GRYPTO;
 CryptoTransformsWindow::CryptoTransformsWindow(GUtil::Qt::Settings *settings, Cryptor const *c, QWidget *parent)
     :QWidget(parent, ::Qt::Window),
       ui(new Ui::CryptoTransformsWindow),
+      m_settings(settings),
       m_cryptor(c == NULL ? NULL : new Cryptor(*c)),
       m_progressDialog(tr("Processing..."), tr("Cancel"), 0, 100, this),
-      m_settings(settings),
       m_stateSaved(false)
 {
     ui->setupUi(this);
@@ -77,20 +77,20 @@ CryptoTransformsWindow::CryptoTransformsWindow(GUtil::Qt::Settings *settings, Cr
     ui->cb_hashType->addItem("MD4", MD4);
     ui->cb_hashType->addItem("MD2", MD2);
 
-    if(settings->Contains(SETTING_GEOMETRY))
-        restoreGeometry(settings->Value(SETTING_GEOMETRY).toByteArray());
-    if(settings->Contains(SETTING_LAST_MODE))
-        ui->cb_mode->setCurrentIndex(settings->Value(SETTING_LAST_MODE).toInt());
-    if(settings->Contains(SETTING_LAST_HASH))
-        ui->cb_hashType->setCurrentIndex(settings->Value(SETTING_LAST_HASH).toInt());
-    if(settings->Contains(SETTING_LAST_SOURCE))
-        ui->cb_source->setCurrentIndex(settings->Value(SETTING_LAST_SOURCE).toInt());
-    if(settings->Contains(SETTING_LAST_SOURCE_ENCODING))
-        ui->cb_sourceEncoding->setCurrentIndex(settings->Value(SETTING_LAST_SOURCE_ENCODING).toInt());
-    if(settings->Contains(SETTING_LAST_DEST))
-        ui->cb_dest->setCurrentIndex(settings->Value(SETTING_LAST_DEST).toInt());
-    if(settings->Contains(SETTING_LAST_DEST_ENCODING))
-        ui->cb_destEncoding->setCurrentIndex(settings->Value(SETTING_LAST_DEST_ENCODING).toInt());
+    if(m_settings->Contains(SETTING_GEOMETRY))
+        restoreGeometry(m_settings->Value(SETTING_GEOMETRY).toByteArray());
+    if(m_settings->Contains(SETTING_LAST_MODE))
+        ui->cb_mode->setCurrentIndex(m_settings->Value(SETTING_LAST_MODE).toInt());
+    if(m_settings->Contains(SETTING_LAST_HASH))
+        ui->cb_hashType->setCurrentIndex(m_settings->Value(SETTING_LAST_HASH).toInt());
+    if(m_settings->Contains(SETTING_LAST_SOURCE))
+        ui->cb_source->setCurrentIndex(m_settings->Value(SETTING_LAST_SOURCE).toInt());
+    if(m_settings->Contains(SETTING_LAST_SOURCE_ENCODING))
+        ui->cb_sourceEncoding->setCurrentIndex(m_settings->Value(SETTING_LAST_SOURCE_ENCODING).toInt());
+    if(m_settings->Contains(SETTING_LAST_DEST))
+        ui->cb_dest->setCurrentIndex(m_settings->Value(SETTING_LAST_DEST).toInt());
+    if(m_settings->Contains(SETTING_LAST_DEST_ENCODING))
+        ui->cb_destEncoding->setCurrentIndex(m_settings->Value(SETTING_LAST_DEST_ENCODING).toInt());
 
     _update_key_status();
 }

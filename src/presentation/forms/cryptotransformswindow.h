@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,16 +15,15 @@ limitations under the License.*/
 #ifndef GRYPTO_CRYPTO_TRANSFORMS_WINDOW_H
 #define GRYPTO_CRYPTO_TRANSFORMS_WINDOW_H
 
+#include <gutil/smartpointer.h>
 #include <QWidget>
 #include <QProgressDialog>
-#include <gutil/smartpointer.h>
 
 namespace Ui {
 class CryptoTransformsWindow;
 }
 
-namespace GUtil{
-namespace CryptoPP{
+namespace GUtil{ namespace CryptoPP{
 class Cryptor;
 }
 
@@ -42,10 +41,10 @@ class CryptoTransformsWindow : public QWidget
 {
     Q_OBJECT
     Ui::CryptoTransformsWindow *ui;
+    GUtil::Qt::Settings *m_settings;
     GUtil::SmartPointer<GUtil::CryptoPP::Cryptor> m_cryptor;
     GUtil::SmartPointer<CryptoTransformWorker> m_worker;
     QProgressDialog m_progressDialog;
-    GUtil::Qt::Settings *m_settings;
     QByteArray m_sourceString;
     QByteArray m_destString;
     bool m_stateSaved;

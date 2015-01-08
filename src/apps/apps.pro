@@ -1,6 +1,7 @@
 TEMPLATE = subdirs
 
 SUBDIRS += \
-    gryptonite
+    gryptonite \
+    grypto_transforms
 
 CONFIG += ordered

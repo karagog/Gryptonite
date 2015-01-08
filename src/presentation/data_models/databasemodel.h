@@ -39,9 +39,26 @@ public:
         \param ask_for_lock_override A function to ask the user if they would like
                 to override the lock file (if needed).
     */
-    explicit DatabaseModel(PasswordDatabase &pdb,
+    explicit DatabaseModel(const char *file_path,
+                           std::function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override,
                            QObject *parent = 0);
-    ~DatabaseModel();
+    
+    /** Opens the database with the given credentials. You can only open the database once, and
+        it will close automatically when the object is deleted.
+    */
+    void Open(const Credentials &);
+    
+    /** Returns true if the database has been opened. */
+    bool IsOpen() const{ return m_db.IsOpen(); }
+
+    /** The path to the database on disk. */
+    const char *FilePath() const;
+
+    /** Returns true if this is the correct password for the database. */
+    bool CheckCredentials(const Credentials &) const;
+
+    /** Returns a reference to the cryptor used by the database object. */
+    GUtil::CryptoPP::Cryptor const &Cryptor() const;
 
 
     /** Returns the model index of the entry, or an invalid one if it can't be found.
@@ -116,11 +133,9 @@ public:
     /** Loads all entries from the database. */
     void FetchAllEntries();
 
-
     /** \name QAbstractItemModel interface
      *  \{
     */
-
     virtual QModelIndex index(int, int, const QModelIndex &) const;
     virtual QModelIndex parent(const QModelIndex &) const;
     virtual int rowCount(const QModelIndex & = QModelIndex()) const;
@@ -137,7 +152,6 @@ public:
     virtual bool hasChildren(const QModelIndex &) const;
     virtual bool canFetchMore(const QModelIndex &) const;
     virtual void fetchMore(const QModelIndex &);
-
     /** \} */
 
 
@@ -166,7 +180,7 @@ private slots:
 
 private:
 
-    PasswordDatabase &m_db;
+    PasswordDatabase m_db;
     QList<EntryContainer *> m_root;
     QHash<EntryId, EntryContainer *> m_index;
     GUtil::UndoStack m_undostack;

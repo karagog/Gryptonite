@@ -495,6 +495,9 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
       m_filepath(file_path)
 {
     G_D_INIT();
+    
+    // Note: Here we don't even check that the file exists, because maybe it wasn't created yet,
+    //  but we can still lock the future location of the file path so it's ready when we want to create it.
 
     // Attempt to lock the database
     QFileInfo fi(file_path);

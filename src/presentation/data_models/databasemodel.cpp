@@ -164,10 +164,11 @@ EntryContainer::~EntryContainer()
 }
 
 
-DatabaseModel::DatabaseModel(PasswordDatabase &pdb,
+DatabaseModel::DatabaseModel(const char *f,
+                             function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override,
                              QObject *parent)
     :QAbstractItemModel(parent),
-      m_db(pdb)
+      m_db(f, ask_for_lock_override)
 {
     connect(&m_db, SIGNAL(NotifyFavoritesUpdated()),
             this, SIGNAL(NotifyFavoritesUpdated()));
@@ -175,15 +176,22 @@ DatabaseModel::DatabaseModel(PasswordDatabase &pdb,
             this, SLOT(_handle_database_worker_exception(const std::shared_ptr<GUtil::Exception<>> &)));
     connect(&m_db, SIGNAL(NotifyProgressUpdated(int, QString)),
             this, SIGNAL(NotifyProgressUpdated(int, QString)));
+}
 
-    // We need to manually fetch the root
+void DatabaseModel::Open(const Credentials &creds)
+{
+    m_db.Open(creds);
+    
+    // Fetch the root index
     fetchMore(QModelIndex());
-
+    
     //new ModelTest(this);
 }
 
-DatabaseModel::~DatabaseModel()
-{}
+GUtil::CryptoPP::Cryptor const &DatabaseModel::Cryptor() const
+{
+    return m_db.Cryptor();
+}
 
 QModelIndex DatabaseModel::FindIndexById(const EntryId &id) const
 {
@@ -555,6 +563,16 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
     if(ec) ec->child_count -= move_cnt;
     if(ec_targ) ec_targ->child_count += move_cnt;
     endMoveRows();
+}
+
+const char *DatabaseModel::FilePath() const
+{
+    return m_db.FilePath();
+}
+
+bool DatabaseModel::CheckCredentials(const Credentials &creds) const
+{
+    return m_db.CheckCredentials(creds);
 }
 
 void DatabaseModel::UpdateFile(const FileId &id, const char *filepath)

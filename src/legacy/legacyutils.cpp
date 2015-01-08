@@ -209,7 +209,8 @@ void LegacyUtils::UpdateFileToCurrentVersion(
     progress_cb(10, progress_msg);
 
     // Create the updated database
-    PasswordDatabase pdb(new_path, new_creds);
+    PasswordDatabase pdb(new_path);
+    pdb.Open(new_creds);
 
     // Iterate through the legacy object and populate the new object
     __add_children_to_database(pf.getContents(), pdb, EntryId::Null(), entry_ctr,

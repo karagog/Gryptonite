@@ -164,12 +164,10 @@ EntryContainer::~EntryContainer()
 }
 
 
-DatabaseModel::DatabaseModel(const char *f,
-                             const Credentials &creds,
-                             function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override,
+DatabaseModel::DatabaseModel(PasswordDatabase &pdb,
                              QObject *parent)
     :QAbstractItemModel(parent),
-      m_db(f, creds, ask_for_lock_override)
+      m_db(pdb)
 {
     connect(&m_db, SIGNAL(NotifyFavoritesUpdated()),
             this, SIGNAL(NotifyFavoritesUpdated()));
@@ -186,11 +184,6 @@ DatabaseModel::DatabaseModel(const char *f,
 
 DatabaseModel::~DatabaseModel()
 {}
-
-GUtil::CryptoPP::Cryptor const &DatabaseModel::Cryptor() const
-{
-    return m_db.Cryptor();
-}
 
 QModelIndex DatabaseModel::FindIndexById(const EntryId &id) const
 {
@@ -562,16 +555,6 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
     if(ec) ec->child_count -= move_cnt;
     if(ec_targ) ec_targ->child_count += move_cnt;
     endMoveRows();
-}
-
-QByteArray const &DatabaseModel::FilePath() const
-{
-    return m_db.FilePath();
-}
-
-bool DatabaseModel::CheckCredentials(const Credentials &creds) const
-{
-    return m_db.CheckCredentials(creds);
 }
 
 void DatabaseModel::UpdateFile(const FileId &id, const char *filepath)

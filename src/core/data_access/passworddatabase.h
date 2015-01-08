@@ -41,6 +41,7 @@ class PasswordDatabase :
 {
     Q_OBJECT
     void *d;
+    const GUtil::String m_filepath;
     GUtil::SmartPointer<QLockFile> m_lockfile;
 public:
 
@@ -51,8 +52,8 @@ public:
         QString AppName;
     };
 
-    /** Opens or creates the database with the credentials.
-     *  Throws an AuthenticationException if the password is wrong.
+    /** Creates a new PasswordDatabase object. Before you use it, you must call Open() with the
+     *  proper credentials.
      *
      *  \param ask_for_lock_override A function to ask the user if they want
      *      to override the lock on the database. This is only called if the
@@ -62,15 +63,34 @@ public:
      *      The argument contains information about the process that has locked the database.
     */
     PasswordDatabase(const char *file_path,
-                     const Credentials &creds,
-                     std::function<bool(const ProcessInfo &)> ask_for_lock_override = 
+                     std::function<bool(const ProcessInfo &)> ask_for_lock_override =
                             [](const ProcessInfo &){ return false; },
                      QObject * = NULL);
 
     ~PasswordDatabase();
 
+    /** Opens or creates the database with the given credentials.
+     *  Throws an Exception if the password is wrong, or if something else goes wrong.
+     *
+     *  This class' behavior is undefined until you call this function without it throwing an exception.
+     *
+     *  \note There is no corresponding Close() function, as the file automatically closes in the
+     *      destructor. The reason Open() is separate from the constructor is to support delayed
+     *      opening. Thus you can lock the file before asking the user for credentials, so you don't
+     *      waste their time typing in their password if the database is already locked by another process.
+     *      This also allows you to try your credentials multiple times without closing and re-locking
+     *      the database.
+    */
+    void Open(const Credentials &creds);
+
+    /** Returns true if the database was already opened. */
+    bool IsOpen() const;
+
+    /** Throws an exception if the database is not opened. */
+    void FailIfNotOpen() const{ if(!IsOpen()) throw GUtil::Exception<>("Database not open"); }
+
     /** Returns the filepath. */
-    QByteArray const &FilePath() const;
+    GUtil::String const &FilePath() const{ return m_filepath; }
 
     /** Returns true if the password and keyfile are correct. */
     bool CheckCredentials(const Credentials &) const;
@@ -81,7 +101,7 @@ public:
     /** This function does a sanity check on the database to see if it is
      *  the right format for this software version.
     */
-    static void ValidateDatabase(const char *file_path);
+    static void ValidateDatabase(const char *filepath);
 
     /** This function allows you to synchronize with the background entry thread.
      *  Call this to wait until the background thread is done working.
@@ -110,7 +130,7 @@ public:
 
     /** Sets the given entries as favorites, in the order they are given. */
     void SetFavoriteEntries(const GUtil::Vector<EntryId> &);
-    
+
     /** Instructs a background worker to refresh favorites. */
     void RefreshFavorites();
 

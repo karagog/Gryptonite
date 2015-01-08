@@ -89,7 +89,6 @@ namespace
 struct d_t
 {
     // Main thread member variables
-    QByteArray filePath;
     QString dbString;
     GUtil::SmartPointer<GUtil::CryptoPP::Cryptor> cryptor;
 
@@ -414,7 +413,7 @@ public:
 
 
 // Creates a database connection and returns the qt connection string
-static QString __create_connection(const QString &file_path, const QString &force_conn_str = QString())
+static QString __create_connection(const char *file_path, const QString &force_conn_str = QString())
 {
     QString conn_str(force_conn_str.isEmpty() ? Id<10>::NewId().ToString16().ToQString() :
                                                 force_conn_str);
@@ -465,13 +464,13 @@ static void __check_version(const QString &dbstring)
         throw Exception<>("Did not find a version row");
 }
 
-void PasswordDatabase::ValidateDatabase(const char *file_path, bool *is_locked)
+void PasswordDatabase::ValidateDatabase(const char *filepath)
 {
-    if(!File::Exists(file_path))
-        throw Exception<>(String::Format("File does not exist: %s", file_path));
+    if(!File::Exists(filepath))
+        throw Exception<>(String::Format("File does not exist: %s", filepath));
 
     // This will fail with an exception if the database is invalid sqlite
-    QString dbstring = __create_connection(file_path);
+    QString dbstring = __create_connection(filepath);
 
     // Make sure that all the tables are there
     QStringList tables = QSqlDatabase::database(dbstring).tables();
@@ -490,43 +489,51 @@ void PasswordDatabase::ValidateDatabase(const char *file_path, bool *is_locked)
 }
 
 PasswordDatabase::PasswordDatabase(const char *file_path,
-                                   const Credentials &creds,
                                    function<bool(const ProcessInfo &)> ask_for_lock_override,
                                    QObject *par)
-    :QObject(par)
+    :QObject(par),
+      m_filepath(file_path)
 {
     G_D_INIT();
-    G_D;
 
-    bool file_exists = File::Exists(d->filePath = file_path);
-    d->dbString = __create_connection(d->filePath);   // After we check if the file exists
+    // Attempt to lock the database
+    QFileInfo fi(file_path);
+    m_lockfile = new QLockFile(QString("%1.LOCKFILE")
+                                   .arg(fi.absoluteFilePath()));
+    m_lockfile->setStaleLockTime(0);
+    if(!m_lockfile->tryLock(0)){
+        if(QLockFile::LockFailedError == m_lockfile->error()){
+            // The file is locked by another process. Ask the user if they want to override it.
+            ProcessInfo pi;
+            m_lockfile->getLockInfo(&pi.ProcessId, &pi.HostName, &pi.AppName);
+            if(ask_for_lock_override(pi)){
+                if(!m_lockfile->removeStaleLockFile())
+                    throw LockException<>("Unable to remove lockfile (is the locking process still alive?)");
+                if(!m_lockfile->tryLock(0))
+                    throw LockException<>("Database still locked even after removing the lockfile!");
+            }
+            else
+                throw LockException<>("Database Locked");
+        }
+        else{
+            throw LockException<>("Unknown error while locking the database");
+        }
+    }
+}
+
+void PasswordDatabase::Open(const Credentials &creds)
+{
+    if(IsOpen())
+        throw Exception<>("Database already opened");
+
+    G_D;
+    bool file_exists = File::Exists(m_filepath);
+    QString dbstring = __create_connection(m_filepath);   // After we check if the file exists
     try
     {
-        QSqlDatabase db = QSqlDatabase::database(d->dbString);
+        QSqlDatabase db = QSqlDatabase::database(dbstring);
         QSqlQuery q(db);
 
-        // Attempt to lock the database
-        QFileInfo fi(file_path);
-        m_lockfile = new QLockFile(QString("%1.LOCKFILE")
-                                       .arg(fi.absoluteFilePath()));
-        m_lockfile->setStaleLockTime(0);
-        if(!m_lockfile->tryLock(0)){
-            if(QLockFile::LockFailedError == m_lockfile->error()){
-                // The file is locked by another process. Ask the user if they want to override it.
-                ProcessInfo pi;
-                m_lockfile->getLockInfo(&pi.ProcessId, &pi.HostName, &pi.AppName);
-                if(ask_for_lock_override(pi)){
-                    if(!m_lockfile->removeStaleLockFile())
-                        throw LockException<>("Unable to remove lockfile (is the locking process still alive?)");
-                }
-                else
-                    throw LockException<>("Database Locked");
-            }
-            else{
-                throw LockException<>("Unknown error while locking the database");
-            }
-        }
-        
         if(!file_exists){
             // Initialize the new database if it doesn't exist
             __init_sql_resources();
@@ -565,7 +572,7 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
         }
 
         // Check the version record to see if it is valid
-        __check_version(d->dbString);
+        __check_version(dbstring);
 
         // Validate the keycheck information
         q.prepare("SELECT KeyCheck,Salt FROM Version");
@@ -586,9 +593,12 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
     }
     catch(...)
     {
-        QSqlDatabase::removeDatabase(d->dbString);
+        QSqlDatabase::removeDatabase(dbstring);
         throw;
     }
+
+    // Set the db string to denote that we've opened the file
+    d->dbString = dbstring;
 
     // Give the workers something to do, even before they've arrived for the day. That's the
     //  kind of brutal task master I am ;)
@@ -601,22 +611,30 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
     d->file_worker = std::thread(&PasswordDatabase::_file_worker, this, new GUtil::CryptoPP::Cryptor(*d->cryptor));
 }
 
+bool PasswordDatabase::IsOpen() const
+{
+    G_D;
+    return !d->dbString.isEmpty();
+}
+
 PasswordDatabase::~PasswordDatabase()
 {
     G_D;
-    d->file_thread_lock.lock();
-    d->entry_thread_lock.lock();
-    d->closing = true;
-    d->entry_thread_lock.unlock();
-    d->file_thread_lock.unlock();
+    if(IsOpen()){
+        d->file_thread_lock.lock();
+        d->entry_thread_lock.lock();
+        d->closing = true;
+        d->entry_thread_lock.unlock();
+        d->file_thread_lock.unlock();
 
-    d->wc_file_thread.notify_one();
-    d->wc_entry_thread.notify_one();
+        d->wc_file_thread.notify_one();
+        d->wc_entry_thread.notify_one();
 
-    d->entry_worker.join();
-    d->file_worker.join();
-    QSqlDatabase::removeDatabase(d->dbString);
-    
+        d->entry_worker.join();
+        d->file_worker.join();
+        QSqlDatabase::removeDatabase(d->dbString);
+    }
+
     m_lockfile->unlock();
     G_D_UNINIT();
 }
@@ -624,6 +642,7 @@ PasswordDatabase::~PasswordDatabase()
 bool PasswordDatabase::CheckCredentials(const Credentials &creds) const
 {
     G_D;
+    FailIfNotOpen();
     bool ret = false;
 
     // Fetch the salt from the version row
@@ -711,7 +730,7 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, const Entry &e)
 {
     G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
-    
+
     // First get the entry out of the cache
     entry_cache er;
     d->index_lock.lock();
@@ -720,7 +739,7 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, const Entry &e)
         er = d->index[e.GetId()];
     }
     d->index_lock.unlock();
-    
+
     // Then update the database
     db.transaction();
     try{
@@ -880,6 +899,7 @@ static QByteArray __generate_crypttext(Cryptor &cryptor, const Entry &e)
 
 void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 {
+    FailIfNotOpen();
     G_D;
     __command_cache_entries_by_parentid(d, e.GetParentId());
 
@@ -938,6 +958,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 
 void PasswordDatabase::UpdateEntry(Entry &e)
 {
+    FailIfNotOpen();
     G_D;
     __command_cache_entries_by_parentid(d, e.GetParentId());
 
@@ -977,6 +998,7 @@ void PasswordDatabase::UpdateEntry(Entry &e)
 
 void PasswordDatabase::DeleteEntry(const EntryId &id)
 {
+    FailIfNotOpen();
     G_D;
     if(id.IsNull())
         return;
@@ -1020,6 +1042,7 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
 void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_first, quint32 row_last,
                                    const EntryId &parentId_dest, quint32 row_dest)
 {
+    FailIfNotOpen();
     G_D;
     int move_cnt = row_last - row_first + 1;
     bool same_parents = parentId_src == parentId_dest;
@@ -1070,6 +1093,7 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
 
 Entry PasswordDatabase::FindEntry(const EntryId &id) const
 {
+    FailIfNotOpen();
     G_D;
     __command_cache_entries_by_parentid(d, id);
 
@@ -1097,6 +1121,7 @@ Entry PasswordDatabase::FindEntry(const EntryId &id) const
 
 int PasswordDatabase::CountEntriesByParentId(const EntryId &id) const
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->index_lock);
     auto pi = d->parent_index.find(id);
@@ -1112,6 +1137,7 @@ int PasswordDatabase::CountEntriesByParentId(const EntryId &id) const
 
 vector<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
 {
+    FailIfNotOpen();
     G_D;
     // Let the cache know we are accessing this parent id, even if it's
     //  already in the cache, so we can preload its grandchildren
@@ -1135,6 +1161,7 @@ vector<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
 
 void PasswordDatabase::RefreshFavorites()
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->entry_thread_lock);
     d->entry_thread_commands.push(new refresh_favorite_entries_command);
@@ -1143,6 +1170,7 @@ void PasswordDatabase::RefreshFavorites()
 
 void PasswordDatabase::SetFavoriteEntries(const Vector<EntryId> &favs)
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->entry_thread_lock);
     d->entry_thread_commands.push(new set_favorite_entries_command(favs));
@@ -1151,6 +1179,7 @@ void PasswordDatabase::SetFavoriteEntries(const Vector<EntryId> &favs)
 
 vector<Entry> PasswordDatabase::FindFavoriteEntries() const
 {
+    FailIfNotOpen();
     G_D;
     vector<entry_cache> rows;
     unique_lock<mutex> lkr(d->index_lock);
@@ -1166,6 +1195,7 @@ vector<Entry> PasswordDatabase::FindFavoriteEntries() const
 
 void PasswordDatabase::DeleteOrphans()
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->entry_thread_lock);
     d->entry_thread_commands.push(new dispatch_orphans_command());
@@ -1185,6 +1215,7 @@ static bool __file_exists(QSqlQuery &q, const FileId &id)
 
 bool PasswordDatabase::FileExists(const FileId &id) const
 {
+    FailIfNotOpen();
     G_D;
     QSqlQuery q(QSqlDatabase::database(d->dbString));
     return __file_exists(q, id);
@@ -1192,6 +1223,7 @@ bool PasswordDatabase::FileExists(const FileId &id) const
 
 void PasswordDatabase::CancelFileTasks()
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->cancel_file_thread = true;
@@ -1209,6 +1241,7 @@ void PasswordDatabase::CancelFileTasks()
 
 vector<pair<FileId, quint32> > PasswordDatabase::GetFileSummary() const
 {
+    FailIfNotOpen();
     G_D;
     QSqlQuery q(QSqlDatabase::database(d->dbString));
     q.prepare("SELECT ID,Length FROM File");
@@ -1226,6 +1259,7 @@ vector<pair<FileId, quint32> > PasswordDatabase::GetFileSummary() const
 
 void PasswordDatabase::AddUpdateFile(const FileId &id, const char *filename)
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new update_file_command(id, filename));
@@ -1234,6 +1268,7 @@ void PasswordDatabase::AddUpdateFile(const FileId &id, const char *filename)
 
 void PasswordDatabase::DeleteFile(const FileId &id)
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new delete_file_command(id));
@@ -1242,6 +1277,7 @@ void PasswordDatabase::DeleteFile(const FileId &id)
 
 void PasswordDatabase::ExportFile(const FileId &id, const char *export_path) const
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new export_file_command(id, export_path));
@@ -1251,6 +1287,7 @@ void PasswordDatabase::ExportFile(const FileId &id, const char *export_path) con
 void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
                                             const Credentials &creds) const
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new export_to_ps_command(export_filename, creds));
@@ -1260,6 +1297,7 @@ void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
 void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
                                               const Credentials &creds)
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new import_from_ps_command(import_filename, creds));
@@ -1468,7 +1506,7 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
     G_D;
     // We will delete the cryptor
     SmartPointer<GUtil::CryptoPP::Cryptor> bgCryptor(c);
-    const QString conn_str = __create_connection(d->filePath);
+    const QString conn_str = __create_connection(m_filepath);
 
     unique_lock<mutex> lkr(d->entry_thread_lock);
     while(!d->closing)
@@ -1567,7 +1605,7 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
     G_D;
     // We will delete the cryptor
     SmartPointer<GUtil::CryptoPP::Cryptor> bgCryptor(c);
-    const QString conn_str = __create_connection(d->filePath);
+    const QString conn_str = __create_connection(m_filepath);
 
     // Begin the thread loop
     unique_lock<mutex> lkr(d->file_thread_lock);
@@ -1886,20 +1924,16 @@ void PasswordDatabase::_fw_fail_if_cancelled()
         throw CancelledOperationException<>();
 }
 
-QByteArray const &PasswordDatabase::FilePath() const
-{
-    G_D;
-    return d->filePath;
-}
-
 GUtil::CryptoPP::Cryptor const &PasswordDatabase::Cryptor() const
 {
+    FailIfNotOpen();
     G_D;
     return *d->cryptor;
 }
 
 void PasswordDatabase::WaitForEntryThreadIdle()
 {
+    FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->entry_thread_lock);
     d->wc_entry_thread.wait(lkr, [&]{

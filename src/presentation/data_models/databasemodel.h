@@ -17,8 +17,11 @@ limitations under the License.*/
 
 #include <grypto_passworddatabase.h>
 #include <gutil/undostack.h>
-#include <gutil/cryptopp_cryptor.h>
 #include <QAbstractItemModel>
+
+namespace GUtil{ namespace CryptoPP{
+class Cryptor;
+}}
 
 namespace Grypt{
 
@@ -36,19 +39,9 @@ public:
         \param ask_for_lock_override A function to ask the user if they would like
                 to override the lock file (if needed).
     */
-    explicit DatabaseModel(const char *file_path,
-                           const Credentials &,
-                           std::function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override,
+    explicit DatabaseModel(PasswordDatabase &pdb,
                            QObject *parent = 0);
     ~DatabaseModel();
-
-    QByteArray const &FilePath() const;
-
-    /** Returns true if this is the correct password for the database. */
-    bool CheckCredentials(const Credentials &) const;
-
-    /** Returns a reference to the cryptor used by the database object. */
-    GUtil::CryptoPP::Cryptor const &Cryptor() const;
 
 
     /** Returns the model index of the entry, or an invalid one if it can't be found.
@@ -123,6 +116,11 @@ public:
     /** Loads all entries from the database. */
     void FetchAllEntries();
 
+
+    /** \name QAbstractItemModel interface
+     *  \{
+    */
+
     virtual QModelIndex index(int, int, const QModelIndex &) const;
     virtual QModelIndex parent(const QModelIndex &) const;
     virtual int rowCount(const QModelIndex & = QModelIndex()) const;
@@ -139,6 +137,8 @@ public:
     virtual bool hasChildren(const QModelIndex &) const;
     virtual bool canFetchMore(const QModelIndex &) const;
     virtual void fetchMore(const QModelIndex &);
+
+    /** \} */
 
 
 public slots:
@@ -166,7 +166,7 @@ private slots:
 
 private:
 
-    PasswordDatabase m_db;
+    PasswordDatabase &m_db;
     QList<EntryContainer *> m_root;
     QHash<EntryId, EntryContainer *> m_index;
     GUtil::UndoStack m_undostack;

@@ -39,7 +39,6 @@ limitations under the License.*/
 #include <QToolButton>
 #include <QLabel>
 #include <QStandardPaths>
-#include <QWinTaskbarProgress>
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL1(CryptoPP);
 USING_NAMESPACE_GUTIL;
@@ -62,13 +61,15 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     :QMainWindow(parent),
       ui(new Ui::MainWindow),
       m_trayIcon(QIcon(":/icons/main.png")),
-      m_progressBar(true),
-      m_taskbarButton(this),
       m_fileLabel(new QLabel(this)),
       m_settings(s),
       m_isLocked(true),
       m_minimize_msg_shown(false),
-      m_requesting_unlock(false)
+      m_requesting_unlock(false),
+      m_progressBar(true)
+    #ifdef Q_OS_WIN
+      ,m_taskbarButton(this)
+    #endif
 {
     ui->setupUi(this);
     setWindowTitle(GRYPTO_APP_NAME);
@@ -141,10 +142,12 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
         if(al.length() > 0 && QFile::exists(al[0]->data().toString()))
             al[0]->trigger();
     }
-    
+
     // The window must be shown before setting up the taskbar button
     show();
+#ifdef Q_OS_WIN
     m_taskbarButton.setWindow(this->windowHandle());
+#endif // Q_OS_WIN
 }
 
 MainWindow::~MainWindow()
@@ -313,14 +316,35 @@ void MainWindow::_new_open_database(const QString &path)
 {
     Credentials creds;
     QString open_path = path;
+    SmartPointer<PasswordDatabase> pdb;
     if(QFile::exists(path))
     {
         QFileInfo fi(path);
         bool file_updated = false;
 
+        // Create a database object, which locks the file exclusively
+        //  and universally for this process
+        pdb = new PasswordDatabase(open_path.toUtf8().constData(),
+
+                    // A function to confirm overriding the lockfile
+                    [&](const PasswordDatabase::ProcessInfo &pi){
+                        return QMessageBox::Yes == QMessageBox::warning(this,
+                            tr("Locked by another process"),
+                            QString(tr("The database is currently locked by another process:\n"
+                                       "\n\tProcess ID: %1"
+                                       "\n\tHost Name: %2"
+                                       "\n\tApp Name: %3\n"
+                                       "\nDo you want to override the lock and open the file anyways? (NOT recommended!)"))
+                            .arg(pi.ProcessId)
+                            .arg(pi.HostName)
+                            .arg(pi.AppName),
+                            QMessageBox::Yes | QMessageBox::Cancel,
+                            QMessageBox::Cancel);
+                    });
+
         // Check the file's version and update if necessary
         try{
-            PasswordDatabase::ValidateDatabase(path.toUtf8().constData());
+            PasswordDatabase::ValidateDatabase(open_path.toUtf8().constData());
         }
         catch(...){
             /** \todo Do this inside a plugin... */
@@ -356,7 +380,7 @@ void MainWindow::_new_open_database(const QString &path)
                 bool tmp = m_progressBar.IsCancellable();
                 m_progressBar.SetIsCancellable(false);
                 _progress_updated(0);
-                
+
                 LegacyUtils::UpdateFileToCurrentVersion(path.toUtf8(), version,
                                                         open_path.toUtf8(),
                                                         creds, new_creds,
@@ -394,24 +418,8 @@ void MainWindow::_new_open_database(const QString &path)
 
     DatabaseModel *dbm = NULL;
     try{
-        dbm = new DatabaseModel(open_path.toUtf8(), creds,
-        
-                // A function to confirm overriding the lockfile
-                [&](const PasswordDatabase::ProcessInfo &pi){
-                    return QMessageBox::Yes == QMessageBox::warning(this, 
-                        tr("Locked by another process"),
-                        QString(tr("The database is currently locked by another process:\n"
-                                   "\n\tProcess ID: %1"
-                                   "\n\tHost Name: %2"
-                                   "\n\tApp Name: %3\n"
-                                   "\nDo you want to override the lock and open the file anyways? (NOT recommended!)"))
-                        .arg(pi.ProcessId)
-                        .arg(pi.HostName)
-                        .arg(pi.AppName),
-                        QMessageBox::Yes | QMessageBox::Cancel,
-                        QMessageBox::Cancel);
-                },
-                this);
+        pdb->Open(creds);
+        dbm = new DatabaseModel(*pdb, this);
     }
     catch(const GUtil::AuthenticationException<> &){
         __show_access_denied(this, tr("Invalid Key"));
@@ -419,6 +427,10 @@ void MainWindow::_new_open_database(const QString &path)
     }
     connect(dbm, SIGNAL(NotifyFavoritesUpdated()),
             this, SLOT(_update_trayIcon_menu()));
+
+    // There are no more exceptions after this point, so let's update our database pointer
+    m_db = pdb.Data();
+    pdb.Relinquish();
 
     FilteredDatabaseModel *fm = new FilteredDatabaseModel(this);
     fm->setSourceModel(dbm);
@@ -467,7 +479,7 @@ void MainWindow::_open_recent_database(QAction *a)
 
 bool MainWindow::IsFileOpen() const
 {
-    return ui->treeView->model() != NULL;
+    return m_db;
 }
 
 void MainWindow::_close_database()
@@ -479,10 +491,11 @@ void MainWindow::_close_database()
         disconnect(ui->searchWidget, SIGNAL(FilterChanged(Grypt::FilterInfo_t)),
                    this, SLOT(_filter_updated(Grypt::FilterInfo_t)));
 
-        // Delete the old database model
+        // Delete the old database model and close the database
         QAbstractItemModel *old_model = ui->treeView->model();
         ui->treeView->setModel(0);
         delete old_model;
+        m_db.Clear();
 
         _lock_unlock_interface(false);
         _update_ui_file_opened(false);
@@ -854,14 +867,14 @@ void MainWindow::_action_lock_unlock_interface()
 
 void MainWindow::RequestUnlock()
 {
-    if(m_requesting_unlock)
+    if(!IsFileOpen() || m_requesting_unlock)
         return;
 
     m_requesting_unlock = true;
-    GetPasswordDialog dlg(m_settings, _get_database_model()->FilePath(), this);
+    GetPasswordDialog dlg(m_settings, m_db->FilePath(), this);
     if(QDialog::Accepted == dlg.exec())
     {
-        if(_get_database_model()->CheckCredentials(dlg.GetCredentials()))
+        if(m_db->CheckCredentials(dlg.GetCredentials()))
             _lock_unlock_interface(false);
         else
             __show_access_denied(this, tr("Invalid Password"));
@@ -901,7 +914,7 @@ void MainWindow::_cryptographic_transformations()
     if(!m_encryptDecryptWindow){
         m_encryptDecryptWindow = new CryptoTransformsWindow(
                     m_settings,
-                    IsFileOpen() ? &_get_database_model()->Cryptor() : NULL
+                    IsFileOpen() ? &m_db->Cryptor() : NULL
                                    );
         m_encryptDecryptWindow->setAttribute(::Qt::WA_DeleteOnClose, false);
     }
@@ -919,14 +932,18 @@ void MainWindow::_cleanup_files()
 void MainWindow::_progress_updated(int progress, const QString &task_name)
 {
     m_progressBar.SetProgress(progress, task_name);
+#ifdef Q_OS_WIN
     m_taskbarButton.progress()->setValue(progress);
+#endif // Q_OS_WIN
 
     if(progress == 100){
         ui->statusbar->showMessage(QString(tr("Finished %1")).arg(task_name), STATUSBAR_MSG_TIMEOUT);
+#ifdef Q_OS_WIN
         m_taskbarButton.progress()->hide();
     }
     else if(!m_taskbarButton.progress()->isVisible()){
         m_taskbarButton.progress()->show();
+#endif // Q_OS_WIN
     }
 }
 

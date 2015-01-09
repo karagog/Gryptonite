@@ -268,32 +268,53 @@ void DatabaseTest::test_entry_move_basic()
     }
 
 
-//    // Now move an entry from the middle of one parent to the middle of another parent
-//    {
-//        DatabaseModel dbm(DATABASE_PATH, m_creds);
-//        dbm.FetchAllEntries();
-//        dbm.MoveEntries(dbm.FindIndexById(e0.GetId()), 0, 0,
-//                        dbm.FindIndexById(e1.GetId()), 1);
+    // Now move an entry from the middle of one parent to the middle of another parent
+    _close_database();
+    _init_database();
+    db->MoveEntries(e0.GetId(), 0, 0, e1.GetId(), 1);
 
-//        e0 = dbm.FindEntryById(e0.GetId());
-//        e1 = dbm.FindEntryById(e1.GetId());
-//        e2 = dbm.FindEntryById(e2.GetId());
-//        e3 = dbm.FindEntryById(e3.GetId());
-//        e4 = dbm.FindEntryById(e4.GetId());
-//        e5 = dbm.FindEntryById(e5.GetId());
-//        QVERIFY(e0.GetParentId() == EntryId::Null());
-//        QVERIFY(e1.GetParentId() == EntryId::Null());
-//        QVERIFY(e2.GetParentId() == e1.GetId());
-//        QVERIFY(e3.GetParentId() == e0.GetId());
-//        QVERIFY(e4.GetParentId() == e1.GetId());
-//        QVERIFY(e5.GetParentId() == e1.GetId());
-//        QVERIFY(e0.GetRow() == 0);
-//        QVERIFY(e1.GetRow() == 1);
-//        QVERIFY(e3.GetRow() == 0);
-//        QVERIFY(e4.GetRow() == 0);
-//        QVERIFY(e2.GetRow() == 1);
-//        QVERIFY(e5.GetRow() == 2);
-//    }
+    // Check that the cache was update correctly
+    e0 = db->FindEntry(e0.GetId());
+    e1 = db->FindEntry(e1.GetId());
+    e2 = db->FindEntry(e2.GetId());
+    e3 = db->FindEntry(e3.GetId());
+    e4 = db->FindEntry(e4.GetId());
+    e5 = db->FindEntry(e5.GetId());
+    QVERIFY(e0.GetParentId() == EntryId::Null());
+    QVERIFY(e1.GetParentId() == EntryId::Null());
+    QVERIFY(e2.GetParentId() == e1.GetId());
+    QVERIFY(e3.GetParentId() == e0.GetId());
+    QVERIFY(e4.GetParentId() == e1.GetId());
+    QVERIFY(e5.GetParentId() == e1.GetId());
+    QVERIFY(e0.GetRow() == 0);
+    QVERIFY(e1.GetRow() == 1);
+    QVERIFY(e3.GetRow() == 0);
+    QVERIFY(e4.GetRow() == 0);
+    QVERIFY(e2.GetRow() == 1);
+    QVERIFY(e5.GetRow() == 2);
+    
+    
+    // Check that the changes persist through the destruction of the database object
+    _close_database();
+    _init_database();
+    e0 = db->FindEntry(e0.GetId());
+    e1 = db->FindEntry(e1.GetId());
+    e2 = db->FindEntry(e2.GetId());
+    e3 = db->FindEntry(e3.GetId());
+    e4 = db->FindEntry(e4.GetId());
+    e5 = db->FindEntry(e5.GetId());
+    QVERIFY(e0.GetParentId() == EntryId::Null());
+    QVERIFY(e1.GetParentId() == EntryId::Null());
+    QVERIFY(e2.GetParentId() == e1.GetId());
+    QVERIFY(e3.GetParentId() == e0.GetId());
+    QVERIFY(e4.GetParentId() == e1.GetId());
+    QVERIFY(e5.GetParentId() == e1.GetId());
+    QVERIFY(e0.GetRow() == 0);
+    QVERIFY(e1.GetRow() == 1);
+    QVERIFY(e3.GetRow() == 0);
+    QVERIFY(e4.GetRow() == 0);
+    QVERIFY(e2.GetRow() == 1);
+    QVERIFY(e5.GetRow() == 2);
 }
 
 void DatabaseTest::test_entry_move_up_same_parent()

@@ -437,7 +437,7 @@ void PasswordDatabase::_init_cryptor(const Credentials &creds, const byte *s, GU
 }
 
 // Tells the entry worker to cache the child entries of the given parent
-void __command_cache_entries_by_parentid(d_t *d, const EntryId &id)
+static void __command_cache_entries_by_parentid(d_t *d, const EntryId &id)
 {
     d->entry_thread_lock.lock();
     d->entry_thread_commands.push(new cache_entries_by_parentid_command(id));
@@ -1054,8 +1054,19 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
             (same_parents && row_first <= row_dest && row_dest <= row_last))
         throw Exception<>("Invalid move parameters");
 
+    // Make sure the parents are added to the index (happens on background thread)
+    __command_cache_entries_by_parentid(d, parentId_src);
+    __command_cache_entries_by_parentid(d, parentId_dest);
+        
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
+    
+    // Wait for the parents to be added to the index
+    d->wc_index.wait(lkr, [&]{ 
+        return  d->parent_index.find(parentId_src) != d->parent_index.end() &&
+                d->parent_index.find(parentId_dest) != d->parent_index.end();
+    });
+    
     Vector<EntryId> &src = d->parent_index.find(parentId_src)->second.children;
     Vector<EntryId> &dest = d->parent_index.find(parentId_dest)->second.children;
     Vector<EntryId> moving_rows(move_cnt);
@@ -1353,15 +1364,15 @@ void PasswordDatabase::_ew_cache_entries_by_parentid(const QString &conn_str,
     QSqlQuery q(QSqlDatabase::database(conn_str));
 
     // Make sure the parent id is in the index
+    d->index_lock.lock();
     if(!id.IsNull() && d->index.find(id) == d->index.end()){
         entry_cache ec = __fetch_entry_row_by_id(q, id);
-        d->index_lock.lock();
         if(ec.id.IsNull())
             ec.exists = false;
         d->index.emplace(id, ec);
-        d->index_lock.unlock();
         d->wc_index.notify_all();
     }
+    d->index_lock.unlock();
 
     // Fetch the parent's children and 2 levels of grandchildren to maximize
     //  GUI response time because they display in a treeview

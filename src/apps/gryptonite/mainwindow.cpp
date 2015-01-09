@@ -39,7 +39,9 @@ limitations under the License.*/
 #include <QToolButton>
 #include <QLabel>
 #include <QStandardPaths>
+#ifdef Q_OS_WIN
 #include <QWinTaskbarProgress>
+#endif // Q_OS_WIN
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL1(CryptoPP);
 USING_NAMESPACE_GUTIL;
@@ -62,13 +64,15 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     :QMainWindow(parent),
       ui(new Ui::MainWindow),
       m_trayIcon(QIcon(":/icons/main.png")),
-      m_progressBar(true),
-      m_taskbarButton(this),
       m_fileLabel(new QLabel(this)),
       m_settings(s),
       m_isLocked(true),
       m_minimize_msg_shown(false),
-      m_requesting_unlock(false)
+      m_requesting_unlock(false),
+      m_progressBar(true)
+#ifdef Q_OS_WIN
+      ,m_taskbarButton(this)
+#endif
 {
     ui->setupUi(this);
     setWindowTitle(GRYPTO_APP_NAME);
@@ -141,10 +145,12 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
         if(al.length() > 0 && QFile::exists(al[0]->data().toString()))
             al[0]->trigger();
     }
-    
+
     // The window must be shown before setting up the taskbar button
     show();
+#ifdef Q_OS_WIN
     m_taskbarButton.setWindow(this->windowHandle());
+#endif // Q_OS_WIN
 }
 
 MainWindow::~MainWindow()
@@ -314,7 +320,7 @@ void MainWindow::_new_open_database(const QString &path)
     Credentials creds;
     QString open_path = path;
     QString filename = QFileInfo(path).fileName();
-    
+
     bool existed = QFile::exists(path);
     bool file_updated = false;
     if(existed)
@@ -357,7 +363,7 @@ void MainWindow::_new_open_database(const QString &path)
                 bool tmp = m_progressBar.IsCancellable();
                 m_progressBar.SetIsCancellable(false);
                 _progress_updated(0);
-                
+
                 LegacyUtils::UpdateFileToCurrentVersion(path.toUtf8(), version,
                                                         open_path.toUtf8(),
                                                         creds, new_creds,
@@ -374,13 +380,13 @@ void MainWindow::_new_open_database(const QString &path)
             }
         }
     }
-    
+
     // Create a database model, which locks the database for us exclusively and prepares it to be opened
     SmartPointer<DatabaseModel> dbm(new DatabaseModel(open_path.toUtf8(),
-    
+
         // A function to confirm overriding the lockfile
         [&](const PasswordDatabase::ProcessInfo &pi){
-            return QMessageBox::Yes == QMessageBox::warning(this, 
+            return QMessageBox::Yes == QMessageBox::warning(this,
                         tr("Locked by another process"),
                         QString(tr("The database is currently locked by another process:\n"
                                    "\n\tProcess ID: %1"
@@ -411,7 +417,7 @@ void MainWindow::_new_open_database(const QString &path)
             return;
         creds = dlg.GetCredentials();
     }
-    
+
     // Close the database (if one was open)
     _close_database();
 
@@ -444,7 +450,7 @@ void MainWindow::_new_open_database(const QString &path)
     connect(&m_progressBar, SIGNAL(Clicked()), dbm.Data(), SLOT(CancelAllBackgroundOperations()));
     connect(dbm.Data(), SIGNAL(NotifyProgressUpdated(int,QString)),
             this, SLOT(_progress_updated(int,QString)));
-            
+
     dbm.Relinquish();
 }
 
@@ -926,14 +932,18 @@ void MainWindow::_cleanup_files()
 void MainWindow::_progress_updated(int progress, const QString &task_name)
 {
     m_progressBar.SetProgress(progress, task_name);
+#ifdef Q_OS_WIN
     m_taskbarButton.progress()->setValue(progress);
+#endif // Q_OS_WIN
 
     if(progress == 100){
         ui->statusbar->showMessage(QString(tr("Finished %1")).arg(task_name), STATUSBAR_MSG_TIMEOUT);
+#ifdef Q_OS_WIN
         m_taskbarButton.progress()->hide();
     }
     else if(!m_taskbarButton.progress()->isVisible()){
         m_taskbarButton.progress()->show();
+#endif // Q_OS_WIN
     }
 }
 

@@ -24,7 +24,9 @@ limitations under the License.*/
 #include <QUndoStack>
 #include <QSystemTrayIcon>
 #include <QPointer>
+#ifdef Q_OS_WIN
 #include <QWinTaskbarButton>
+#endif // Q_OS_WIN
 
 #define MAINWINDOW_GEOMETRY_SETTING "MAINWIN_GEOMETRY"
 #define MAINWINDOW_STATE_SETTING "MAINWIN_STATE"
@@ -136,8 +138,6 @@ private:
     QSystemTrayIcon m_trayIcon;
     QToolButton *btn_navBack;
     QToolButton *btn_navForward;
-    GUtil::Qt::ProgressBarControl m_progressBar;
-    QWinTaskbarButton m_taskbarButton;
     QLabel *m_fileLabel;
     GUtil::Qt::Settings *m_settings;
     GUtil::SmartPointer<QActionGroup> m_recentFilesGroup;
@@ -152,6 +152,11 @@ private:
 
     bool m_minimize_msg_shown;
     bool m_requesting_unlock;
+
+    GUtil::Qt::ProgressBarControl m_progressBar;
+#ifdef Q_OS_WIN
+    QWinTaskbarButton m_taskbarButton;
+#endif // Q_OS_WIN
 
     void _new_open_database(const QString &);
     void _update_ui_file_opened(bool);

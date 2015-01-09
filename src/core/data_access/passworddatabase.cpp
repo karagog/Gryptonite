@@ -597,6 +597,7 @@ void PasswordDatabase::Open(const Credentials &creds)
     catch(...)
     {
         QSqlDatabase::removeDatabase(dbstring);
+        d->cryptor.Clear();
         throw;
     }
 

@@ -20,7 +20,6 @@ limitations under the License.*/
 #include <QString>
 #include <QtTest>
 using namespace std;
-USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GRYPTO;
 
 #define TEST_FILEPATH  "testdb.sqlite"
@@ -53,15 +52,19 @@ private Q_SLOTS:
 
 private:
     void _cleanup_database(){
-        if(db){
-            delete db;
-            db = 0;
-        }
+        _close_database();
         if(QFile::exists(TEST_FILEPATH))
             QVERIFY(QFile::remove(TEST_FILEPATH));
     }
     void _init_database(){
-        db = new PasswordDatabase(TEST_FILEPATH, creds);
+        db = new PasswordDatabase(TEST_FILEPATH);
+        db->Open(creds);
+    }
+    void _close_database(){
+        if(db){
+            delete db;
+            db = 0;
+        }
     }
 };
 
@@ -89,22 +92,25 @@ void DatabaseTest::initTestCase()
 
 void DatabaseTest::test_create()
 {
+    _close_database();
+
     // Try opening the database with the wrong key
     bool exception_hit = false;
     Credentials bad_creds;
     bad_creds.Password = "wrong password";
+    PasswordDatabase newdb(TEST_FILEPATH);
     try
     {
-        PasswordDatabase newdb(TEST_FILEPATH, bad_creds);
+        newdb.Open(bad_creds);
     }
-    catch(const AuthenticationException<> &ex)
+    catch(const GUtil::AuthenticationException<> &ex)
     {
         exception_hit = true;
     }
     QVERIFY(exception_hit);
 
     // Try opening the database with the right key (No exception)
-    PasswordDatabase newdb(TEST_FILEPATH, creds);
+    newdb.Open(creds);
 }
 
 bool __compare_entries(const Entry &lhs, const Entry &rhs)
@@ -133,6 +139,8 @@ bool __compare_entries(const Entry &lhs, const Entry &rhs)
 
 void DatabaseTest::test_entry()
 {
+    _init_database();
+    
     Entry e, e2;
     SecretValue v;
 
@@ -307,6 +315,6 @@ void DatabaseTest::cleanupTestCase()
 }
 
 
-QTEST_APPLESS_MAIN(DatabaseTest)
+QTEST_MAIN(DatabaseTest)
 
 #include "tst_databasetest.moc"

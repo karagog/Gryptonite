@@ -321,8 +321,7 @@ void CryptoTransformsWindow::_worker_finished()
     if(m_worker)
     {
         err_str = m_worker->ErrorString();
-        m_worker->deleteLater();
-        m_worker.Relinquish();
+        m_worker.Clear();
         m_progressDialog.hide();
     }
     ui->te_dest->clear();
@@ -346,8 +345,9 @@ void CryptoTransformsWindow::_worker_finished()
         if(_is_file_output()){
             // Remove the incomplete dest file
             File f(ui->le_dest->text().trimmed().toUtf8());
-            if(f.Exists())
+            if(f.Exists()){
                 f.Delete();
+            }
         }
     }
     else

@@ -84,7 +84,7 @@ DatabasemodelTest::DatabasemodelTest()
     _cleanup_database();
 
     // This creates and initializes an empty database
-    DatabaseModel dbm(DATABASE_PATH, m_creds);
+    DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
 }
 
 DatabasemodelTest::~DatabasemodelTest()
@@ -102,7 +102,7 @@ void DatabasemodelTest::test_new_entry()
     e.SetFavoriteIndex(0);
     e.SetModifyDate(modify_date);
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.AddEntry(e);
 
         // Check that the new data is immediately accessible, because
@@ -113,7 +113,7 @@ void DatabasemodelTest::test_new_entry()
 
     // Check that the data persists after the original object dies
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         Entry e2 = dbm.FindEntryById(e.GetId());
         QVERIFY(__compare_entries(e, e2));
 
@@ -133,7 +133,7 @@ void DatabasemodelTest::test_new_entry()
     e2.SetModifyDate(QDateTime::currentDateTime());
     e2.SetRow(0);
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.AddEntry(e2);
 
         Entry e3 = dbm.FindEntryById(e2.GetId());
@@ -144,7 +144,7 @@ void DatabasemodelTest::test_new_entry()
 
     // Make sure the changes persist
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         Entry e3 = dbm.FindEntryById(e.GetId());
         QVERIFY(e3.GetRow() == 1);
     }
@@ -154,7 +154,7 @@ void DatabasemodelTest::test_new_entry()
     Entry e3(e);
     e3.SetRow(1);
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.AddEntry(e3);
         QVERIFY(dbm.FindIndexById(e3.GetId()).isValid());
 
@@ -185,7 +185,7 @@ void DatabasemodelTest::test_new_entry()
 
     // Make sure the changes persist
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         Entry e4 = dbm.FindEntryById(e2.GetId());
         Entry e5 = dbm.FindEntryById(e.GetId());
         QVERIFY(e4.GetRow() == 0);
@@ -210,7 +210,7 @@ void DatabasemodelTest::test_update_entry()
     e.SetFavoriteIndex(0);
     e.SetModifyDate(modify_date);
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.AddEntry(e);
 
         e = dbm.FindEntryById(e.GetId());
@@ -227,7 +227,7 @@ void DatabasemodelTest::test_update_entry()
 
     // Make sure the changes persist
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         Entry e2 = dbm.FindEntryById(e.GetId());
         QVERIFY(e2.GetDescription() == "new description");
     }
@@ -235,7 +235,7 @@ void DatabasemodelTest::test_update_entry()
 
     // Test that undoing works
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         e.SetDescription("completely different");
         dbm.UpdateEntry(e);
         e = dbm.FindEntryById(e.GetId());
@@ -265,7 +265,7 @@ void DatabasemodelTest::test_delete_entry()
     e.SetFavoriteIndex(0);
     e.SetModifyDate(modify_date);
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.AddEntry(e);
 
         dbm.RemoveEntry(e);
@@ -284,7 +284,7 @@ void DatabasemodelTest::test_delete_entry()
 
     // Make sure the changes persist
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         QVERIFY(!dbm.FindIndexById(e.GetId()).isValid());
     }
 
@@ -293,7 +293,7 @@ void DatabasemodelTest::test_delete_entry()
     //  at least until you tell it to delete the orphans
     Entry e2(e), e3(e);
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.AddEntry(e);
 
         e2.SetParentId(e.GetId());
@@ -320,7 +320,7 @@ void DatabasemodelTest::test_delete_entry()
     // We deleted the parents, so the orphans will not be added to the
     //  index when we create a new database model
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         QVERIFY(!dbm.FindIndexById(e2.GetId()).isValid());
         QVERIFY(!dbm.FindIndexById(e3.GetId()).isValid());
 
@@ -342,7 +342,7 @@ void DatabasemodelTest::test_move_entries_basic()
     Entry e2, e3,   e4, e5;
     {
         // Populate the initial hierarchy for the test
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.AddEntry(e0);
         dbm.AddEntry(e1);
 
@@ -380,7 +380,7 @@ void DatabasemodelTest::test_move_entries_basic()
 
     // Now move an entry from the middle of one parent to the middle of another parent
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.FetchAllEntries();
         dbm.MoveEntries(dbm.FindIndexById(e0.GetId()), 0, 0,
                         dbm.FindIndexById(e1.GetId()), 1);
@@ -449,7 +449,7 @@ void DatabasemodelTest::test_move_entries_basic()
 
     // Make sure changes are persistent
     {
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         e0 = dbm.FindEntryById(e0.GetId());
         e1 = dbm.FindEntryById(e1.GetId());
         e2 = dbm.FindEntryById(e2.GetId());
@@ -478,7 +478,7 @@ void DatabasemodelTest::test_move_entries_down_same_parent()
     Entry e1, e2, e3, e4, e5;
     {
         // Populate the initial hierarchy for the test
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.AddEntry(e1);
         dbm.AddEntry(e2);
         dbm.AddEntry(e3);
@@ -565,7 +565,7 @@ void DatabasemodelTest::test_move_entries_up_same_parent()
     Entry e1, e2, e3, e4, e5;
     {
         // Populate the initial hierarchy for the test
-        DatabaseModel dbm(DATABASE_PATH, m_creds);
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
         dbm.AddEntry(e1);
         dbm.AddEntry(e2);
         dbm.AddEntry(e3);

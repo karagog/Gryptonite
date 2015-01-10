@@ -40,14 +40,15 @@ public:
                 to override the lock file (if needed).
     */
     explicit DatabaseModel(const char *file_path,
-                           std::function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override,
+                           std::function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override
+                                = [](const PasswordDatabase::ProcessInfo &){ return false; },
                            QObject *parent = 0);
-    
+
     /** Opens the database with the given credentials. You can only open the database once, and
         it will close automatically when the object is deleted.
     */
     void Open(const Credentials &);
-    
+
     /** Returns true if the database has been opened. */
     bool IsOpen() const{ return m_db.IsOpen(); }
 

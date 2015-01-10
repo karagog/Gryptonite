@@ -140,7 +140,7 @@ bool __compare_entries(const Entry &lhs, const Entry &rhs)
 void DatabaseTest::test_entry()
 {
     _init_database();
-    
+
     Entry e, e2;
     SecretValue v;
 
@@ -292,8 +292,8 @@ void DatabaseTest::test_entry_move_basic()
     QVERIFY(e4.GetRow() == 0);
     QVERIFY(e2.GetRow() == 1);
     QVERIFY(e5.GetRow() == 2);
-    
-    
+
+
     // Check that the changes persist through the destruction of the database object
     _close_database();
     _init_database();
@@ -319,12 +319,134 @@ void DatabaseTest::test_entry_move_basic()
 
 void DatabaseTest::test_entry_move_up_same_parent()
 {
-    QVERIFY2(false, "Failure");
+    _cleanup_database();
+    _init_database();
+
+    Entry e1, e2, e3, e4, e5;
+
+    // Populate the initial hierarchy for the test
+    db->AddEntry(e1);
+    db->AddEntry(e2);
+    db->AddEntry(e3);
+    db->AddEntry(e4);
+    db->AddEntry(e5);
+    QVERIFY(e1.GetParentId() == EntryId::Null());
+    QVERIFY(e2.GetParentId() == EntryId::Null());
+    QVERIFY(e3.GetParentId() == EntryId::Null());
+    QVERIFY(e4.GetParentId() == EntryId::Null());
+    QVERIFY(e5.GetParentId() == EntryId::Null());
+    QVERIFY(e1.GetRow() == 0);
+    QVERIFY(e2.GetRow() == 1);
+    QVERIFY(e3.GetRow() == 2);
+    QVERIFY(e4.GetRow() == 3);
+    QVERIFY(e5.GetRow() == 4);
+
+
+    // Now move some entries down with respect to its siblings
+    db->MoveEntries(EntryId::Null(), 2, 3,
+                    EntryId::Null(), 1);
+
+    // Check that the cache was updated correctly
+    e1 = db->FindEntry(e1.GetId());
+    e2 = db->FindEntry(e2.GetId());
+    e3 = db->FindEntry(e3.GetId());
+    e4 = db->FindEntry(e4.GetId());
+    e5 = db->FindEntry(e5.GetId());
+    QVERIFY(e1.GetParentId() == EntryId::Null());
+    QVERIFY(e2.GetParentId() == EntryId::Null());
+    QVERIFY(e3.GetParentId() == EntryId::Null());
+    QVERIFY(e4.GetParentId() == EntryId::Null());
+    QVERIFY(e5.GetParentId() == EntryId::Null());
+    QVERIFY(e1.GetRow() == 0);
+    QVERIFY(e2.GetRow() == 3);
+    QVERIFY(e3.GetRow() == 1);
+    QVERIFY(e4.GetRow() == 2);
+    QVERIFY(e5.GetRow() == 4);
+
+    // Make sure the changes are persistent
+    _close_database();
+    _init_database();
+    e1 = db->FindEntry(e1.GetId());
+    e2 = db->FindEntry(e2.GetId());
+    e3 = db->FindEntry(e3.GetId());
+    e4 = db->FindEntry(e4.GetId());
+    e5 = db->FindEntry(e5.GetId());
+    QVERIFY(e1.GetParentId() == EntryId::Null());
+    QVERIFY(e2.GetParentId() == EntryId::Null());
+    QVERIFY(e3.GetParentId() == EntryId::Null());
+    QVERIFY(e4.GetParentId() == EntryId::Null());
+    QVERIFY(e5.GetParentId() == EntryId::Null());
+    QVERIFY(e1.GetRow() == 0);
+    QVERIFY(e2.GetRow() == 3);
+    QVERIFY(e3.GetRow() == 1);
+    QVERIFY(e4.GetRow() == 2);
+    QVERIFY(e5.GetRow() == 4);
 }
 
 void DatabaseTest::test_entry_move_down_same_parent()
 {
-    QVERIFY2(false, "Failure");
+    _cleanup_database();
+    _init_database();
+
+    Entry e1, e2, e3, e4, e5;
+
+    // Populate the initial hierarchy for the test
+    db->AddEntry(e1);
+    db->AddEntry(e2);
+    db->AddEntry(e3);
+    db->AddEntry(e4);
+    db->AddEntry(e5);
+    QVERIFY(e1.GetParentId() == EntryId::Null());
+    QVERIFY(e2.GetParentId() == EntryId::Null());
+    QVERIFY(e3.GetParentId() == EntryId::Null());
+    QVERIFY(e4.GetParentId() == EntryId::Null());
+    QVERIFY(e5.GetParentId() == EntryId::Null());
+    QVERIFY(e1.GetRow() == 0);
+    QVERIFY(e2.GetRow() == 1);
+    QVERIFY(e3.GetRow() == 2);
+    QVERIFY(e4.GetRow() == 3);
+    QVERIFY(e5.GetRow() == 4);
+
+
+    // Now move some entries down with respect to its siblings
+    db->MoveEntries(EntryId::Null(), 1, 2,
+                    EntryId::Null(), 4);
+
+    // Check that the cache was updated correctly
+    e1 = db->FindEntry(e1.GetId());
+    e2 = db->FindEntry(e2.GetId());
+    e3 = db->FindEntry(e3.GetId());
+    e4 = db->FindEntry(e4.GetId());
+    e5 = db->FindEntry(e5.GetId());
+    QVERIFY(e1.GetParentId() == EntryId::Null());
+    QVERIFY(e2.GetParentId() == EntryId::Null());
+    QVERIFY(e3.GetParentId() == EntryId::Null());
+    QVERIFY(e4.GetParentId() == EntryId::Null());
+    QVERIFY(e5.GetParentId() == EntryId::Null());
+    QVERIFY(e1.GetRow() == 0);
+    QVERIFY(e2.GetRow() == 2);
+    QVERIFY(e3.GetRow() == 3);
+    QVERIFY(e4.GetRow() == 1);
+    QVERIFY(e5.GetRow() == 4);
+
+    // Check that the changes are persistent
+    _close_database();
+    _init_database();
+    e1 = db->FindEntry(e1.GetId());
+    e2 = db->FindEntry(e2.GetId());
+    e3 = db->FindEntry(e3.GetId());
+    e4 = db->FindEntry(e4.GetId());
+    e5 = db->FindEntry(e5.GetId());
+    QVERIFY(e1.GetParentId() == EntryId::Null());
+    QVERIFY(e2.GetParentId() == EntryId::Null());
+    QVERIFY(e3.GetParentId() == EntryId::Null());
+    QVERIFY(e4.GetParentId() == EntryId::Null());
+    QVERIFY(e5.GetParentId() == EntryId::Null());
+    QVERIFY(e1.GetRow() == 0);
+    QVERIFY(e2.GetRow() == 2);
+    QVERIFY(e3.GetRow() == 3);
+    QVERIFY(e4.GetRow() == 1);
+    QVERIFY(e5.GetRow() == 4);
 }
 
 void DatabaseTest::cleanupTestCase()

@@ -495,7 +495,7 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
       m_filepath(file_path)
 {
     G_D_INIT();
-    
+
     // Note: Here we don't even check that the file exists, because maybe it wasn't created yet,
     //  but we can still lock the future location of the file path so it's ready when we want to create it.
 
@@ -835,8 +835,8 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
             row_dest -= row_cnt;
         }
 
+        // Remember the original sibling count before we move anything
         int src_siblings_cnt = __count_entries_by_parent_id(q, src_parent);
-        int dest_siblings_cnt = __count_entries_by_parent_id(q, dest_parent);
 
         // First move the source rows to a dummy parent with ID=0
         for(int i = 0; i < row_cnt; ++i){
@@ -849,6 +849,10 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
             q.addBindValue(row_first + i);
             DatabaseUtils::ExecuteQuery(q);
         }
+
+        // Count the siblings at the dest. We do this later because the source
+        //  may be the dest, in which case we need to count after removing the source rows.
+        int dest_siblings_cnt = __count_entries_by_parent_id(q, dest_parent);
 
         // Update the siblings at the source
         for(int i = row_last + 1; i < src_siblings_cnt + row_cnt; ++i){
@@ -1057,16 +1061,16 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     // Make sure the parents are added to the index (happens on background thread)
     __command_cache_entries_by_parentid(d, parentId_src);
     __command_cache_entries_by_parentid(d, parentId_dest);
-        
+
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
-    
+
     // Wait for the parents to be added to the index
-    d->wc_index.wait(lkr, [&]{ 
+    d->wc_index.wait(lkr, [&]{
         return  d->parent_index.find(parentId_src) != d->parent_index.end() &&
                 d->parent_index.find(parentId_dest) != d->parent_index.end();
     });
-    
+
     Vector<EntryId> &src = d->parent_index.find(parentId_src)->second.children;
     Vector<EntryId> &dest = d->parent_index.find(parentId_dest)->second.children;
     Vector<EntryId> moving_rows(move_cnt);
@@ -1089,6 +1093,7 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     // Insert the rows at the dest parent
     if(same_parents && row_dest > row_first)
         row_dest -= move_cnt;
+
     for(int i = 0; i < move_cnt; ++i){
         dest.Insert(moving_rows[i], row_dest + i);
         d->index.find(moving_rows[i])->second.parentid = parentId_dest;

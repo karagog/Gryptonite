@@ -16,19 +16,37 @@ limitations under the License.*/
 #include <grypto_common.h>
 #include <gutil/application.h>
 #include <gutil/qt_settings.h>
-USING_NAMESPACE_GUTIL1(Qt);
+#include <gutil/globallogger.h>
+#include <gutil/filelogger.h>
+#include <QStandardPaths>
+USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GRYPTO;
+
+#define APPLICATION_LOG "grypto_transforms.log"
 
 int main(int argc, char *argv[])
 {
-    Application a(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING);
+    // Set up a global file logger, so the application can log errors somewhere
+    SetGlobalLogger(new FileLogger(
+                        String::Format("%s/" APPLICATION_LOG,
+                                       QStandardPaths::writableLocation(QStandardPaths::DataLocation).toUtf8().constData())));
+
+    GUtil::Qt::Application a(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING);
+
+    // Don't allow exceptions to crash us. You can read the log to find exception details.
+    a.SetTrapExceptions(true);
 
     // Initialize a settings object for persistent data
-    Settings settings(GRYPTO_SETTINGS_IDENTIFIER);
+    GUtil::Qt::Settings settings(GRYPTO_SETTINGS_IDENTIFIER);
 
     // Create and show the crypto transforms window
     CryptoTransformsWindow w(&settings);
     w.show();
 
-    return a.exec();
+    // Execute the application event loop
+    int ret = a.exec();
+
+    // Clean up and return
+    SetGlobalLogger(NULL);
+    return ret;
 }

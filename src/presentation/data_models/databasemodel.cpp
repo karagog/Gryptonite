@@ -181,10 +181,10 @@ DatabaseModel::DatabaseModel(const char *f,
 void DatabaseModel::Open(const Credentials &creds)
 {
     m_db.Open(creds);
-    
+
     // Fetch the root index
     fetchMore(QModelIndex());
-    
+
     //new ModelTest(this);
 }
 
@@ -536,13 +536,18 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
             return;
     }
 
+    beginMoveRows(pind, r_first, r_last, targ_pind, r_dest);
+
     // Move the entries in the database
     m_db.MoveEntries(pid, r_first, r_last,
                       pid_targ, r_dest);
 
 
     // Now move them in the model
-    beginMoveRows(pind, r_first, r_last, targ_pind, r_dest);
+    int r_dest_cpy = r_dest;
+    if(pind == targ_pind && r_dest > r_last)
+        r_dest_cpy -= move_cnt;
+
     QList<EntryContainer *> &cl = _get_child_list(pind);
     Vector<EntryContainer *> to_move((EntryContainer *)NULL, move_cnt, true);
     for(int i = r_last; i >= r_first; --i){
@@ -550,12 +555,12 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
         cl.removeAt(i);
     }
     for(uint i = 0; i < to_move.Length(); ++i)
-        cl_targ.insert(r_dest + i, to_move[i]);
+        cl_targ.insert(r_dest_cpy + i, to_move[i]);
 
     // Adjust rows at both source and dest
     for(int i = r_first; i < cl.length(); ++i)
         cl[i]->entry.SetRow(i);
-    for(int i = r_dest; i < cl_targ.length(); ++i){
+    for(int i = r_dest_cpy; i < cl_targ.length(); ++i){
         EntryContainer *cur = cl_targ[i];
         cur->entry.SetRow(i);
         cur->entry.SetParentId(pid_targ);

@@ -855,7 +855,7 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
         int dest_siblings_cnt = __count_entries_by_parent_id(q, dest_parent);
 
         // Update the siblings at the source
-        for(int i = row_last + 1; i < src_siblings_cnt + row_cnt; ++i){
+        for(int i = row_last + 1; i < src_siblings_cnt; ++i){
             q.prepare(QString("UPDATE Entry SET Row=? WHERE ParentID%1 AND Row=?")
                       .arg(src_parent.IsNull() ? " IS NULL" : "=?"));
             q.addBindValue(i - row_cnt);
@@ -866,7 +866,7 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
         }
 
         // Update the siblings at the dest
-        for(int i = row_dest; i < dest_siblings_cnt; ++i){
+        for(int i = dest_siblings_cnt - 1; i >= (int)row_dest; --i){
             q.prepare(QString("UPDATE Entry SET Row=? WHERE ParentID%1 AND Row=?")
                       .arg(dest_parent.IsNull() ? " IS NULL" : "=?"));
             q.addBindValue(i + row_cnt);

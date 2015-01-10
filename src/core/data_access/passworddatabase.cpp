@@ -861,7 +861,7 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
             q.addBindValue(i - row_cnt);
             if(!src_parent.IsNull())
                 q.addBindValue(src_parent.ToQByteArray());
-            q.addBindValue(row_first + row_cnt);
+            q.addBindValue(i);
             DatabaseUtils::ExecuteQuery(q);
         }
 
@@ -1053,6 +1053,7 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     FailIfNotOpen();
     G_D;
     int move_cnt = row_last - row_first + 1;
+    quint32 row_dest_orig = row_dest;
     bool same_parents = parentId_src == parentId_dest;
     if(0 > move_cnt ||
             (same_parents && row_first <= row_dest && row_dest <= row_last))
@@ -1106,7 +1107,7 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
 
     // Update the database
     d->entry_thread_lock.lock();
-    d->entry_thread_commands.push(new move_entry_command(parentId_src, row_first, row_last, parentId_dest, row_dest));
+    d->entry_thread_commands.push(new move_entry_command(parentId_src, row_first, row_last, parentId_dest, row_dest_orig));
     d->entry_thread_lock.unlock();
     d->wc_entry_thread.notify_one();
 }

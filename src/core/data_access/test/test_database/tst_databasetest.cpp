@@ -409,7 +409,7 @@ void DatabaseTest::test_entry_move_down_same_parent()
 
 
     // Now move some entries down with respect to its siblings
-    db->MoveEntries(EntryId::Null(), 1, 2,
+    db->MoveEntries(EntryId::Null(), 0, 0,
                     EntryId::Null(), 4);
 
     // Check that the cache was updated correctly
@@ -423,10 +423,10 @@ void DatabaseTest::test_entry_move_down_same_parent()
     QVERIFY(e3.GetParentId() == EntryId::Null());
     QVERIFY(e4.GetParentId() == EntryId::Null());
     QVERIFY(e5.GetParentId() == EntryId::Null());
-    QVERIFY(e1.GetRow() == 0);
-    QVERIFY(e2.GetRow() == 2);
-    QVERIFY(e3.GetRow() == 3);
-    QVERIFY(e4.GetRow() == 1);
+    QVERIFY(e1.GetRow() == 3);
+    QVERIFY(e2.GetRow() == 0);
+    QVERIFY(e3.GetRow() == 1);
+    QVERIFY(e4.GetRow() == 2);
     QVERIFY(e5.GetRow() == 4);
 
     // Check that the changes are persistent
@@ -442,10 +442,10 @@ void DatabaseTest::test_entry_move_down_same_parent()
     QVERIFY(e3.GetParentId() == EntryId::Null());
     QVERIFY(e4.GetParentId() == EntryId::Null());
     QVERIFY(e5.GetParentId() == EntryId::Null());
-    QVERIFY(e1.GetRow() == 0);
-    QVERIFY(e2.GetRow() == 2);
-    QVERIFY(e3.GetRow() == 3);
-    QVERIFY(e4.GetRow() == 1);
+    QVERIFY(e1.GetRow() == 3);
+    QVERIFY(e2.GetRow() == 0);
+    QVERIFY(e3.GetRow() == 1);
+    QVERIFY(e4.GetRow() == 2);
     QVERIFY(e5.GetRow() == 4);
 }
 

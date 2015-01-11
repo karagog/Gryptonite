@@ -56,7 +56,7 @@ Application::Application(int &argc, char **argv)
     qRegisterMetaType<Grypt::EntryId>("Grypt::EntryId");
 
     setQuitOnLastWindowClosed(false);
-    
+
     main_window = new MainWindow(&settings);
 }
 

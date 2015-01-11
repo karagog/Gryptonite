@@ -12,7 +12,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="../../presentation/grypto_ui.qrc">
-    <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
+    <normaloff>:/grypto/icons/main.png</normaloff>:/grypto/icons/main.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -44,7 +44,7 @@
            <string>Click to Unlock</string>
           </property>
           <property name="icon">
-           <iconset resource="../../presentation/grypto_ui.qrc">
+           <iconset>
             <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
           </property>
           <property name="iconSize">

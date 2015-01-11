@@ -13,10 +13,6 @@
   <property name="windowTitle">
    <string>Preferences</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="../../presentation/grypto_ui.qrc">
-    <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QGroupBox" name="groupBox">
@@ -227,9 +223,7 @@ You can disable this feature by moving the slider all the way left.</string>
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="../../presentation/grypto_ui.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>delaySlider</sender>

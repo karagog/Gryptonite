@@ -16,10 +16,6 @@
   <property name="windowTitle">
    <string>Edit Secret</string>
   </property>
-  <property name="windowIcon">
-   <iconset>
-    <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QGridLayout" name="gridLayout_2">

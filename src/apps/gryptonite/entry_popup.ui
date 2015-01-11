@@ -13,10 +13,6 @@
   <property name="windowTitle">
    <string/>
   </property>
-  <property name="windowIcon">
-   <iconset resource="../../presentation/grypto_ui.qrc">
-    <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
-  </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="1" column="0">
     <widget class="QPushButton" name="btn_mainWindow">
@@ -40,13 +36,11 @@
   <customwidget>
    <class>Grypt::EntryView</class>
    <extends>QWidget</extends>
-   <header location="global">grypto_entryview.h</header>
+   <header>grypto_entryview.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="../../presentation/grypto_ui.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>btn_mainWindow</sender>

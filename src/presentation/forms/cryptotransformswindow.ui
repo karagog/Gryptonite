@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Cryptographic Transformations</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../grypto_ui.qrc">
+    <normaloff>:/grypto/icons/main.png</normaloff>:/grypto/icons/main.png</iconset>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QGroupBox" name="gb_mode">
@@ -446,7 +450,9 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../grypto_ui.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>cb_source</sender>

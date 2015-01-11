@@ -39,6 +39,7 @@ limitations under the License.*/
 #include <QToolButton>
 #include <QLabel>
 #include <QStandardPaths>
+#include <QDesktopServices>
 #ifdef Q_OS_WIN
 #include <QWinTaskbarProgress>
 #endif // Q_OS_WIN
@@ -597,9 +598,22 @@ void MainWindow::_update_ui_file_opened(bool b)
 
 void MainWindow::_favorite_action_clicked(QAction *a)
 {
-    EntryPopup *ep = new EntryPopup(_get_database_model()->FindEntryById(a->data().value<EntryId>()),
-                                    m_settings,
-                                    this);
+    Entry e = _get_database_model()->FindEntryById(a->data().value<EntryId>());
+
+    // Open any URL fields with QDesktopServices
+    if(m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool()){
+        for(const SecretValue &sv : e.Values()){
+            if(sv.GetName().toLower() == "url"){
+                if(!QDesktopServices::openUrl(QUrl(sv.GetValue()))){
+                    QMessageBox::warning(this, tr("Opening URL Failed"),
+                                         QString(tr("Could not open URL: %1"))
+                                         .arg(sv.GetValue().constData()));
+                }
+            }
+        }
+    }
+
+    EntryPopup *ep = new EntryPopup(e, m_settings, this);
     connect(ep, SIGNAL(SelectInMainWindow(const Grypt::EntryId &)),
             this, SLOT(ShowEntryById(const Grypt::EntryId &)));
 

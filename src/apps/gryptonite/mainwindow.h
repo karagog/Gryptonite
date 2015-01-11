@@ -83,6 +83,9 @@ public slots:
     /** Prompts the user for a password and if it's correct, unlocks the interface. */
     void RequestUnlock();
 
+    /** Activates the main window and selects the entry given by id. */
+    void ShowEntryById(const Grypt::EntryId &);
+
 
 protected:
 
@@ -147,7 +150,7 @@ private:
     bool m_isLocked;
     QByteArray m_savedState;
     GUtil::SmartPointer<QWidget> m_encryptDecryptWindow;
-    GUtil::SmartPointer<QWidget> m_entryView;
+    QPointer<QWidget> m_entryView;
     QPointer<QWidget> m_cleanupFilesWindow;
 
     bool m_minimize_msg_shown;
@@ -164,6 +167,7 @@ private:
     Grypt::FilteredDatabaseModel *_get_proxy_model() const;
     Grypt::DatabaseModel *_get_database_model() const;
 
+    void _select_entry(const Grypt::EntryId &);
     void _edit_entry(const Grypt::Entry &);
     bool _handle_key_pressed(QKeyEvent *);
     void _reset_lockout_timer(QEvent *);

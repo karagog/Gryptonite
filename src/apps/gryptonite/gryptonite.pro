@@ -32,7 +32,8 @@ HEADERS += \
     application.h \
     about.h \
     preferences_edit.h \
-    settings.h
+    settings.h \
+    entry_popup.h
 
 SOURCES += \
     main.cpp \
@@ -44,4 +45,5 @@ SOURCES += \
 
 FORMS += \
     mainwindow.ui \
-    preferences_edit.ui
+    preferences_edit.ui \
+    entry_popup.ui

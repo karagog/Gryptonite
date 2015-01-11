@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EntryPopup</class>
+ <widget class="QWidget" name="EntryPopup">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>395</width>
+    <height>264</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string/>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../../presentation/grypto_ui.qrc">
+    <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="0">
+    <widget class="QPushButton" name="btn_mainWindow">
+     <property name="toolTip">
+      <string>Close this window and go back to the main window.</string>
+     </property>
+     <property name="whatsThis">
+      <string>Close this window and go back to the main window.</string>
+     </property>
+     <property name="text">
+      <string>Show in Main Window</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="Grypt::EntryView" name="view_entry" native="true"/>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Grypt::EntryView</class>
+   <extends>QWidget</extends>
+   <header location="global">grypto_entryview.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../../presentation/grypto_ui.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>btn_mainWindow</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryPopup</receiver>
+   <slot>_show_in_main_window()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>157</x>
+     <y>240</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>215</x>
+     <y>261</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>_show_in_main_window()</slot>
+ </slots>
+</ui>

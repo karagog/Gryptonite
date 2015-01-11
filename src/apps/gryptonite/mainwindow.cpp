@@ -22,7 +22,7 @@ limitations under the License.*/
 #include "grypto_databasemodel.h"
 #include "grypto_filtereddatabasemodel.h"
 #include "grypto_entry_edit.h"
-#include "grypto_entry_popup.h"
+#include "entry_popup.h"
 #include "grypto_cryptotransformswindow.h"
 #include "grypto_cleanupfileswindow.h"
 #include "../../legacy/legacyutils.h"
@@ -597,8 +597,16 @@ void MainWindow::_update_ui_file_opened(bool b)
 
 void MainWindow::_favorite_action_clicked(QAction *a)
 {
-    m_entryView = new EntryPopup(_get_database_model()->FindEntryById(a->data().value<EntryId>()));
-    m_entryView->show();
+    EntryPopup *ep = new EntryPopup(_get_database_model()->FindEntryById(a->data().value<EntryId>()),
+                                    m_settings,
+                                    this);
+    connect(ep, SIGNAL(SelectInMainWindow(const Grypt::EntryId &)),
+            this, SLOT(ShowEntryById(const Grypt::EntryId &)));
+
+    if(m_entryView)
+        m_entryView->deleteLater();
+    (m_entryView = ep)->show();
+    _hide();
 }
 
 void MainWindow::_update_trayIcon_menu()
@@ -743,6 +751,14 @@ void MainWindow::_nav_index_changed(int ind)
                 static_cast<const navigation_command *>(m_navStack.command(ind))->CurEntryId);
 
             ui->view_entry->SetEntry(e);
+
+            QItemSelectionModel *ism = ui->treeView->selectionModel();
+            QModelIndex ind = _get_database_model()->FindIndexById(e.GetId());
+            if(ind.isValid()){
+                ism->select(ind, QItemSelectionModel::Rows | QItemSelectionModel::ClearAndSelect);
+                ui->treeView->setSelectionModel(ism);
+                ui->treeView->ExpandToIndex(ind);
+            }
             success = true;
         } catch(...) {}
     }
@@ -754,21 +770,32 @@ void MainWindow::_nav_index_changed(int ind)
     btn_navForward->setEnabled(m_navStack.canRedo());
 }
 
+void MainWindow::_select_entry(const EntryId &id)
+{
+    bool allow = true;
+    if(m_navStack.index() > 0)
+    {
+        allow = id !=
+                static_cast<const navigation_command *>(m_navStack.command(m_navStack.index() - 1))->CurEntryId;
+    }
+
+    if(allow)
+        m_navStack.push(new navigation_command(id));
+}
+
+void MainWindow::ShowEntryById(const Grypt::EntryId &id)
+{
+    showNormal();
+    activateWindow();
+    _select_entry(id);
+}
+
 void MainWindow::_treeview_clicked(const QModelIndex &ind)
 {
     if(ind.isValid())
-    {
-        Entry const *e =  _get_database_model()->GetEntryFromIndex(_get_proxy_model()->mapToSource(ind));
-        bool allow = true;
-        if(m_navStack.index() > 0)
-        {
-            allow = e->GetId() !=
-                    static_cast<const navigation_command *>(m_navStack.command(m_navStack.index() - 1))->CurEntryId;
-        }
-
-        if(allow)
-            m_navStack.push(new navigation_command(e->GetId()));
-    }
+        _select_entry(_get_database_model()->GetEntryFromIndex(
+                          _get_proxy_model()->mapToSource(ind))
+                      ->GetId());
 }
 
 void MainWindow::_filter_updated(const FilterInfo_t &fi)

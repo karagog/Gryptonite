@@ -24,7 +24,6 @@ limitations under the License.*/
 #include "grypto_entry_edit.h"
 #include "entry_popup.h"
 #include "grypto_cryptotransformswindow.h"
-#include "grypto_cleanupfileswindow.h"
 #include "../../legacy/legacyutils.h"
 #include <gutil/qt_settings.h>
 #include <gutil/widget.h>
@@ -113,7 +112,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->action_Redo, SIGNAL(triggered()), this, SLOT(_redo()));
     connect(ui->action_Search, SIGNAL(triggered()), this, SLOT(_search()));
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
-    connect(ui->actionCleanup_Files, SIGNAL(triggered()), this, SLOT(_cleanup_files()));
     connect(ui->action_cryptoTransform, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
     connect(ui->action_Preferences, SIGNAL(triggered()), this, SLOT(_edit_preferences()));
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
@@ -573,7 +571,6 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->action_DeleteEntry->setEnabled(b);
     ui->action_Search->setEnabled(b);
     ui->actionLockUnlock->setEnabled(b);
-    ui->actionCleanup_Files->setEnabled(b);
 
     ui->action_Save_As->setEnabled(b);
     ui->action_Close->setEnabled(b);
@@ -767,7 +764,7 @@ void MainWindow::_nav_index_changed(int ind)
             ui->view_entry->SetEntry(e);
 
             QItemSelectionModel *ism = ui->treeView->selectionModel();
-            QModelIndex ind = _get_database_model()->FindIndexById(e.GetId());
+            QModelIndex ind = _get_proxy_model()->mapFromSource(_get_database_model()->FindIndexById(e.GetId()));
             if(ind.isValid()){
                 ism->select(ind, QItemSelectionModel::Rows | QItemSelectionModel::ClearAndSelect);
                 ui->treeView->setSelectionModel(ism);
@@ -960,14 +957,6 @@ void MainWindow::_cryptographic_transformations()
         m_encryptDecryptWindow->setAttribute(::Qt::WA_DeleteOnClose, false);
     }
     m_encryptDecryptWindow->show();
-}
-
-void MainWindow::_cleanup_files()
-{
-    if(m_cleanupFilesWindow)
-        m_cleanupFilesWindow = NULL;
-    m_cleanupFilesWindow = new CleanupFilesWindow(_get_database_model(), m_settings, this);
-    m_cleanupFilesWindow->show();
 }
 
 void MainWindow::_progress_updated(int progress, const QString &task_name)

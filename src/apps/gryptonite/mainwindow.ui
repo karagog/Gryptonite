@@ -44,8 +44,8 @@
            <string>Click to Unlock</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
+           <iconset resource="../../presentation/grypto_ui.qrc">
+            <normaloff>:/grypto/icons/main.png</normaloff>:/grypto/icons/main.png</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -116,6 +116,7 @@
     <addaction name="menu_Export"/>
     <addaction name="menu_Import"/>
     <addaction name="separator"/>
+    <addaction name="actionLockUnlock"/>
     <addaction name="action_Close"/>
     <addaction name="menu_Recent_Files"/>
     <addaction name="separator"/>
@@ -138,11 +139,8 @@
     <property name="title">
      <string>&amp;Tools</string>
     </property>
-    <addaction name="actionLockUnlock"/>
     <addaction name="separator"/>
     <addaction name="action_cryptoTransform"/>
-    <addaction name="separator"/>
-    <addaction name="actionCleanup_Files"/>
    </widget>
    <widget class="QMenu" name="menu_Help">
     <property name="title">
@@ -307,17 +305,12 @@
   </action>
   <action name="actionLockUnlock">
    <property name="text">
-    <string>Lock</string>
+    <string>&amp;Lock Database</string>
    </property>
   </action>
   <action name="action_cryptoTransform">
    <property name="text">
     <string>Cryptographic &amp;Transformations</string>
-   </property>
-  </action>
-  <action name="actionCleanup_Files">
-   <property name="text">
-    <string>Cleanup &amp;Files</string>
    </property>
   </action>
   <action name="action_export_ps">

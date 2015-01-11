@@ -1580,7 +1580,10 @@ void PasswordDatabase::_ew_dispatch_orphans(const QString &conn_str)
             }
         }
     }
-    qDebug("Removed %d orphaned entries...", (int)delete_list_e.size());
+
+    if(0 < delete_list_e.size()){
+        qDebug("Removed %d orphaned entries...", (int)delete_list_e.size());
+    }
 
     // Update the index before removing the files (because it affects our calculation)
     d->index_lock.lock();
@@ -1613,7 +1616,9 @@ void PasswordDatabase::_ew_dispatch_orphans(const QString &conn_str)
         for(FileId const &fid : delete_list_f)
             _fw_del_file(conn_str, fid);
 
-        qDebug("Removed %d orphaned files...", (int)delete_list_f.size());
+        if(0 < delete_list_f.size()){
+            qDebug("Removed %d orphaned files...", (int)delete_list_f.size());
+        }
     }
 }
 

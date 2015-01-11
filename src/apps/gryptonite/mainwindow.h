@@ -109,7 +109,6 @@ private slots:
     void _search();
     void _action_lock_unlock_interface();
     void _cryptographic_transformations();
-    void _cleanup_files();
 
     void _undo();
     void _redo();
@@ -151,7 +150,6 @@ private:
     QByteArray m_savedState;
     GUtil::SmartPointer<QWidget> m_encryptDecryptWindow;
     QPointer<QWidget> m_entryView;
-    QPointer<QWidget> m_cleanupFilesWindow;
 
     bool m_minimize_msg_shown;
     bool m_requesting_unlock;

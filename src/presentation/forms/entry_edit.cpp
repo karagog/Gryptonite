@@ -39,7 +39,10 @@ EntryEdit::EntryEdit(const Entry &e, DatabaseModel *m, QWidget *parent)
     ui->descriptionEdit->setText(e.GetDescription());
     ui->fav_btn->setChecked(e.IsFavorite());
 
-    if(!e.GetFileId().IsNull()){
+    if(e.GetFileId().IsNull()){
+        ui->lbl_fileStatus->clear();
+    }
+    else{
         ui->le_filename->setText(e.GetFileName());
         if(m->FileExists(e.GetFileId()))
             ui->lbl_fileStatus->setText(tr("(Uploaded)"));

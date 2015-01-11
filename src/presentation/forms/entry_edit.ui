@@ -17,7 +17,7 @@
    <string>Edit Secret</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../grypto_ui.qrc">
+   <iconset>
     <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -100,7 +100,7 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="icon">
         <iconset resource="../grypto_ui.qrc">
-         <normaloff>:/icons/star.png</normaloff>:/icons/star.png</iconset>
+         <normaloff>:/grypto/icons/star.png</normaloff>:/grypto/icons/star.png</iconset>
        </property>
        <property name="checkable">
         <bool>true</bool>
@@ -135,7 +135,7 @@ p, li { white-space: pre-wrap; }
          </property>
          <property name="icon">
           <iconset resource="../grypto_ui.qrc">
-           <normaloff>:/icons/uparrow.png</normaloff>:/icons/uparrow.png</iconset>
+           <normaloff>:/grypto/icons/uparrow.png</normaloff>:/grypto/icons/uparrow.png</iconset>
          </property>
         </widget>
        </item>
@@ -146,7 +146,7 @@ p, li { white-space: pre-wrap; }
          </property>
          <property name="icon">
           <iconset resource="../grypto_ui.qrc">
-           <normaloff>:/icons/downarrow.png</normaloff>:/icons/downarrow.png</iconset>
+           <normaloff>:/grypto/icons/downarrow.png</normaloff>:/grypto/icons/downarrow.png</iconset>
          </property>
         </widget>
        </item>
@@ -271,7 +271,7 @@ Use the arrows on the side to adjust the order that the enries appear in.</strin
          </property>
          <property name="icon">
           <iconset resource="../grypto_ui.qrc">
-           <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+           <normaloff>:/grypto/icons/plus.png</normaloff>:/grypto/icons/plus.png</iconset>
          </property>
          <property name="flat">
           <bool>false</bool>
@@ -309,7 +309,7 @@ Use the arrows on the side to adjust the order that the enries appear in.</strin
          </property>
          <property name="icon">
           <iconset resource="../grypto_ui.qrc">
-           <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+           <normaloff>:/grypto/icons/minus.png</normaloff>:/grypto/icons/minus.png</iconset>
          </property>
         </widget>
        </item>
@@ -447,7 +447,7 @@ Be careful, because pressing this button will wipe out any content currently hel
        </property>
        <property name="icon">
         <iconset resource="../grypto_ui.qrc">
-         <normaloff>:/icons/checkmark.png</normaloff>:/icons/checkmark.png</iconset>
+         <normaloff>:/grypto/icons/checkmark.png</normaloff>:/grypto/icons/checkmark.png</iconset>
        </property>
       </widget>
      </item>
@@ -473,7 +473,7 @@ Be careful, because pressing this button will wipe out any content currently hel
        </property>
        <property name="icon">
         <iconset resource="../grypto_ui.qrc">
-         <normaloff>:/icons/exclamation.png</normaloff>:/icons/exclamation.png</iconset>
+         <normaloff>:/grypto/icons/exclamation.png</normaloff>:/grypto/icons/exclamation.png</iconset>
        </property>
       </widget>
      </item>

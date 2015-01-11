@@ -284,14 +284,14 @@ QVariant File_Entry::data ( const QModelIndex & index, int role) const
             if(targ->type == directory)
             {
                 if(is_favorite(targ))
-                    ret = QIcon(":/icons/star.png");
+                    ret = QIcon(":/grypto/icons/star.png");
             }
             else if(targ->type == password)
             {
                 if(targ->is_favorite(false))
-                    ret = QIcon(":/icons/star.png");
+                    ret = QIcon(":/grypto/icons/star.png");
                 else
-                    ret = QIcon(":/icons/key.png");
+                    ret = QIcon(":/grypto/icons/key.png");
             }
         }
         else if(type == password)
@@ -299,12 +299,12 @@ QVariant File_Entry::data ( const QModelIndex & index, int role) const
             if(col == 0)
             {
                 if(attributes.at(row).notes.length() > 0)
-                    ret = QIcon(":/icons/notes.png");
+                    ret = QIcon(":/grypto/icons/notes.png");
             }
             else if(col == 1)
             {
                 if(attributes.at(row).broken_binary_data_reference)
-                    ret = QIcon(":/icons/redX.png");
+                    ret = QIcon(":/grypto/icons/redX.png");
             }
         }
         break;
@@ -521,14 +521,14 @@ QVariant File_Entry::data(int role, int col) const
         if(type == directory)
         {
             if(is_favorite(this))
-                ret = QIcon(":/icons/star.png");
+                ret = QIcon(":/grypto/icons/star.png");
         }
         else if(type == password)
         {
             if(is_favorite(false))
-                ret = QIcon(":/icons/star.png");
+                ret = QIcon(":/grypto/icons/star.png");
             else
-                ret = QIcon(":/icons/key.png");
+                ret = QIcon(":/grypto/icons/key.png");
         }
 
         break;

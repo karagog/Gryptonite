@@ -19,6 +19,7 @@ limitations under the License.*/
 #include <QSet>
 #include <QMimeData>
 #include <QStringList>
+#include <QIcon>
 #include <unordered_map>
 //#include "../gutil/src/test/modeltest.h"
 USING_NAMESPACE_GUTIL;
@@ -286,13 +287,24 @@ QVariant DatabaseModel::data(const QModelIndex &ind, int role) const
             ret = ec->entry.GetDescription();
             break;
         case Qt::FontRole:
-            ret = [=]{ QFont f; f.setBold(col == 0 && ec->child_count > 0); return f; } ();
+            ret = [=]{
+                QFont f;
+                f.setBold(col == 0 &&
+                          (ec->child_count > 0 ||
+                           ec->entry.IsFavorite()));
+                return f;
+            } ();
             break;
         case Qt::TextAlignmentRole:
             if(col == 0)
                 ret = Qt::AlignLeft;
             else if(col == 1)
                 ret = Qt::AlignRight;
+            break;
+        case Qt::DecorationRole:
+            if(col == 0 && ec->entry.IsFavorite()){
+                ret = QIcon(":/grypto/icons/star.png");
+            }
             break;
         default:
             break;

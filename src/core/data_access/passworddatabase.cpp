@@ -540,7 +540,7 @@ void PasswordDatabase::Open(const Credentials &creds)
         if(!file_exists){
             // Initialize the new database if it doesn't exist
             __init_sql_resources();
-            QResource rs(":/sql/create_db.sql");
+            QResource rs(":/grypto/sql/create_db.sql");
             GASSERT(rs.isValid());
 
             QByteArray sql;

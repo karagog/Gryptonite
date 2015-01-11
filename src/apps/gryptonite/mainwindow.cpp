@@ -63,7 +63,7 @@ static void __show_access_denied(QWidget *w, const QString &msg)
 MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     :QMainWindow(parent),
       ui(new Ui::MainWindow),
-      m_trayIcon(QIcon(":/icons/main.png")),
+      m_trayIcon(QIcon(":/grypto/icons/main.png")),
       m_fileLabel(new QLabel(this)),
       m_settings(s),
       m_isLocked(true),
@@ -87,14 +87,14 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
 
     // Set up the toolbar
     btn_navBack = new QToolButton(this);
-    btn_navBack->setIcon(QIcon(":/icons/leftarrow.png"));
+    btn_navBack->setIcon(QIcon(":/grypto/icons/leftarrow.png"));
     btn_navBack->setToolTip(tr("Navigate Backwards"));
     btn_navBack->setAutoRaise(true);
     connect(btn_navBack, SIGNAL(clicked()), &m_navStack, SLOT(undo()));
     ui->toolBar->addWidget(btn_navBack);
 
     btn_navForward = new QToolButton(this);
-    btn_navForward->setIcon(QIcon(":/icons/rightarrow.png"));
+    btn_navForward->setIcon(QIcon(":/grypto/icons/rightarrow.png"));
     btn_navForward->setToolTip(tr("Navigate Forwards"));
     btn_navForward->setAutoRaise(true);
     connect(btn_navForward, SIGNAL(clicked()), &m_navStack, SLOT(redo()));

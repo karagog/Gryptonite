@@ -110,7 +110,7 @@ QVariant EntryModel::data(const QModelIndex &index, int role) const
             if(col == 0)
             {
                 if(sv.GetNotes().length() > 0)
-                    ret = QIcon(":/icons/notes.png");
+                    ret = QIcon(":/grypto/icons/notes.png");
             }
             break;
         case IDSecret:

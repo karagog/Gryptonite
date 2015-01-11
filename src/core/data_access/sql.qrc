@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/sql">
+    <qresource prefix="/grypto/sql">
         <file>create_db.sql</file>
     </qresource>
 </RCC>

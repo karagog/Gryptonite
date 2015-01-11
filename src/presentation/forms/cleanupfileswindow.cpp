@@ -12,9 +12,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
+#include <grypto_common.h>
 #include "cleanupfileswindow.h"
 #include "ui_cleanupfileswindow.h"
-#include "grypto_databasemodel.h"
+#include <grypto_databasemodel.h>
+#include <gutil/qt_settings.h>
 #include <QMessageBox>
 #include <QContextMenuEvent>
 #include <QMenu>
@@ -41,29 +43,24 @@ CleanupFilesWindow::CleanupFilesWindow(DatabaseModel *m, Settings *settings, QWi
     connect(ui->listWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)),
             this, SLOT(_export_item(QListWidgetItem*)));
 
-    int orphan_cnt = 0;
-    const vector<pair<FileId, quint32> > file_list( m->GetFileSummary() );
-    const QSet<QByteArray> referenced_ids( m->GetReferencedFiles() );
-
-    for(auto p : file_list)
+    QHash<FileId, PasswordDatabase::FileInfo_t> files( m->GetOrphanedFiles() );
+    for(const FileId &k : files.keys())
     {
-        if(referenced_ids.contains((QByteArray)p.first))
-            continue;
-
+        const int size = files[k].Size;
         QString txt;
-        if(p.second >= 1000000)
-            txt = QString("%1 MB").arg((double)p.second/1000000, 0, 'f', 2);
-        else if(p.second >= 1000)
-            txt = QString("%1 KB").arg((double)p.second/1000, 0, 'f', 2);
+        if(size >= 1000000)
+            txt = QString("%1 MB").arg((double)size/1000000, 0, 'f', 2);
+        else if(size >= 1000)
+            txt = QString("%1 KB").arg((double)size/1000, 0, 'f', 2);
         else
-            txt = QString("%1 B").arg(p.second);
-        QListWidgetItem *lwi = new QListWidgetItem(txt, ui->listWidget);
-        lwi->setData(Qt::UserRole, QVariant::fromValue<FileId>(p.first));
-        orphan_cnt++;
-    }
-    ui->lbl_status->setText(QString(tr("Found %1 orphan files:").arg(orphan_cnt)));
+            txt = QString("%1 B").arg(size);
 
-    if(orphan_cnt == 0)
+        (new QListWidgetItem(txt, ui->listWidget))
+            ->setData(Qt::UserRole, QVariant::fromValue<FileId>(k));
+    }
+    ui->lbl_status->setText(QString(tr("Found %1 orphan files:").arg(files.count())));
+
+    if(files.count() == 0)
         ui->pushButton->setEnabled(false);
 }
 

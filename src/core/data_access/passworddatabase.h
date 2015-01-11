@@ -15,14 +15,16 @@ limitations under the License.*/
 #ifndef GRYPTO_PASSWORDDATABASE_H
 #define GRYPTO_PASSWORDDATABASE_H
 
+#include <grypto_common.h>
 #include <gutil/exception.h>
 #include <gutil/smartpointer.h>
 #include <gutil/iprogresshandler.h>
-#include <grypto_common.h>
 #include <QString>
 #include <QObject>
 #include <memory>
 #include <functional>
+#include <map>
+#include <set>
 
 class QSqlRecord;
 class QSqlQuery;
@@ -50,6 +52,14 @@ public:
         qint64  ProcessId = -1;
         QString HostName;
         QString AppName;
+    };
+
+    struct FileInfo_t
+    {
+        // The file's size in bytes
+        uint Size;
+
+        FileInfo_t(uint size = 0) :Size(size) {}
     };
 
     /** Creates a new PasswordDatabase object. Before you use it, you must call Open() with the
@@ -103,10 +113,13 @@ public:
     */
     static void ValidateDatabase(const char *filepath);
 
+    /** Causes the background thread to load all entries into the cache. */
+    void LoadAllEntries() const;
+
     /** This function allows you to synchronize with the background entry thread.
      *  Call this to wait until the background thread is done working.
     */
-    void WaitForEntryThreadIdle();
+    void WaitForEntryThreadIdle() const;
 
 
     /** \name Entry Access
@@ -176,8 +189,16 @@ public:
     /** Removes the file from the database. */
     void DeleteFile(const FileId &);
 
-    /** Returns the complete list of file ids and associated file sizes. */
-    std::vector<std::pair<FileId, quint32> > GetFileSummary() const;
+    /** Returns the complete list of file ids and associated file sizes.
+     *  Note that some files may not be referenced by an entry id.
+    */
+    QHash<FileId, FileInfo_t> GetFileSummary() const;
+
+    /** Returns a list of the orphaned files, along with their sizes in bytes. */
+    QHash<FileId, FileInfo_t> GetOrphanedFiles() const;
+
+    /** Returns the set of file ids which are referenced by the entry ids. */
+    QSet<FileId> GetReferencedFileIds() const;
 
     /** \} */
 
@@ -249,6 +270,7 @@ private:
     void _ew_delete_entry(const QString &, const EntryId &);
     void _ew_move_entry(const QString &, const EntryId &, quint32, quint32, const EntryId &, quint32);
     void _ew_cache_entries_by_parentid(const QString &, const EntryId &);
+    void _ew_cache_all_entries(const QString &);
     void _ew_refresh_favorites(const QString &);
     void _ew_set_favorites(const QString &, const GUtil::Vector<EntryId> &sorted_favorites);
     void _ew_dispatch_orphans(const QString &);

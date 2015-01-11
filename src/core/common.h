@@ -47,16 +47,16 @@ namespace Grypt{
 #define USING_NAMESPACE_GRYPTO1( ns ) using namespace Grypt :: ns
 
 
-NAMESPACE_GRYPTO;
+NAMESPACE_GRYPTO
 typedef GUtil::Id<16> IdType;
 typedef IdType EntryId;
 typedef IdType FileId;
-END_NAMESPACE_GRYPTO;
+END_NAMESPACE_GRYPTO
+
+GUTIL_DEFINE_ID_QHASH(Grypt::IdType::Size)
 
 // So we can store it in a QVariant
 Q_DECLARE_METATYPE(Grypt::IdType)
-
-GUTIL_DEFINE_ID_QHASH( Grypt::IdType::Size );
 
 
 #endif // GRYPTO_MACROS_H

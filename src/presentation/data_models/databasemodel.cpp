@@ -624,31 +624,19 @@ void DatabaseModel::ImportFromPortableSafe(const char *export_filename,
     m_db.ImportFromPortableSafe(export_filename, creds);
 }
 
-vector<pair<FileId, quint32> > DatabaseModel::GetFileSummary()
+QHash<FileId, PasswordDatabase::FileInfo_t> DatabaseModel::GetFileSummary()
 {
     return m_db.GetFileSummary();
 }
 
-void DatabaseModel::_append_referenced_files(const QModelIndex &ind, QSet<QByteArray> &s)
+QHash<FileId, PasswordDatabase::FileInfo_t> DatabaseModel::GetOrphanedFiles()
 {
-    if(canFetchMore(ind))
-        fetchMore(ind);
-
-    if(ind.isValid()){
-        EntryContainer *ec = _get_container_from_index(ind);
-        if(!ec->entry.GetFileId().IsNull())
-            s.insert((QByteArray)ec->entry.GetFileId());
-    }
-
-    for(int i = 0; i < rowCount(ind); ++i)
-        _append_referenced_files(index(i, 0, ind), s);
+    return m_db.GetOrphanedFiles();
 }
 
-QSet<QByteArray> DatabaseModel::GetReferencedFiles()
+QSet<FileId> DatabaseModel::GetReferencedFiles()
 {
-    QSet<QByteArray> ret;
-    _append_referenced_files(QModelIndex(), ret);
-    return ret;
+    return m_db.GetReferencedFileIds();
 }
 
 void DatabaseModel::CancelAllBackgroundOperations()

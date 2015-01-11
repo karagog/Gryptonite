@@ -111,11 +111,14 @@ public:
     /** Returns true if the file id is present in the database. */
     bool FileExists(const FileId &);
 
-    /** Returns the complete list of file ids that are referenced by entries. */
-    QSet<QByteArray> GetReferencedFiles();
-
     /** Returns the complete list of files in the database, along with their sizes. */
-    std::vector<std::pair<FileId, quint32> > GetFileSummary();
+    QHash<FileId, PasswordDatabase::FileInfo_t> GetFileSummary();
+
+    /** Returns a set of all file ids which are not referenced by any entry id. */
+    QHash<FileId, PasswordDatabase::FileInfo_t> GetOrphanedFiles();
+
+    /** Returns the complete list of file ids that are referenced by entries. */
+    QSet<FileId> GetReferencedFiles();
 
     /** Decrypts and exports the file. */
     void ExportFile(const FileId &, const char *export_file_path);

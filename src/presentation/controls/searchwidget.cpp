@@ -24,7 +24,7 @@ SearchWidget::SearchWidget(QWidget *parent)
       ui(new Ui::SearchWidget)
 {
     ui->setupUi(this);
-    setFocusProxy(ui->lineEdit);
+    //setFocusProxy(ui->lineEdit);
     Clear();
 }
 
@@ -37,6 +37,7 @@ void SearchWidget::focusInEvent(QFocusEvent *ev)
 {
     QWidget::focusInEvent(ev);
     ui->lineEdit->setFocus();
+    ui->lineEdit->selectAll();
 }
 
 void SearchWidget::Clear()

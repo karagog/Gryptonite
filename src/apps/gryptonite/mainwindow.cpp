@@ -83,6 +83,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     ui->statusbar->addPermanentWidget(&m_progressBar, 1);
     ui->statusbar->addPermanentWidget(m_fileLabel);
 
+    ui->treeView->setModel(new FilteredDatabaseModel(this));
     ui->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     // Set up the toolbar
@@ -430,9 +431,7 @@ void MainWindow::_new_open_database(const QString &path)
     connect(dbm.Data(), SIGNAL(NotifyFavoritesUpdated()),
             this, SLOT(_update_trayIcon_menu()));
 
-    FilteredDatabaseModel *fm = new FilteredDatabaseModel(this);
-    fm->setSourceModel(dbm.Data());
-    ui->treeView->setModel(fm);
+    _get_proxy_model()->setSourceModel(dbm.Data());
     _update_ui_file_opened(true);
 
     if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT))
@@ -479,7 +478,7 @@ void MainWindow::_open_recent_database(QAction *a)
 
 bool MainWindow::IsFileOpen() const
 {
-    return ui->treeView->model() != NULL;
+    return _get_proxy_model()->sourceModel() != NULL;
 }
 
 void MainWindow::_close_database()
@@ -488,12 +487,9 @@ void MainWindow::_close_database()
     {
         m_lockoutTimer.StopLockoutTimer();
 
-        disconnect(ui->searchWidget, SIGNAL(FilterChanged(Grypt::FilterInfo_t)),
-                   this, SLOT(_filter_updated(Grypt::FilterInfo_t)));
-
         // Delete the old database model
-        QAbstractItemModel *old_model = ui->treeView->model();
-        ui->treeView->setModel(0);
+        QAbstractItemModel *old_model = _get_proxy_model()->sourceModel();
+        _get_proxy_model()->setSourceModel(NULL);
         delete old_model;
 
         _lock_unlock_interface(false);
@@ -662,8 +658,7 @@ FilteredDatabaseModel *MainWindow::_get_proxy_model() const
 
 DatabaseModel *MainWindow::_get_database_model() const
 {
-    FilteredDatabaseModel *pm = _get_proxy_model();
-    return NULL == pm ? NULL : static_cast<DatabaseModel *>(pm->sourceModel());
+    return static_cast<DatabaseModel *>(_get_proxy_model()->sourceModel());
 }
 
 void MainWindow::_edit_entry()

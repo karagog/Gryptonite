@@ -647,11 +647,10 @@ PasswordDatabase::~PasswordDatabase()
         d->file_thread_lock.lock();
         d->entry_thread_lock.lock();
         d->closing = true;
-        d->entry_thread_lock.unlock();
-        d->file_thread_lock.unlock();
-
         d->wc_file_thread.notify_one();
         d->wc_entry_thread.notify_one();
+        d->entry_thread_lock.unlock();
+        d->file_thread_lock.unlock();
 
         d->entry_worker.join();
         d->file_worker.join();

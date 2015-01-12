@@ -27,7 +27,7 @@ FilteredDatabaseModel::FilteredDatabaseModel(QObject *parent)
 
 void FilteredDatabaseModel::setSourceModel(QAbstractItemModel *m)
 {
-    if(dynamic_cast<DatabaseModel *>(m) == NULL)
+    if(m && dynamic_cast<DatabaseModel *>(m) == NULL)
         qDebug("Refusing to set model because it's not a DatabaseModel");
     else
         QSortFilterProxyModel::setSourceModel(m);
@@ -42,7 +42,7 @@ void FilteredDatabaseModel::SetFilter(const FilterInfo_t &fi)
 {
     m_index.clear();
 
-    if(fi.IsValid)
+    if(sourceModel() && fi.IsValid)
     {
         QRegExp rx(fi.SearchString,
                    fi.IgnoreCase ? Qt::CaseInsensitive : Qt::CaseSensitive,

@@ -34,27 +34,24 @@ public:
     explicit SearchWidget(QWidget *parent = 0);
     ~SearchWidget();
 
+    void SetFilter(const Grypt::FilterInfo_t &);
+    Grypt::FilterInfo_t GetFilter() const;
+
+public slots:
     void Clear();
 
-
 signals:
-
     void FilterChanged(const Grypt::FilterInfo_t &);
 
-
 protected:
-
     virtual void focusInEvent(QFocusEvent *ev);
 
-
 private slots:
-
     void _something_changed();
-    void _clear_filter();
-
 
 private:
     Ui::SearchWidget *ui;
+    bool m_suppressUpdates;
 };
 
 

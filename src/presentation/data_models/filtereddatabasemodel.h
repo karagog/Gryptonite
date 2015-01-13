@@ -29,6 +29,8 @@ struct FilterInfo_t
 {
     const bool IsValid;
 
+    bool FilterResults;
+
     QString SearchString;
     bool IgnoreCase;
 
@@ -45,8 +47,15 @@ struct FilterInfo_t
         :IsValid(false) {}
 
     /** Constructs a valid filter. */
-    FilterInfo_t(const QString &ss, bool ignore_case, StringType type)
-        :IsValid(true), SearchString(ss), IgnoreCase(ignore_case), SearchStringType(type) {}
+    FilterInfo_t(const QString &ss, bool filter_results, bool ignore_case, StringType type)
+        :IsValid(true),
+          FilterResults(filter_results),
+          SearchString(ss),
+          IgnoreCase(ignore_case),
+          SearchStringType(type) {}
+
+    QString ToXml() const;
+    static FilterInfo_t FromXml(const QString &);
 
 };
 

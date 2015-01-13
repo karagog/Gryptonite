@@ -77,14 +77,14 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     ui->setupUi(this);
     setWindowTitle(GRYPTO_APP_NAME);
 
+    ui->treeView->setModel(new FilteredDatabaseModel(this));
+    ui->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
     _update_trayIcon_menu();
     m_trayIcon.show();
 
     ui->statusbar->addPermanentWidget(&m_progressBar, 1);
     ui->statusbar->addPermanentWidget(m_fileLabel);
-
-    ui->treeView->setModel(new FilteredDatabaseModel(this));
-    ui->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     // Set up the toolbar
     btn_navBack = new QToolButton(this);
@@ -100,6 +100,12 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     btn_navForward->setAutoRaise(true);
     connect(btn_navForward, SIGNAL(clicked()), &m_navStack, SLOT(redo()));
     ui->toolBar->addWidget(btn_navForward);
+
+    // Restore search parameters
+    if(m_settings->Contains(MAINWINDOW_SEARCH_SETTING)){
+        ui->searchWidget->SetFilter(
+                    FilterInfo_t::FromXml(m_settings->Value(MAINWINDOW_SEARCH_SETTING).toString()));
+    }
 
     connect(ui->actionQuit, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(ui->actionNewOpenDB, SIGNAL(triggered()), this, SLOT(_new_open_database()));
@@ -162,6 +168,9 @@ void MainWindow::AboutToQuit()
 {
     // This restores the state of all dock widgets
     _close_database();
+
+    // Save the search settings before we close
+    m_settings->SetValue(MAINWINDOW_SEARCH_SETTING, ui->searchWidget->GetFilter().ToXml());
 
     // Save the main window state so we can restore it next session
     m_settings->SetValue(MAINWINDOW_GEOMETRY_SETTING, saveGeometry());

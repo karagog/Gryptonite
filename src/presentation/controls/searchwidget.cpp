@@ -21,7 +21,8 @@ NAMESPACE_GRYPTO;
 
 SearchWidget::SearchWidget(QWidget *parent)
     :QWidget(parent),
-      ui(new Ui::SearchWidget)
+      ui(new Ui::SearchWidget),
+      m_suppressUpdates(false)
 {
     ui->setupUi(this);
     //setFocusProxy(ui->lineEdit);
@@ -40,19 +41,22 @@ void SearchWidget::focusInEvent(QFocusEvent *ev)
     ui->lineEdit->selectAll();
 }
 
-void SearchWidget::Clear()
+void SearchWidget::SetFilter(const FilterInfo_t &fi)
 {
-    ui->lineEdit->clear();
-    ui->gb_time->setChecked(false);
-    ui->chk_start->setChecked(false);
-    ui->chk_end->setChecked(false);
-    ui->dte_start->setDateTime(QDateTime::currentDateTime());
-    ui->dte_end->setDateTime(QDateTime::currentDateTime());
+    ui->lineEdit->setText(fi.SearchString);
+    ui->chk_filter_results->setChecked(fi.FilterResults);
+    ui->chk_caseSensitive->setChecked(!fi.IgnoreCase);
+    ui->chk_start->setChecked(!fi.StartTime.isNull());
+    ui->chk_end->setChecked(!fi.EndTime.isNull());
+    ui->dte_start->setDateTime(fi.StartTime);
+    ui->dte_end->setDateTime(fi.EndTime);
+    ui->gb_time->setChecked(!fi.StartTime.isNull() || !fi.EndTime.isNull());
 }
 
-void SearchWidget::_something_changed()
+FilterInfo_t SearchWidget::GetFilter() const
 {
-    FilterInfo_t fi(ui->lineEdit->text().trimmed(),
+    FilterInfo_t ret(ui->lineEdit->text().trimmed(),
+                    ui->chk_filter_results->isChecked(),
                     !ui->chk_caseSensitive->isChecked(),
                     ui->rdo_wildCard->isChecked() ?
                                     FilterInfo_t::Wildcard :
@@ -61,17 +65,33 @@ void SearchWidget::_something_changed()
     if(ui->gb_time->isChecked())
     {
         if(ui->chk_start->isChecked())
-            fi.StartTime = ui->dte_start->dateTime();
+            ret.StartTime = ui->dte_start->dateTime();
         if(ui->chk_end->isChecked())
-            fi.EndTime = ui->dte_end->dateTime();
+            ret.EndTime = ui->dte_end->dateTime();
     }
-
-    emit FilterChanged(fi);
+    return ret;
 }
 
-void SearchWidget::_clear_filter()
+void SearchWidget::Clear()
 {
+    m_suppressUpdates = true;
+    ui->lineEdit->clear();
+    ui->gb_time->setChecked(false);
+    ui->chk_start->setChecked(false);
+    ui->chk_end->setChecked(false);
+    ui->dte_start->setDateTime(QDateTime::currentDateTime());
+    ui->dte_end->setDateTime(QDateTime::currentDateTime());
+
     emit FilterChanged(FilterInfo_t());
+    m_suppressUpdates = false;
+}
+
+void SearchWidget::_something_changed()
+{
+    if(m_suppressUpdates)
+        return;
+
+    emit FilterChanged(GetFilter());
 }
 
 

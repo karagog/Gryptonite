@@ -15,6 +15,9 @@ limitations under the License.*/
 #include "filtereddatabasemodel.h"
 #include "databasemodel.h"
 #include "grypto_entry.h"
+#include <gutil/variant.h>
+USING_NAMESPACE_GUTIL1(Qt);
+USING_NAMESPACE_GUTIL;
 
 NAMESPACE_GRYPTO;
 
@@ -45,7 +48,7 @@ void FilteredDatabaseModel::SetFilter(const FilterInfo_t &fi)
     if(sourceModel() && fi.IsValid)
     {
         QRegExp rx(fi.SearchString,
-                   fi.IgnoreCase ? Qt::CaseInsensitive : Qt::CaseSensitive,
+                   fi.IgnoreCase ? ::Qt::CaseInsensitive : ::Qt::CaseSensitive,
                    fi.SearchStringType == fi.Wildcard ? QRegExp::Wildcard : QRegExp::RegExp);
 
         // Iterate through the entire model and populate the filter index
@@ -63,7 +66,7 @@ void FilteredDatabaseModel::SetFilter(const FilterInfo_t &fi)
 bool FilteredDatabaseModel::_update_index(const QModelIndex &src_ind, const QRegExp &rx, const FilterInfo_t &fi)
 {
     bool row_matches = false;
-    bool show_anyway = false;
+    bool show_anyway = !fi.FilterResults;
     DatabaseModel *m = _get_database_model();
 
     // First figure out if a child matches
@@ -169,5 +172,42 @@ QModelIndexList FilteredDatabaseModel::GetUnfilteredRows() const
     return ret;
 }
 
+
+QString FilterInfo_t::ToXml() const
+{
+    QVariantList vl;
+    if(IsValid){
+        vl.append(SearchString);
+        vl.append(FilterResults);
+        vl.append(IgnoreCase);
+        vl.append((int)SearchStringType);
+        vl.append(StartTime);
+        vl.append(EndTime);
+    }
+    return Variant(vl).ToXmlQString();
+}
+
+FilterInfo_t FilterInfo_t::FromXml(const QString &xml)
+{
+    Variant v;
+    v.FromXmlQString(xml);
+    if(v.type() != QVariant::List)
+        throw XmlException<>();
+
+    QVariantList vl = v.toList();
+
+    // Return an invalid filter info
+    if(vl.length() != 6)
+        return FilterInfo_t();
+
+    FilterInfo_t ret(
+                vl[0].toString(),
+                vl[1].toBool(),
+                vl[2].toBool(),
+                (FilterInfo_t::StringType)vl[3].toInt());
+    ret.StartTime = vl[4].toDateTime();
+    ret.EndTime = vl[5].toDateTime();
+    return ret;
+}
 
 END_NAMESPACE_GRYPTO;

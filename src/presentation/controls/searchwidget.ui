@@ -13,10 +13,30 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QFormLayout" name="formLayout">
-   <property name="fieldGrowthPolicy">
-    <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-   </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="0" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineEdit">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+       <horstretch>1</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="3">
+    <widget class="QPushButton" name="btn_clear">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Clear Filter</string>
+     </property>
+    </widget>
+   </item>
    <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="font">
@@ -30,10 +50,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
-    <widget class="QLineEdit" name="lineEdit"/>
-   </item>
-   <item row="1" column="0" colspan="2">
+   <item row="2" column="0" colspan="3">
     <widget class="QGroupBox" name="gb_filterType">
      <property name="title">
       <string>Filter Type</string>
@@ -56,17 +73,10 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QCheckBox" name="chk_caseSensitive">
-        <property name="text">
-         <string>Case Sensitive</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
-   <item row="2" column="0" colspan="2">
+   <item row="3" column="0" colspan="3">
     <widget class="QGroupBox" name="gb_time">
      <property name="title">
       <string>Time Selection</string>
@@ -107,16 +117,17 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QPushButton" name="btn_clear">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>1</verstretch>
-      </sizepolicy>
-     </property>
+   <item row="1" column="1">
+    <widget class="QCheckBox" name="chk_filter_results">
      <property name="text">
-      <string>Clear Filter</string>
+      <string>Hide Unmatched Rows</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QCheckBox" name="chk_caseSensitive">
+     <property name="text">
+      <string>Case Sensitive</string>
      </property>
     </widget>
    </item>
@@ -147,8 +158,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>75</x>
-     <y>75</y>
+     <x>94</x>
+     <y>97</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -243,8 +254,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>287</x>
-     <y>208</y>
+     <x>380</x>
+     <y>205</y>
     </hint>
     <hint type="destinationlabel">
      <x>394</x>
@@ -259,8 +270,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>225</x>
-     <y>77</y>
+     <x>380</x>
+     <y>97</y>
     </hint>
     <hint type="destinationlabel">
      <x>344</x>
@@ -272,7 +283,7 @@
    <sender>btn_clear</sender>
    <signal>clicked()</signal>
    <receiver>SearchWidget</receiver>
-   <slot>_clear_filter()</slot>
+   <slot>Clear()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>157</x>
@@ -284,9 +295,25 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>chk_filter_results</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>54</x>
+     <y>41</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>111</x>
+     <y>45</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>_something_changed()</slot>
-  <slot>_clear_filter()</slot>
+  <slot>Clear()</slot>
  </slots>
 </ui>

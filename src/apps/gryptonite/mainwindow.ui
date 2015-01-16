@@ -338,6 +338,11 @@
     <string>&amp;Favorites</string>
    </property>
   </action>
+  <action name="action_add_remove_favorites">
+   <property name="text">
+    <string>&amp;Add to Favorites</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

@@ -718,6 +718,21 @@ void DatabaseModel::MoveEntries(const QModelIndex &src_parent, int src_first, in
                                         dest_parent, dest_row, this));
 }
 
+void DatabaseModel::AddEntryToFavorites(const EntryId &)
+{
+    throw NotImplementedException<>();
+}
+
+void DatabaseModel::RemoveEntryFromFavorites(const EntryId &)
+{
+    throw NotImplementedException<>();
+}
+
+void DatabaseModel::SetFavoriteEntries(const QList<EntryId> &)
+{
+    throw NotImplementedException<>();
+}
+
 Qt::DropActions DatabaseModel::supportedDropActions() const
 {
     return Qt::MoveAction;

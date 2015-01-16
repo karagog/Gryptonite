@@ -65,6 +65,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
       m_trayIcon(QIcon(":/grypto/icons/main.png")),
       m_fileLabel(new QLabel(this)),
       m_settings(s),
+      m_add_remove_favorites(this),
       m_isLocked(true),
       m_minimize_msg_shown(false),
       m_requesting_unlock(false),
@@ -114,6 +115,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->actionNew_Entry, SIGNAL(triggered()), this, SLOT(_new_entry()));
     connect(ui->action_EditEntry, SIGNAL(triggered()), this, SLOT(_edit_entry()));
     connect(ui->action_DeleteEntry, SIGNAL(triggered()), this, SLOT(_delete_entry()));
+    connect(&m_add_remove_favorites, SIGNAL(triggered()), this, SLOT(_add_remove_favorite()));
     connect(ui->action_Undo, SIGNAL(triggered()), this, SLOT(_undo()));
     connect(ui->action_Redo, SIGNAL(triggered()), this, SLOT(_redo()));
     connect(ui->action_Search, SIGNAL(triggered()), this, SLOT(_search()));
@@ -266,12 +268,40 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
     else if(ev->type() == QEvent::ContextMenu)
     {
         QContextMenuEvent *cm = static_cast<QContextMenuEvent *>(ev);
-        if(o == ui->treeView){
-            ui->menuEntry->move(cm->globalPos());
-            ui->menuEntry->show();
+        if(o == ui->treeView)
+        {
+            // Customize the menu a little bit
+            Entry const *e = _get_currently_selected_entry();
+            if(e){
+                m_add_remove_favorites.setData(e->IsFavorite());
+                if(e->IsFavorite())
+                    m_add_remove_favorites.setText(tr("Remove from Favorites"));
+                else
+                    m_add_remove_favorites.setText(tr("Add to Favorites"));
+            }
+
+            QMenu *menu = new QMenu(this);
+            QList<QAction*> actions = ui->menuEntry->actions();
+            menu->addActions(actions);
+            menu->insertAction(ui->action_Undo, &m_add_remove_favorites);
+
+            // Add separators where appropriate
+            menu->insertSeparator(&m_add_remove_favorites);
+            menu->insertSeparator(ui->action_Undo);
+            menu->insertSeparator(ui->action_Search);
+
+            menu->move(cm->globalPos());
+            menu->show();
         }
     }
     return ret;
+}
+
+Entry const *MainWindow::_get_currently_selected_entry() const
+{
+    return _get_database_model()->GetEntryFromIndex(
+                _get_proxy_model()->mapToSource(
+                    ui->treeView->currentIndex()));
 }
 
 void MainWindow::_update_recent_files(const QString &latest_path)
@@ -542,6 +572,7 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->actionNew_Entry->setEnabled(b);
     ui->action_EditEntry->setEnabled(b);
     ui->action_DeleteEntry->setEnabled(b);
+    m_add_remove_favorites.setEnabled(b);
     ui->action_Search->setEnabled(b);
     ui->actionLockUnlock->setEnabled(b);
 
@@ -659,6 +690,19 @@ void MainWindow::_delete_entry()
             model->RemoveEntry(*e);
         }
     }
+}
+
+void MainWindow::_add_remove_favorite()
+{
+    bool is_favorite = m_add_remove_favorites.data().toBool();
+    Entry const *e = _get_currently_selected_entry();
+    if(NULL == e)
+        return;
+
+    if(is_favorite)
+        _get_database_model()->RemoveEntryFromFavorites(e->GetId());
+    else
+        _get_database_model()->AddEntryToFavorites(e->GetId());
 }
 
 void MainWindow::_edit_entry(const Entry &e)

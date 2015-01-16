@@ -93,6 +93,10 @@ public:
     void RemoveEntry(const Entry &);
     void MoveEntries(const QModelIndex &src_parent, int src_first, int src_last,
                      const QModelIndex &dest_parent, int dest_row);
+
+    void AddEntryToFavorites(const EntryId &);
+    void RemoveEntryFromFavorites(const EntryId &);
+    void SetFavoriteEntries(const QList<EntryId> &);
     /** \} */
 
     inline bool CanUndo() const{ return m_undostack.CanUndo(); }

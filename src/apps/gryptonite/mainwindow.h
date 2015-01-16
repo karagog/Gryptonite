@@ -24,6 +24,7 @@ limitations under the License.*/
 #include <QUndoStack>
 #include <QSystemTrayIcon>
 #include <QPointer>
+#include <QAction>
 #ifdef Q_OS_WIN
 #include <QWinTaskbarButton>
 #endif // Q_OS_WIN
@@ -107,6 +108,7 @@ private slots:
     void _new_entry();
     void _edit_entry();
     void _delete_entry();
+    void _add_remove_favorite();
     void _search();
     void _action_lock_unlock_interface();
     void _cryptographic_transformations();
@@ -144,6 +146,7 @@ private:
     QLabel *m_fileLabel;
     GUtil::Qt::Settings *m_settings;
     GUtil::SmartPointer<QActionGroup> m_recentFilesGroup;
+    QAction m_add_remove_favorites;
     QUndoStack m_navStack;
     Grypt::ClipboardAccess m_clipboard;
     Lockout m_lockoutTimer;
@@ -167,6 +170,7 @@ private:
     Grypt::DatabaseModel *_get_database_model() const;
 
     void _select_entry(const Grypt::EntryId &);
+    Grypt::Entry const *_get_currently_selected_entry() const;
     void _edit_entry(const Grypt::Entry &);
     bool _handle_key_pressed(QKeyEvent *);
     void _reset_lockout_timer(QEvent *);

@@ -33,7 +33,8 @@ HEADERS += \
     about.h \
     preferences_edit.h \
     settings.h \
-    entry_popup.h
+    entry_popup.h \
+    legacymanager.h
 
 SOURCES += \
     main.cpp \
@@ -41,7 +42,8 @@ SOURCES += \
     lockout.cpp \
     application.cpp \
     about.cpp \
-    preferences_edit.cpp
+    preferences_edit.cpp \
+    legacymanager.cpp
 
 FORMS += \
     mainwindow.ui \

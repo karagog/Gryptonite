@@ -16,6 +16,7 @@ limitations under the License.*/
 #include "ui_mainwindow.h"
 #include "preferences_edit.h"
 #include "settings.h"
+#include "legacymanager.h"
 #include "grypto_common.h"
 #include "grypto_newpassworddialog.h"
 #include "grypto_getpassworddialog.h"
@@ -24,7 +25,6 @@ limitations under the License.*/
 #include "grypto_entry_edit.h"
 #include "entry_popup.h"
 #include "grypto_cryptotransformswindow.h"
-#include "../../legacy/legacyutils.h"
 #include <gutil/qt_settings.h>
 #include <gutil/widget.h>
 #include <gutil/application.h>
@@ -46,7 +46,6 @@ USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL1(CryptoPP);
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GRYPTO;
-USING_NAMESPACE_GRYPTO1(Legacy);
 using namespace std;
 
 #define STATUSBAR_MSG_TIMEOUT 5000
@@ -328,7 +327,6 @@ void MainWindow::_new_open_database(const QString &path)
 {
     Credentials creds;
     QString open_path = path;
-    QString filename = QFileInfo(path).fileName();
 
     bool existed = QFile::exists(path);
     bool file_updated = false;
@@ -338,55 +336,25 @@ void MainWindow::_new_open_database(const QString &path)
         try{
             PasswordDatabase::ValidateDatabase(path.toUtf8());
         }
-        catch(...){
-            /** \todo Do this inside a plugin... */
-            LegacyUtils::FileVersionEnum version =
-                    LegacyUtils::GetFileVersion(path.toUtf8().constData());
-            if(LegacyUtils::CurrentVersion != version){
-                if(QMessageBox::No == QMessageBox::warning(this, tr("Old file detected"),
-                                     QString("The file you selected is either unrecognized, or in an older format."
-                                             " Would you like to attempt to update it?  (The original file will be preserved)"),
-                                     QMessageBox::Yes | QMessageBox::No, QMessageBox::No)){
-                    return;
-                }
+        catch(...)
+        {
+            // If validation failed, try to upgrade the file
+            // First we don't allow cancelling during the upgrade
+            bool tmp = m_progressBar.IsCancellable();
+            m_progressBar.SetIsCancellable(false);
+            finally([&]{ m_progressBar.SetIsCancellable(tmp); });
 
-                open_path = QFileDialog::getSaveFileName(this, tr("Select updated file path"), QString(),
-                                                                 "Grypto DB (*.gdb);;All Files (*)");
-                if(!open_path.contains('.'))
-                    open_path.append(".gdb");
+            // Call the legacy manager to upgrade the database
+            open_path = LegacyManager::UpgradeDatabase(path, creds, m_settings,
+                [=](int p, const QString &ps){
+                    this->_progress_updated(p, ps);
+                },
+                this);
 
-                {
-                    GetPasswordDialog dlg(m_settings, filename, this);
-                    if(QDialog::Rejected == dlg.exec())
-                        return;
-                    creds = dlg.GetCredentials();
-                }
-                Credentials new_creds;
-                {
-                    NewPasswordDialog dlg(m_settings, this);
-                    if(QDialog::Rejected == dlg.exec())
-                        return;
-                    new_creds = dlg.GetCredentials();
-                }
-
-                bool tmp = m_progressBar.IsCancellable();
-                m_progressBar.SetIsCancellable(false);
-                _progress_updated(0);
-
-                LegacyUtils::UpdateFileToCurrentVersion(path.toUtf8(), version,
-                                                        open_path.toUtf8(),
-                                                        creds, new_creds,
-
-                    // The progress callback function...
-                    [&](int p, const QString &s){
-                        _progress_updated(p, s);
-                    }
-                );
-                m_progressBar.SetIsCancellable(tmp);
-
-                creds = new_creds;
+            if(open_path.isNull())
+                return;
+            else
                 file_updated = true;
-            }
         }
     }
 
@@ -421,7 +389,7 @@ void MainWindow::_new_open_database(const QString &path)
         creds = dlg.GetCredentials();
     }
     else if(!file_updated){
-        GetPasswordDialog dlg(m_settings, filename, this);
+        GetPasswordDialog dlg(m_settings, QFileInfo(path).fileName(), this);
         if(QDialog::Rejected == dlg.exec())
             return;
         creds = dlg.GetCredentials();

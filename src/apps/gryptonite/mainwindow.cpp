@@ -963,6 +963,7 @@ void MainWindow::_cryptographic_transformations()
         m_encryptDecryptWindow->setAttribute(::Qt::WA_DeleteOnClose, false);
     }
     m_encryptDecryptWindow->show();
+    m_encryptDecryptWindow->activateWindow();
 }
 
 void MainWindow::_progress_updated(int progress, const QString &task_name)

@@ -636,8 +636,10 @@ void MainWindow::_update_trayIcon_menu()
         vector<Entry> favs = dbm->FindFavorites();
         QActionGroup *ag = new QActionGroup(this);
         connect(ag, SIGNAL(triggered(QAction*)), this, SLOT(_favorite_action_clicked(QAction*)));
-        for(const Entry &fav : favs)
-            ag->addAction(fav.GetName())->setData(QVariant::fromValue(fav.GetId()));
+        for(const Entry &fav : favs){
+            ag->addAction(QIcon(":/grypto/icons/star.png"), fav.GetName())
+                    ->setData(QVariant::fromValue(fav.GetId()));
+        }
         m_trayIcon.contextMenu()->addActions(ag->actions());
         m_trayIcon.contextMenu()->addSeparator();
     }

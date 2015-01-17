@@ -62,7 +62,6 @@ struct entry_cache{
     uint row;
     int favoriteindex;
     QByteArray crypttext;
-    bool exists = true;
 
     entry_cache() {}
 
@@ -114,6 +113,7 @@ struct d_t
     //  the background threads.
     unordered_map<Grypt::EntryId, entry_cache> index;
     unordered_map<Grypt::EntryId, parent_cache> parent_index;
+    QSet<Grypt::EntryId> deleted_entries;
     Vector<Grypt::EntryId> favorite_index;
     mutex index_lock;
     condition_variable wc_index;
@@ -799,10 +799,15 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
         q.prepare("SELECT ParentId,Row,Favorite FROM Entry WHERE Id=?");
         q.addBindValue((QByteArray)id);
         DatabaseUtils::ExecuteQuery(q);
-        if(!q.next()) throw Exception<>("Entry not found");
+        if(!q.next())
+            throw Exception<>("Entry not found");
+
         pid = q.record().value(0).toByteArray();
         row = q.record().value(1).toInt();
         old_favorite_index = q.record().value(2).toInt();
+
+        // We have to manually count the children, because at this point the entry
+        //  has been deleted from the index
         child_count = __count_entries_by_parent_id(q, pid);
 
         q.prepare("DELETE FROM Entry WHERE ID=?");
@@ -966,9 +971,11 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
         entry_cache ec(e);
         ec.crypttext = crypttext;
         d->index[e.GetId()] = ec;
+        if(d->deleted_entries.contains(e.GetId()))
+            d->deleted_entries.remove(e.GetId());
 
-        GASSERT(d->parent_index.find(e.GetId()) == d->parent_index.end());
-        d->parent_index[e.GetId()] = parent_cache();
+        if(d->parent_index.find(e.GetId()) == d->parent_index.end())
+            d->parent_index[e.GetId()] = parent_cache();
     }
     lkr.unlock();
     d->wc_index.notify_all();
@@ -1048,7 +1055,10 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
         if(fi != -1)
             d->favorite_index.RemoveAt(fi);
         d->index.erase(i);
-        d->parent_index.erase(id);
+        d->deleted_entries.insert(id);
+
+        // Don't remove from the parent index, because they may un-delete it
+        //d->parent_index.erase(id);
     }
     lkr.unlock();
     d->wc_index.notify_all();
@@ -1122,28 +1132,29 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
 Entry PasswordDatabase::FindEntry(const EntryId &id) const
 {
     FailIfNotOpen();
+    auto exit_not_found = []{ throw Exception<>("Entry not found"); };
     G_D;
-    __command_cache_entries_by_parentid(d, id);
 
-    bool found = false;
     entry_cache ec;
     {
         unique_lock<mutex> lkr(d->index_lock);
+        if(d->deleted_entries.contains(id))
+            exit_not_found();
+
+        __command_cache_entries_by_parentid(d, id);
 
         // Wait 'til the entry is fully loaded
         d->wc_index.wait(lkr, [&]{
             auto i = d->index.find(id);
-            return i != d->index.end() && i->second.exists;
+            return i != d->index.end();
         });
 
         auto i = d->index.find(id);
-        if(i != d->index.end() && i->second.exists){
-            ec = i->second;
-            found = true;
-        }
+        if(i == d->index.end())
+            exit_not_found();
+
+        ec = i->second;
     }
-    if(!found)
-        throw Exception<>("Entry not found");
     return __convert_cache_to_entry(ec, *d->cryptor);
 }
 
@@ -1426,17 +1437,13 @@ void PasswordDatabase::_ew_cache_entries_by_parentid(const QString &conn_str,
     d->index_lock.lock();
     if(!id.IsNull() && d->index.find(id) == d->index.end()){
         entry_cache ec = __fetch_entry_row_by_id(q, id);
-        if(ec.id.IsNull())
-            ec.exists = false;
         d->index.emplace(id, ec);
         d->wc_index.notify_all();
     }
     d->index_lock.unlock();
 
-    // Fetch the parent's children and 2 levels of grandchildren to maximize
-    //  GUI response time because they display in a treeview
-    for(int lvl = 0; lvl < 3; ++lvl)
-        __cache_children(q, d, id, 0, lvl);
+    // Cache the children of the given parent id
+    __cache_children(q, d, id, 0, 0);
 }
 
 // recursively appends only child nodes whose children have not been loaded yet

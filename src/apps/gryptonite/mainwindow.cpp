@@ -122,6 +122,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->action_Search, SIGNAL(triggered()), this, SLOT(_search()));
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
     connect(ui->action_cryptoTransform, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
+    connect(ui->action_Favorites, SIGNAL(triggered()), this, SLOT(_edit_favorites()));
     connect(ui->action_Preferences, SIGNAL(triggered()), this, SLOT(_edit_preferences()));
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
     connect(&m_trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
@@ -1050,6 +1051,11 @@ void MainWindow::_progress_updated(int progress, const QString &task_name)
         m_taskbarButton.progress()->show();
 #endif // Q_OS_WIN
     }
+}
+
+void MainWindow::_edit_favorites()
+{
+    throw NotImplementedException<>();
 }
 
 void MainWindow::_edit_preferences()

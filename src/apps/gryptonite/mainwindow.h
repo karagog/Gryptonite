@@ -131,6 +131,7 @@ private slots:
     void _entry_row_activated(int);
     void _progress_updated(int, const QString & = QString::null);
 
+    void _edit_favorites();
     void _edit_preferences();
     void _tray_icon_activated(QSystemTrayIcon::ActivationReason);
 

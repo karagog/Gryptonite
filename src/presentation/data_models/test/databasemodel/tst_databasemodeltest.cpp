@@ -461,6 +461,20 @@ void DatabasemodelTest::test_delete_entry()
         // the orphans are still there
         QVERIFY(dbm.FindIndexById(e2.GetId()).isValid());
         QVERIFY(dbm.FindIndexById(e3.GetId()).isValid());
+
+        // If I undo delete, the model should show the children again
+        dbm.Undo();
+        QModelIndex ind = dbm.FindIndexById(e.GetId());
+        QVERIFY(ind.isValid());
+        QVERIFY(dbm.rowCount(ind) == 1);
+        QVERIFY(dbm.rowCount(dbm.index(0, 0, ind)) == 1);
+        QVERIFY(dbm.FindIndexById(e2.GetId()).isValid());
+        QVERIFY(dbm.FindIndexById(e3.GetId()).isValid());
+
+        dbm.Redo();
+        QVERIFY(!dbm.FindIndexById(e.GetId()).isValid());
+        QVERIFY(dbm.FindIndexById(e2.GetId()).isValid());
+        QVERIFY(dbm.FindIndexById(e3.GetId()).isValid());
     }
 
     // We deleted the parents, so the orphans will not be added to the

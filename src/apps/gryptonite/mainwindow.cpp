@@ -447,6 +447,10 @@ void MainWindow::_new_open_database(const QString &path)
     connect(dbm.Data(), SIGNAL(NotifyFavoritesUpdated()),
             this, SLOT(_update_trayIcon_menu()));
 
+    // Until I have time to resolve issues with pre-loading grandchildren before
+    //  their ancestors, I will just load all entries up front
+    dbm->FetchAllEntries();
+
     _get_proxy_model()->setSourceModel(dbm.Data());
     _update_ui_file_opened(true);
 
@@ -637,6 +641,27 @@ void MainWindow::_favorite_action_clicked(QAction *a)
     _hide();
 }
 
+static QMenu *__create_menu(DatabaseModel *dbm, QActionGroup &ag, const QModelIndex &ind, QWidget *parent)
+{
+    Entry const *e = dbm->GetEntryFromIndex(ind);
+    GASSERT(e);
+
+    SmartPointer<QMenu> ret(new QMenu(e->GetName(), parent));
+    for(int i = 0; i < dbm->rowCount(ind); ++i){
+        QModelIndex child_index = dbm->index(i, 0, ind);
+        if(0 < dbm->rowCount(child_index)){
+            // Continue recursing as long as we find children
+            ret->addMenu(__create_menu(dbm, ag, child_index, parent));
+        }
+        else{
+            QAction *a = ag.addAction(dbm->data(child_index, ::Qt::DisplayRole).toString());
+            a->setData(dbm->data(child_index, DatabaseModel::EntryIdRole));
+            ret->addAction(a);
+        }
+    }
+    return ret.Relinquish();
+}
+
 void MainWindow::_update_trayIcon_menu()
 {
     QMenu *old_menu = m_trayIcon.contextMenu();
@@ -649,10 +674,19 @@ void MainWindow::_update_trayIcon_menu()
         QActionGroup *ag = new QActionGroup(this);
         connect(ag, SIGNAL(triggered(QAction*)), this, SLOT(_favorite_action_clicked(QAction*)));
         for(const Entry &fav : favs){
-            ag->addAction(QIcon(":/grypto/icons/star.png"), fav.GetName())
-                    ->setData(QVariant::fromValue(fav.GetId()));
+            QModelIndex ind = dbm->FindIndexById(fav.GetId());
+            if(0 < dbm->rowCount(ind)){
+                // If the favorite has children, we recurse and add them to the menu
+                QMenu *m = __create_menu(dbm, *ag, ind, this);
+                m->setIcon(QIcon(":/grypto/icons/star.png"));
+                m_trayIcon.contextMenu()->addMenu(m);
+            }
+            else{
+                QAction *a = ag->addAction(QIcon(":/grypto/icons/star.png"), fav.GetName());
+                a->setData(QVariant::fromValue(fav.GetId()));
+                m_trayIcon.contextMenu()->addAction(a);
+            }
         }
-        m_trayIcon.contextMenu()->addActions(ag->actions());
         m_trayIcon.contextMenu()->addSeparator();
     }
 

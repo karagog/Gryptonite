@@ -145,6 +145,11 @@ public:
     /** \name QAbstractItemModel interface
      *  \{
     */
+    enum CustomDataRoles{
+        EntryIdRole = Qt::UserRole,
+        FileIdRole  = Qt::UserRole + 1
+    };
+
     virtual QModelIndex index(int, int, const QModelIndex &) const;
     virtual QModelIndex parent(const QModelIndex &) const;
     virtual int rowCount(const QModelIndex & = QModelIndex()) const;

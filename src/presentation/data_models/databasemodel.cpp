@@ -311,6 +311,13 @@ QVariant DatabaseModel::data(const QModelIndex &ind, int role) const
                 ret = QIcon(":/grypto/icons/star.png");
             }
             break;
+        case EntryIdRole:
+            ret = QVariant::fromValue(ec->entry.GetId());
+            break;
+        case FileIdRole:
+            if(!ec->entry.GetFileId().IsNull())
+                ret = QVariant::fromValue(ec->entry.GetFileId());
+            break;
         default:
             break;
         }

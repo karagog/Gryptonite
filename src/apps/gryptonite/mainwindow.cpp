@@ -728,9 +728,11 @@ void MainWindow::_treeview_doubleclicked(const QModelIndex &ind)
 
 void MainWindow::_treeview_currentindex_changed(const QModelIndex &ind)
 {
-    bool b = ind.isValid();
-    ui->action_EditEntry->setEnabled(b);
-    ui->action_DeleteEntry->setEnabled(b);
+    Entry const *e = _get_database_model()->GetEntryFromIndex(_get_proxy_model()->mapToSource(ind));
+    ui->action_EditEntry->setEnabled(e);
+    ui->action_DeleteEntry->setEnabled(e);
+    if(e)
+        _select_entry(e->GetId());
 }
 
 void MainWindow::_entry_row_activated(int r)

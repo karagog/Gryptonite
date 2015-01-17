@@ -39,6 +39,7 @@ limitations under the License.*/
 #include <QLabel>
 #include <QStandardPaths>
 #include <QDesktopServices>
+#include <QWhatsThis>
 #ifdef Q_OS_WIN
 #include <QWinTaskbarProgress>
 #endif // Q_OS_WIN
@@ -125,6 +126,13 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
     connect(&m_trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
             this, SLOT(_tray_icon_activated(QSystemTrayIcon::ActivationReason)));
+
+    // Create a "what's this" action
+    {
+        QAction *a_whatsthis = QWhatsThis::createAction(this);
+        ui->menu_Help->insertAction(ui->action_About, a_whatsthis);
+        ui->menu_Help->insertSeparator(ui->action_About);
+    }
 
     connect(ui->view_entry, SIGNAL(RowActivated(int)), this, SLOT(_entry_row_activated(int)));
     connect(ui->treeView->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),

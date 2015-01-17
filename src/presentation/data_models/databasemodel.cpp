@@ -31,13 +31,12 @@ NAMESPACE_GRYPTO;
 struct EntryContainer
 {
     Entry entry;
-    int child_count;
+    int child_count = -1;
     QList<EntryContainer *> children;
+    bool deleted = false;
 
-    EntryContainer() :child_count(-1) {}
     EntryContainer(const Entry &e)
-        :entry(e),
-          child_count(-1)
+        :entry(e)
     {}
     ~EntryContainer();
 };
@@ -179,6 +178,12 @@ DatabaseModel::DatabaseModel(const char *f,
             this, SIGNAL(NotifyProgressUpdated(int, QString)));
 }
 
+DatabaseModel::~DatabaseModel()
+{
+    // Clean up the index objects
+    __cleanup_entry_list(m_root);
+}
+
 void DatabaseModel::Open(const Credentials &creds)
 {
     m_db.Open(creds);
@@ -197,7 +202,7 @@ GUtil::CryptoPP::Cryptor const &DatabaseModel::Cryptor() const
 QModelIndex DatabaseModel::FindIndexById(const EntryId &id) const
 {
     QModelIndex ret;
-    if(m_index.contains(id))
+    if(m_index.contains(id) && !m_index[id]->deleted)
     {
         EntryContainer *c = m_index[id];
         ret = createIndex(c->entry.GetRow(), 0, (void *)c);
@@ -218,7 +223,7 @@ vector<Entry> DatabaseModel::FindFavorites() const
 Entry const *DatabaseModel::GetEntryFromIndex(const QModelIndex &ind) const
 {
     EntryContainer *ec = _get_container_from_index(ind);
-    return ec ? &ec->entry : NULL;
+    return ec  && !ec->deleted ? &ec->entry : NULL;
 }
 
 QModelIndex DatabaseModel::index(int row, int col, const QModelIndex &parent) const
@@ -472,9 +477,16 @@ void DatabaseModel::_add_entry(Entry &e, bool generate_id)
             children[i]->entry.SetRow(i + 1);
 
         // Add the new entry to the model
-        EntryContainer *ec = new EntryContainer(e);
-        ec->child_count = 0;
-        m_index.insert(e.GetId(), ec);
+        EntryContainer *ec = m_index.value(e.GetId(), NULL);
+        if(ec){
+            // If the entry was already in the model, then undelete it
+            ec->deleted = false;
+        }
+        else{
+            ec = new EntryContainer(e);
+            ec->child_count = 0;
+            m_index.insert(e.GetId(), ec);
+        }
         children.insert(e.GetRow(), ec);
         if(par.isValid())
             _get_container_from_index(par)->child_count += 1;
@@ -502,8 +514,8 @@ void DatabaseModel::_del_entry(const EntryId &id)
         for(int i = ind.row(); i < children.count(); ++i)
             children[i]->entry.SetRow(i);
 
-        // Remove from the index
-        m_index.remove(id);
+        // Mark as deleted
+        _get_container_from_index(ind)->deleted = true;
     }
     endRemoveRows();
 }

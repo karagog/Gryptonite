@@ -43,6 +43,7 @@ public:
                            std::function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override
                                 = [](const PasswordDatabase::ProcessInfo &){ return false; },
                            QObject *parent = 0);
+    ~DatabaseModel();
 
     /** Opens the database with the given credentials. You can only open the database once, and
         it will close automatically when the object is deleted.

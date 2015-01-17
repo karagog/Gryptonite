@@ -127,6 +127,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
             this, SLOT(_tray_icon_activated(QSystemTrayIcon::ActivationReason)));
 
     connect(ui->view_entry, SIGNAL(RowActivated(int)), this, SLOT(_entry_row_activated(int)));
+    connect(ui->treeView->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+            this, SLOT(_treeview_currentindex_changed(QModelIndex)));
 
     //connect(&m_undostack, SIGNAL(indexChanged(int)), this, SLOT(_update_undo_text()));
     connect(&m_navStack, SIGNAL(indexChanged(int)), this, SLOT(_nav_index_changed(int)));
@@ -265,12 +267,16 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
             }
         }
     }
-    else if(ev->type() == QEvent::ContextMenu)
+    else if(ev->type() == QEvent::ContextMenu && IsFileOpen())
     {
         QContextMenuEvent *cm = static_cast<QContextMenuEvent *>(ev);
         if(o == ui->treeView)
         {
             // Customize the menu a little bit
+            QMenu *menu = new QMenu(this);
+            QList<QAction*> actions = ui->menuEntry->actions();
+            menu->addActions(actions);
+
             Entry const *e = _get_currently_selected_entry();
             if(e){
                 m_add_remove_favorites.setData(e->IsFavorite());
@@ -278,15 +284,10 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
                     m_add_remove_favorites.setText(tr("Remove from Favorites"));
                 else
                     m_add_remove_favorites.setText(tr("Add to Favorites"));
+
+                menu->insertAction(ui->action_Undo, &m_add_remove_favorites);
+                menu->insertSeparator(&m_add_remove_favorites);
             }
-
-            QMenu *menu = new QMenu(this);
-            QList<QAction*> actions = ui->menuEntry->actions();
-            menu->addActions(actions);
-            menu->insertAction(ui->action_Undo, &m_add_remove_favorites);
-
-            // Add separators where appropriate
-            menu->insertSeparator(&m_add_remove_favorites);
             menu->insertSeparator(ui->action_Undo);
             menu->insertSeparator(ui->action_Search);
 
@@ -567,11 +568,11 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->view_entry->setEnabled(b);
     ui->searchWidget->setEnabled(b);
 
+    ui->treeView->setEnabled(b);
+    ui->view_entry->setEnabled(b);
     ui->view_entry->SetEntry(Entry());
 
     ui->actionNew_Entry->setEnabled(b);
-    ui->action_EditEntry->setEnabled(b);
-    ui->action_DeleteEntry->setEnabled(b);
     m_add_remove_favorites.setEnabled(b);
     ui->action_Search->setEnabled(b);
     ui->actionLockUnlock->setEnabled(b);
@@ -595,6 +596,7 @@ void MainWindow::_update_ui_file_opened(bool b)
     }
     _update_undo_text();
     _update_trayIcon_menu();
+    _treeview_currentindex_changed(ui->treeView->currentIndex());
 }
 
 void MainWindow::_favorite_action_clicked(QAction *a)
@@ -724,6 +726,13 @@ void MainWindow::_treeview_doubleclicked(const QModelIndex &ind)
     }
 }
 
+void MainWindow::_treeview_currentindex_changed(const QModelIndex &ind)
+{
+    bool b = ind.isValid();
+    ui->action_EditEntry->setEnabled(b);
+    ui->action_DeleteEntry->setEnabled(b);
+}
+
 void MainWindow::_entry_row_activated(int r)
 {
     if(0 <= r){
@@ -817,14 +826,6 @@ void MainWindow::ShowEntryById(const Grypt::EntryId &id)
     showNormal();
     activateWindow();
     _select_entry(id);
-}
-
-void MainWindow::_treeview_clicked(const QModelIndex &ind)
-{
-    if(ind.isValid())
-        _select_entry(_get_database_model()->GetEntryFromIndex(
-                          _get_proxy_model()->mapToSource(ind))
-                      ->GetId());
 }
 
 void MainWindow::_filter_updated(const FilterInfo_t &fi)

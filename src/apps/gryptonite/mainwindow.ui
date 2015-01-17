@@ -372,22 +372,6 @@
  <connections>
   <connection>
    <sender>treeView</sender>
-   <signal>clicked(QModelIndex)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>_treeview_clicked(QModelIndex)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>171</x>
-     <y>191</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>277</x>
-     <y>388</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>treeView</sender>
    <signal>doubleClicked(QModelIndex)</signal>
    <receiver>MainWindow</receiver>
    <slot>_treeview_doubleclicked(QModelIndex)</slot>

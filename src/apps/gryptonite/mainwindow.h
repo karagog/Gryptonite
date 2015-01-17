@@ -125,8 +125,8 @@ private slots:
 
     void _filter_updated(const Grypt::FilterInfo_t &);
 
-    void _treeview_clicked(const QModelIndex &);
     void _treeview_doubleclicked(const QModelIndex &);
+    void _treeview_currentindex_changed(const QModelIndex &);
 
     void _entry_row_activated(int);
     void _progress_updated(int, const QString & = QString::null);

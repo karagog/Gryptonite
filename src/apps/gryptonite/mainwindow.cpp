@@ -527,6 +527,7 @@ void MainWindow::_export_to_portable_safe()
 
 void MainWindow::_import_from_portable_safe()
 {
+    GASSERT(IsFileOpen());
     QString fn = QFileDialog::getOpenFileName(this, tr("Import from Portable Safe"),
                                               QString(),
                                               "GUtil Portable Safe (*.gps)"
@@ -573,6 +574,7 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->view_entry->SetEntry(Entry());
 
     ui->actionNew_Entry->setEnabled(b);
+    ui->action_Favorites->setEnabled(b);
     m_add_remove_favorites.setEnabled(b);
     ui->action_Search->setEnabled(b);
     ui->actionLockUnlock->setEnabled(b);
@@ -581,6 +583,7 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->action_Close->setEnabled(b);
     ui->menuEntry->setEnabled(b);
     ui->menu_Export->setEnabled(b);
+    ui->menu_Import->setEnabled(b);
 
     if(!b)
     {
@@ -907,7 +910,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
         m_isLocked = false;
     }
 
-    ui->action_Save_As->setEnabled(!lock);
+    ui->action_Save_As->setEnabled(!lock && IsFileOpen());
     ui->actionNew_Entry->setEnabled(!lock);
     ui->action_EditEntry->setEnabled(!lock);
     ui->action_DeleteEntry->setEnabled(!lock);

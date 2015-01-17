@@ -285,6 +285,14 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
             QList<QAction*> actions = ui->menuEntry->actions();
             menu->addActions(actions);
 
+            QAction *action_expand = new QAction(tr("Expand All"), this);
+            QAction *action_collapse = new QAction(tr("Collapse All"), this);
+            connect(action_expand, SIGNAL(triggered()), ui->treeView, SLOT(expandAll()));
+            connect(action_collapse, SIGNAL(triggered()), ui->treeView, SLOT(collapseAll()));
+            menu->insertAction(ui->action_Undo, action_expand);
+            menu->insertAction(ui->action_Undo, action_collapse);
+            menu->insertSeparator(ui->action_Undo);
+
             Entry const *e = _get_currently_selected_entry();
             if(e){
                 m_add_remove_favorites.setData(e->IsFavorite());

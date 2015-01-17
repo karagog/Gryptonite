@@ -62,6 +62,7 @@ struct entry_cache{
     uint row;
     int favoriteindex;
     QByteArray crypttext;
+    bool exists = true;
 
     entry_cache() {}
 
@@ -1150,7 +1151,7 @@ Entry PasswordDatabase::FindEntry(const EntryId &id) const
         });
 
         auto i = d->index.find(id);
-        if(i == d->index.end())
+        if(i == d->index.end() || !i->second.exists)
             exit_not_found();
 
         ec = i->second;
@@ -1437,6 +1438,8 @@ void PasswordDatabase::_ew_cache_entries_by_parentid(const QString &conn_str,
     d->index_lock.lock();
     if(!id.IsNull() && d->index.find(id) == d->index.end()){
         entry_cache ec = __fetch_entry_row_by_id(q, id);
+        if(ec.id == EntryId::Null())
+            ec.exists = false;
         d->index.emplace(id, ec);
         d->wc_index.notify_all();
     }

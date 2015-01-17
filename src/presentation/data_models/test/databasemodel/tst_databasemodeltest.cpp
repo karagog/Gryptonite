@@ -66,6 +66,7 @@ private Q_SLOTS:
     void test_update_entry();
     void test_update_entry_with_file();
     void test_delete_entry();
+    void test_delete_entry_with_siblings();
     void test_delete_entry_with_file();
     void test_move_entries_basic();
     void test_move_entries_down_same_parent();
@@ -477,6 +478,144 @@ void DatabasemodelTest::test_delete_entry()
 void DatabasemodelTest::test_delete_entry_with_file()
 {
     QVERIFY2(false, "Failure");
+}
+
+void DatabasemodelTest::test_delete_entry_with_siblings()
+{
+    _cleanup_database();
+
+    Entry  e0, e1, e2, e3, e4, e5;
+    {
+        // Populate the siblings for the test
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
+        dbm.AddEntry(e0);
+        dbm.AddEntry(e1);
+        dbm.AddEntry(e2);
+        dbm.AddEntry(e3);
+        dbm.AddEntry(e4);
+        dbm.AddEntry(e5);
+
+        e0 = dbm.FindEntryById(e0.GetId());
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e0.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e0.GetRow() == 0);
+        QVERIFY(e1.GetRow() == 1);
+        QVERIFY(e2.GetRow() == 2);
+        QVERIFY(e3.GetRow() == 3);
+        QVERIFY(e4.GetRow() == 4);
+        QVERIFY(e5.GetRow() == 5);
+    }
+
+    // Delete an entry somewhere in the middle of the list of siblings
+    {
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
+        dbm.RemoveEntry(e2);
+
+        e0 = dbm.FindEntryById(e0.GetId());
+        e1 = dbm.FindEntryById(e1.GetId());
+        bool exception_hit = false;
+        try{
+            // We should not be able to find the deleted entry
+            dbm.FindEntryById(e2.GetId());
+        }catch(...){
+            exception_hit = true;
+        }
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(exception_hit);
+        QVERIFY(e0.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e0.GetRow() == 0);
+        QVERIFY(e1.GetRow() == 1);
+        QVERIFY(e3.GetRow() == 2);
+        QVERIFY(e4.GetRow() == 3);
+        QVERIFY(e5.GetRow() == 4);
+
+        // Check that undoing works
+        dbm.Undo();
+        e0 = dbm.FindEntryById(e0.GetId());
+        e1 = dbm.FindEntryById(e1.GetId());
+        e2 = dbm.FindEntryById(e2.GetId());
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(e0.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e2.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e0.GetRow() == 0);
+        QVERIFY(e1.GetRow() == 1);
+        QVERIFY(e2.GetRow() == 2);
+        QVERIFY(e3.GetRow() == 3);
+        QVERIFY(e4.GetRow() == 4);
+        QVERIFY(e5.GetRow() == 5);
+
+        dbm.Redo();
+        e0 = dbm.FindEntryById(e0.GetId());
+        e1 = dbm.FindEntryById(e1.GetId());
+        exception_hit = false;
+        try{
+            dbm.FindEntryById(e2.GetId());
+        }catch(...){
+            exception_hit = true;
+        }
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(exception_hit);
+        QVERIFY(e0.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e0.GetRow() == 0);
+        QVERIFY(e1.GetRow() == 1);
+        QVERIFY(e3.GetRow() == 2);
+        QVERIFY(e4.GetRow() == 3);
+        QVERIFY(e5.GetRow() == 4);
+    }
+
+    // Check that the changes were persistent
+    {
+        DatabaseModel dbm(DATABASE_PATH); dbm.Open(m_creds);
+        e0 = dbm.FindEntryById(e0.GetId());
+        e1 = dbm.FindEntryById(e1.GetId());
+        bool exception_hit = false;
+        try{
+            dbm.FindEntryById(e2.GetId());
+        }catch(...){
+            exception_hit = true;
+        }
+        e3 = dbm.FindEntryById(e3.GetId());
+        e4 = dbm.FindEntryById(e4.GetId());
+        e5 = dbm.FindEntryById(e5.GetId());
+        QVERIFY(exception_hit);
+        QVERIFY(e0.GetParentId() == EntryId::Null());
+        QVERIFY(e1.GetParentId() == EntryId::Null());
+        QVERIFY(e3.GetParentId() == EntryId::Null());
+        QVERIFY(e4.GetParentId() == EntryId::Null());
+        QVERIFY(e5.GetParentId() == EntryId::Null());
+        QVERIFY(e0.GetRow() == 0);
+        QVERIFY(e1.GetRow() == 1);
+        QVERIFY(e3.GetRow() == 2);
+        QVERIFY(e4.GetRow() == 3);
+        QVERIFY(e5.GetRow() == 4);
+    }
 }
 
 void DatabasemodelTest::test_move_entries_basic()

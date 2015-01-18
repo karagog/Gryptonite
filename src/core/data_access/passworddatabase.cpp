@@ -1337,8 +1337,9 @@ void PasswordDatabase::DeleteOrphans()
 static bool __file_exists(QSqlQuery &q, const FileId &id)
 {
     bool ret = false;
-    q.prepare("SELECT COUNT(*) FROM File WHERE ID=?");
-    q.addBindValue((QByteArray)id);
+    if(!q.prepare("SELECT COUNT(*) FROM File WHERE ID=:fid"))
+        GASSERT2(false, q.lastError().text().toUtf8().constData());
+    q.bindValue(":fid", (QByteArray)id);
     DatabaseUtils::ExecuteQuery(q);
     if(q.next())
         ret = 0 < q.record().value(0).toInt();

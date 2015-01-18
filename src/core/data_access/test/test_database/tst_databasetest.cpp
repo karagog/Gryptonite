@@ -48,6 +48,7 @@ private Q_SLOTS:
     void test_entry_move_basic();
     void test_entry_move_up_same_parent();
     void test_entry_move_down_same_parent();
+    void test_entry_favorites();
     void cleanupTestCase();
 
 private:
@@ -179,7 +180,7 @@ void DatabaseTest::test_entry_insert()
     e.SetRow(0);
     db->AddEntry(e);
 
-    vector<Entry> el = db->FindEntriesByParentId(EntryId::Null());
+    QList<Entry> el = db->FindEntriesByParentId(EntryId::Null());
     QVERIFY(el.size() == 3);
     QVERIFY(el[0].GetName() == "new entry");
     QVERIFY(el[1].GetName() == "first entry");
@@ -197,7 +198,7 @@ void DatabaseTest::test_entry_delete()
     db->AddEntry(e);
     db->DeleteEntry(e.GetId());
 
-    vector<Entry> el = db->FindEntriesByParentId(EntryId::Null());
+    QList<Entry> el = db->FindEntriesByParentId(EntryId::Null());
     QVERIFY(el.size() == 3);
     QVERIFY(el[0].GetName() == "new entry");
     QVERIFY(el[1].GetName() == "first entry");
@@ -447,6 +448,110 @@ void DatabaseTest::test_entry_move_down_same_parent()
     QVERIFY(e3.GetRow() == 1);
     QVERIFY(e4.GetRow() == 2);
     QVERIFY(e5.GetRow() == 4);
+}
+
+void DatabaseTest::test_entry_favorites()
+{
+    _cleanup_database();
+    _init_database();
+
+    Entry e1, e2, e3, e4, e5;
+    QList<Entry> favs;
+
+    // Populate the initial hierarchy for the test
+    db->AddEntry(e1);
+    db->AddEntry(e2);
+    db->AddEntry(e3);
+    db->AddEntry(e4);
+    db->AddEntry(e5);
+    QVERIFY(db->FindFavoriteEntries().length() == 0);
+
+    db->AddFavoriteEntry(e1.GetId());
+    db->AddFavoriteEntry(e3.GetId());
+    favs = db->FindFavoriteEntries();
+    QVERIFY(favs.length() == 2);
+    auto find_in_list = [&](const EntryId &id){
+        int ret = -1;
+        for(int i = 0; ret == -1 && i < favs.length(); ++i)
+            if(favs[i].GetId() == id)
+                ret = i;
+        return ret;
+    };
+    QVERIFY(-1 != find_in_list(e1.GetId()));
+    QVERIFY(-1 != find_in_list(e3.GetId()));
+    QVERIFY(favs[0].GetFavoriteIndex() == 0);
+    QVERIFY(favs[1].GetFavoriteIndex() == 0);
+
+
+    // Check that the changes are persistent
+    _close_database();
+    _init_database();
+    db->WaitForEntryThreadIdle();
+    favs = db->FindFavoriteEntries();
+    QVERIFY(-1 != find_in_list(e1.GetId()));
+    QVERIFY(-1 != find_in_list(e3.GetId()));
+    QVERIFY(favs[0].GetFavoriteIndex() == 0);
+    QVERIFY(favs[1].GetFavoriteIndex() == 0);
+
+
+    // Now assign a special order to the favorites
+    QList<EntryId> my_list;
+    my_list << e1.GetId() << e2.GetId() << e3.GetId();
+    db->SetFavoriteEntries(my_list);
+    favs = db->FindFavoriteEntries();
+    QVERIFY(favs.length() == 3);
+    QVERIFY(0 == find_in_list(e1.GetId()));
+    QVERIFY(1 == find_in_list(e2.GetId()));
+    QVERIFY(2 == find_in_list(e3.GetId()));
+    QVERIFY(favs[0].GetFavoriteIndex() == 1);
+    QVERIFY(favs[1].GetFavoriteIndex() == 2);
+    QVERIFY(favs[2].GetFavoriteIndex() == 3);
+
+    // Adding a favorite prepends it to the list in no particular order
+    db->AddFavoriteEntry(e4.GetId());
+    favs = db->FindFavoriteEntries();
+    QVERIFY(0 == find_in_list(e4.GetId()));
+    QVERIFY(1 == find_in_list(e1.GetId()));
+    QVERIFY(2 == find_in_list(e2.GetId()));
+    QVERIFY(3 == find_in_list(e3.GetId()));
+    QVERIFY(favs[0].GetFavoriteIndex() == 0);
+    QVERIFY(favs[1].GetFavoriteIndex() == 1);
+    QVERIFY(favs[2].GetFavoriteIndex() == 2);
+    QVERIFY(favs[3].GetFavoriteIndex() == 3);
+
+    // Remove one of the ordered favorites
+    db->RemoveFavoriteEntry(e1.GetId());
+    favs = db->FindFavoriteEntries();
+    QVERIFY(0 == find_in_list(e4.GetId()));
+    QVERIFY(1 == find_in_list(e2.GetId()));
+    QVERIFY(2 == find_in_list(e3.GetId()));
+    QVERIFY(-1 == find_in_list(e1.GetId()));
+    QVERIFY(favs[0].GetFavoriteIndex() == 0);
+    QVERIFY(favs[1].GetFavoriteIndex() == 1);
+    QVERIFY(favs[2].GetFavoriteIndex() == 2);
+
+    // Remove the unordered favorite
+    db->RemoveFavoriteEntry(e4.GetId());
+    favs = db->FindFavoriteEntries();
+    QVERIFY(0 == find_in_list(e2.GetId()));
+    QVERIFY(1 == find_in_list(e3.GetId()));
+    QVERIFY(-1 == find_in_list(e1.GetId()));
+    QVERIFY(-1 == find_in_list(e4.GetId()));
+    QVERIFY(favs[0].GetFavoriteIndex() == 1);
+    QVERIFY(favs[1].GetFavoriteIndex() == 2);
+
+
+    // Check that the changes were persistent
+    _close_database();
+    _init_database();
+    db->WaitForEntryThreadIdle();
+    favs = db->FindFavoriteEntries();
+    QVERIFY(0 == find_in_list(e2.GetId()));
+    QVERIFY(1 == find_in_list(e3.GetId()));
+    QVERIFY(-1 == find_in_list(e1.GetId()));
+    QVERIFY(-1 == find_in_list(e4.GetId()));
+    QVERIFY(favs[0].GetFavoriteIndex() == 1);
+    QVERIFY(favs[1].GetFavoriteIndex() == 2);
 }
 
 void DatabaseTest::cleanupTestCase()

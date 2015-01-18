@@ -115,7 +115,7 @@ struct d_t
     unordered_map<Grypt::EntryId, entry_cache> index;
     unordered_map<Grypt::EntryId, parent_cache> parent_index;
     QSet<Grypt::EntryId> deleted_entries;
-    Vector<Grypt::EntryId> favorite_index;
+    QList<Grypt::EntryId> favorite_index;
     mutex index_lock;
     condition_variable wc_index;
 
@@ -260,6 +260,8 @@ public:
         FetchAllEntries,
         RefreshFavoriteEntries,
         SetFavoriteEntries,
+        AddFavoriteEntry,
+        RemoveFavoriteEntry,
 
         // File commands
         UpdateFile,
@@ -347,12 +349,32 @@ public:
 class set_favorite_entries_command : public bg_worker_command
 {
 public:
-    set_favorite_entries_command(const Vector<EntryId> &favs)
+    set_favorite_entries_command(const QList<EntryId> &favs)
         :bg_worker_command(SetFavoriteEntries),
           Favorites(favs)
     {}
 
-    const Vector<EntryId> Favorites;
+    const QList<EntryId> Favorites;
+};
+
+class add_favorite_entry : public bg_worker_command
+{
+public:
+    add_favorite_entry(const EntryId &id)
+        :bg_worker_command(AddFavoriteEntry),
+          ID(id)
+    {}
+    const EntryId ID;
+};
+
+class remove_favorite_entry : public bg_worker_command
+{
+public:
+    remove_favorite_entry(const EntryId &id)
+        :bg_worker_command(RemoveFavoriteEntry),
+          ID(id)
+    {}
+    const EntryId ID;
 };
 
 class dispatch_orphans_command : public bg_worker_command
@@ -967,7 +989,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
         }
 
         if(e.IsFavorite())
-            d->favorite_index.PushBack(e.GetId());
+            d->favorite_index.append(e.GetId());
 
         entry_cache ec(e);
         ec.crypttext = crypttext;
@@ -1010,9 +1032,9 @@ void PasswordDatabase::UpdateEntry(Entry &e)
         d->index[e.GetId()].crypttext = crypttext;
         if(old_favorite_index != e.GetFavoriteIndex()){
             if(e.IsFavorite() && old_favorite_index < 0)
-                d->favorite_index.PushBack(e.GetId());
+                d->favorite_index.append(e.GetId());
             else if(!e.IsFavorite() && old_favorite_index >= 0)
-                d->favorite_index.RemoveOne(e.GetId());
+                d->favorite_index.removeOne(e.GetId());
         }
     }
 
@@ -1052,9 +1074,9 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
                 ci->second.row = r;
         }
 
-        int fi = d->favorite_index.IndexOf(id);
+        int fi = d->favorite_index.indexOf(id);
         if(fi != -1)
-            d->favorite_index.RemoveAt(fi);
+            d->favorite_index.removeAt(fi);
         d->index.erase(i);
         d->deleted_entries.insert(id);
 
@@ -1206,11 +1228,73 @@ void PasswordDatabase::RefreshFavorites()
     __queue_entry_command(d, new refresh_favorite_entries_command);
 }
 
-void PasswordDatabase::SetFavoriteEntries(const Vector<EntryId> &favs)
+void PasswordDatabase::SetFavoriteEntries(const QList<EntryId> &favs)
 {
     FailIfNotOpen();
     G_D;
     __queue_entry_command(d, new set_favorite_entries_command(favs));
+
+    d->index_lock.lock();
+    {
+        // Update the favorite index
+        d->favorite_index = favs;
+
+        int ctr = 0;
+        for(const EntryId &eid : favs){
+            ctr++;  // Start counting at 1
+            if(d->index.find(eid) != d->index.end())
+                d->index[eid].favoriteindex = ctr;
+        }
+    }
+    d->index_lock.unlock();
+    d->wc_index.notify_all();
+    emit NotifyFavoritesUpdated();
+}
+
+void PasswordDatabase::AddFavoriteEntry(const EntryId &id)
+{
+    FailIfNotOpen();
+    G_D;
+    __queue_entry_command(d, new add_favorite_entry(id));
+
+    d->index_lock.lock();
+    {
+        auto iter = d->index.find(id);
+        if(iter != d->index.end()){
+            d->favorite_index.prepend(id);
+            iter->second.favoriteindex = 0;
+        }
+    }
+    d->index_lock.unlock();
+    d->wc_index.notify_all();
+    emit NotifyFavoritesUpdated();
+}
+
+void PasswordDatabase::RemoveFavoriteEntry(const EntryId &id)
+{
+    FailIfNotOpen();
+    G_D;
+    __queue_entry_command(d, new remove_favorite_entry(id));
+
+    unique_lock<mutex> lkr(d->index_lock);
+    {
+        // Find it in the index and remove it
+        int ind = d->favorite_index.indexOf(id);
+        if(-1 == ind)
+            return;
+        d->favorite_index.removeAt(ind);
+
+        auto iter = d->index.find(id);
+        int old_index = iter->second.favoriteindex;
+        if(0 < old_index){
+            // Adjust the other favorites' rows
+            for(int i = 0; i < d->favorite_index.length() - ind; ++i)
+                d->index[d->favorite_index[ind + i]].favoriteindex = old_index + i;
+        }
+    }
+    lkr.unlock();
+    d->wc_index.notify_all();
+    emit NotifyFavoritesUpdated();
 }
 
 QList<Entry> PasswordDatabase::FindFavoriteEntries() const
@@ -1491,11 +1575,11 @@ void PasswordDatabase::_ew_refresh_favorites(const QString &conn_str)
     G_D;
     QSqlQuery q("SELECT * FROM Entry WHERE Favorite >= 0 ORDER BY Favorite ASC",
                 QSqlDatabase::database(conn_str));
-    Vector<EntryId> ids;
-    vector<entry_cache> rows;
+    QList<EntryId> ids;
+    QList<entry_cache> rows;
     while(q.next()){
-        rows.emplace_back(__convert_record_to_entry_cache(q.record()));
-        ids.PushBack(rows.back().id);
+        rows.append(__convert_record_to_entry_cache(q.record()));
+        ids.append(rows.back().id);
     }
 
     unique_lock<mutex> lkr(d->index_lock);
@@ -1509,24 +1593,20 @@ void PasswordDatabase::_ew_refresh_favorites(const QString &conn_str)
     emit NotifyFavoritesUpdated();
 }
 
-void PasswordDatabase::_ew_set_favorites(const QString &conn_str, const Vector<EntryId> &favs)
+void PasswordDatabase::_ew_set_favorites(const QString &conn_str, const QList<EntryId> &favs)
 {
-    G_D;
     QSqlDatabase db(QSqlDatabase::database(conn_str));
-    Vector<entry_cache> rows;
     db.transaction();
     try{
         // First clear all existing favorites
         QSqlQuery q("UPDATE Entry SET Favorite=-1", db);
 
         // Then apply favorites in the order they were given
-        for(uint i = 0; i < favs.Length(); ++i){
+        for(int i = 0; i < favs.length(); ++i){
             q.prepare("UPDATE Entry SET Favorite=? WHERE Id=?");
             q.addBindValue(i + 1);
             q.addBindValue((QByteArray)favs[i]);
             DatabaseUtils::ExecuteQuery(q);
-
-            rows.PushBack(__fetch_entry_row_by_id(q, favs[i]));
         }
     }
     catch(...){
@@ -1534,20 +1614,60 @@ void PasswordDatabase::_ew_set_favorites(const QString &conn_str, const Vector<E
         throw;
     }
     db.commit();
+}
 
-    // Update the index, now that the database was updated
-    d->index_lock.lock();
-    {
-        // Update the favorite index
-        d->favorite_index = favs;
+void PasswordDatabase::_ew_add_favorite(const QString &conn_str, const EntryId &id)
+{
+    QSqlQuery q(QSqlDatabase::database(conn_str));
+    q.prepare("SELECT Favorite FROM Entry WHERE ID=?");
+    q.addBindValue((QByteArray)id);
+    DatabaseUtils::ExecuteQuery(q);
+    if(!q.next())
+        return;
 
-        // Make sure we update the cache too
-        for(const entry_cache &row : rows)
-            d->index[row.id] = row;
+    if(0 > q.value(0).toInt()){
+        q.prepare("UPDATE Entry SET Favorite=0 WHERE ID=?");
+        q.addBindValue((QByteArray)id);
+        DatabaseUtils::ExecuteQuery(q);
     }
-    d->index_lock.unlock();
-    d->wc_index.notify_all();
-    emit NotifyFavoritesUpdated();
+}
+
+void PasswordDatabase::_ew_remove_favorite(const QString &conn_str, const EntryId &id)
+{
+    QSqlDatabase db(QSqlDatabase::database(conn_str));
+    QSqlQuery q(db);
+    entry_cache ec = __fetch_entry_row_by_id(q, id);
+    if(ec.id.IsNull() || -1 == ec.favoriteindex)
+        return;
+
+    db.transaction();
+    try{
+        // If the favorite was a sorted index, then we have to update the other favorites
+        if(0 != ec.favoriteindex){
+            q.prepare("SELECT ID FROM Entry WHERE Favorite>? ORDER BY Favorite ASC");
+            q.addBindValue(ec.favoriteindex);
+            DatabaseUtils::ExecuteQuery(q);
+
+            int ctr = 0;
+            QSqlQuery q2(db);
+            while(q.next()){
+                q2.prepare("UPDATE Entry SET Favorite=? WHERE ID=?");
+                q2.addBindValue(ec.favoriteindex + ctr);
+                q2.addBindValue(q.value("ID").toByteArray());
+                DatabaseUtils::ExecuteQuery(q2);
+                ctr++;
+            }
+        }
+
+        q.prepare("UPDATE Entry SET Favorite=-1 WHERE ID=?");
+        q.addBindValue((QByteArray)id);
+        DatabaseUtils::ExecuteQuery(q);
+    }
+    catch(...){
+        db.rollback();
+        throw;
+    }
+    db.commit();
 }
 
 void PasswordDatabase::_ew_dispatch_orphans(const QString &conn_str)
@@ -1709,6 +1829,18 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
                 {
                     set_favorite_entries_command *sfe = static_cast<set_favorite_entries_command *>(cmd.Data());
                     _ew_set_favorites(conn_str, sfe->Favorites);
+                }
+                    break;
+                case bg_worker_command::AddFavoriteEntry:
+                {
+                    add_favorite_entry *afe = static_cast<add_favorite_entry *>(cmd.Data());
+                    _ew_add_favorite(conn_str, afe->ID);
+                }
+                    break;
+                case bg_worker_command::RemoveFavoriteEntry:
+                {
+                    remove_favorite_entry *rfe = static_cast<remove_favorite_entry *>(cmd.Data());
+                    _ew_remove_favorite(conn_str, rfe->ID);
                 }
                     break;
                 case bg_worker_command::DispatchOrphans:

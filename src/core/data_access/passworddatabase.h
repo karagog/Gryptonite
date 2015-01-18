@@ -142,7 +142,13 @@ public:
     QList<Entry> FindFavoriteEntries() const;
 
     /** Sets the given entries as favorites, in the order they are given. */
-    void SetFavoriteEntries(const GUtil::Vector<EntryId> &);
+    void SetFavoriteEntries(const QList<EntryId> &);
+
+    /** Adds the entry to favorites. */
+    void AddFavoriteEntry(const EntryId &);
+
+    /** Removes the entry from favorites. */
+    void RemoveFavoriteEntry(const EntryId &);
 
     /** Instructs a background worker to refresh favorites. */
     void RefreshFavorites();
@@ -272,7 +278,9 @@ private:
     void _ew_cache_entries_by_parentid(const QString &, const EntryId &);
     void _ew_cache_all_entries(const QString &);
     void _ew_refresh_favorites(const QString &);
-    void _ew_set_favorites(const QString &, const GUtil::Vector<EntryId> &sorted_favorites);
+    void _ew_set_favorites(const QString &, const QList<EntryId> &sorted_favorites);
+    void _ew_add_favorite(const QString &, const EntryId &);
+    void _ew_remove_favorite(const QString &, const EntryId &);
     void _ew_dispatch_orphans(const QString &);
 
 };

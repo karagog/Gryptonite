@@ -276,6 +276,10 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
                     _delete_entry();
                     ret = true;
                 }
+                else if(kev->key() == ::Qt::Key_Escape){
+                    // The escape key nulls out the treeview selection
+                    ui->treeView->setCurrentIndex(QModelIndex());
+                }
             }
         }
     }

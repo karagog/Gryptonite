@@ -393,8 +393,14 @@ public:
           ID(id),
           FilePath(path)
     {}
+    update_file_command(const FileId &id, const QByteArray &contents)
+        :bg_worker_command(UpdateFile),
+          ID(id),
+          FileContents(contents)
+    {}
     const FileId ID;
     const QByteArray FilePath;
+    const QByteArray FileContents;
 };
 
 class export_file_command : public bg_worker_command
@@ -1444,6 +1450,15 @@ void PasswordDatabase::AddUpdateFile(const FileId &id, const char *filename)
     d->wc_file_thread.notify_one();
 }
 
+void PasswordDatabase::AddUpdateFile(const FileId &id, const QByteArray &contents)
+{
+    FailIfNotOpen();
+    G_D;
+    unique_lock<mutex> lkr(d->file_thread_lock);
+    d->file_thread_commands.push(new update_file_command(id, contents));
+    d->wc_file_thread.notify_one();
+}
+
 void PasswordDatabase::DeleteFile(const FileId &id)
 {
     FailIfNotOpen();
@@ -1460,6 +1475,24 @@ void PasswordDatabase::ExportFile(const FileId &id, const char *export_path) con
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new export_file_command(id, export_path));
     d->wc_file_thread.notify_one();
+}
+
+QByteArray PasswordDatabase::GetFile(const FileId &id) const
+{
+    FailIfNotOpen();
+    G_D;
+    QByteArray ret;
+    QSqlQuery q(QSqlDatabase::database(d->dbString));
+    q.prepare("SELECT Data FROM File WHERE ID=?");
+    q.addBindValue((QByteArray)id);
+    DatabaseUtils::ExecuteQuery(q);
+    if(q.next()){
+        const QByteArray encrypted = q.value(0).toByteArray();
+        QByteArrayInput i(encrypted);
+        QByteArrayOutput o(ret);
+        d->cryptor->DecryptData(&o, &i);
+    }
+    return ret;
 }
 
 void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
@@ -1480,6 +1513,101 @@ void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new import_from_ps_command(import_filename, creds));
     d->wc_file_thread.notify_one();
+}
+
+static void __count_child_entries(QSqlDatabase &db, int &count, const EntryId &parent_id)
+{
+    QSqlQuery q(db);
+    QList<EntryId> child_ids;
+    q.prepare(QString("SELECT ID FROM Entry WHERE ParentID%1")
+              .arg(parent_id.IsNull() ? " IS NULL" : "=?"));
+    if(!parent_id.IsNull())
+        q.addBindValue((QByteArray)parent_id);
+    DatabaseUtils::ExecuteQuery(q);
+
+    while(q.next()){
+        EntryId cid = q.value("ID").toByteArray();
+        child_ids.append(cid);
+        __count_child_entries(db, count, cid);
+    }
+    count += child_ids.length();
+}
+
+int PasswordDatabase::CountAllEntries() const
+{
+    FailIfNotOpen();
+    G_D;
+    int ret = 0;
+    QSqlDatabase db(QSqlDatabase::database(d->dbString));
+    db.transaction();
+    finally([&]{ db.rollback(); });
+    __count_child_entries(db, ret, EntryId::Null());
+    return ret;
+}
+
+static void __import_children(d_t *d,
+                              PasswordDatabase &master,
+                              const PasswordDatabase &other,
+                              const EntryId &orig_parent_id,
+                              const EntryId &new_parent_id,
+                              QList<QPair<FileId,FileId>> &file_list,
+                              int &progress_ctr,
+                              function<void()> progress_cb)
+{
+    QList<Entry> children = other.FindEntriesByParentId(orig_parent_id);
+    for(Entry &c : children){
+        // Give every entry a new id
+        EntryId orig_id = c.GetId();
+        c.SetId(EntryId::NewId());
+        c.SetParentId(new_parent_id);
+        if(!c.GetFileId().IsNull()){
+            // Give every file a new id, but remember the old one so we can reference it later
+            file_list.append(QPair<FileId,FileId>(c.GetFileId(), FileId::NewId()));
+            c.SetFileId(file_list.back().second);
+        }
+        master.AddEntry(c);
+        ++progress_ctr;
+        progress_cb();
+        __import_children(d, master, other, orig_id, c.GetId(), file_list, progress_ctr, progress_cb);
+    }
+}
+
+void PasswordDatabase::ImportFromDatabase(const PasswordDatabase &other)
+{
+    FailIfNotOpen();
+    G_D;
+    QString progress_label(QString(tr("Importing entries from %1")).arg(other.FilePath()));
+    emit NotifyProgressUpdated(0, progress_label);
+    finally([&]{ emit NotifyProgressUpdated(100, progress_label); });
+
+    int progress_ctr = 0;
+    int entry_count = other.CountAllEntries();
+    emit NotifyProgressUpdated(10, progress_label);
+
+    QList<QPair<FileId, FileId>> file_list;
+    __import_children(d,
+                      *this,
+                      other,
+                      EntryId::Null(),
+                      EntryId::Null(),
+                      file_list,
+                      progress_ctr,
+                      [&]{
+        emit NotifyProgressUpdated((float)progress_ctr*100/entry_count * 0.9 + 10,
+                                   progress_label);
+    });
+
+    progress_label = QString(tr("Importing files from %1")).arg(other.FilePath());
+    emit NotifyProgressUpdated(0, progress_label);
+
+    int file_count = file_list.length();
+    for(int i = 0; i < file_count; ++i){
+        QByteArray cur_file = other.GetFile(file_list[i].first);
+        AddUpdateFile(file_list[i].second, cur_file);
+        emit NotifyProgressUpdated((float)i/file_count*100, progress_label);
+    }
+
+    RefreshFavorites();
 }
 
 static void  __cache_children(QSqlQuery &q, d_t *d,
@@ -1914,7 +2042,9 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
                 case bg_worker_command::UpdateFile:
                 {
                     update_file_command *afc = static_cast<update_file_command *>(cmd.Data());
-                    _fw_add_file(conn_str, *bgCryptor, afc->ID, afc->FilePath);
+                    _fw_add_file(conn_str, *bgCryptor, afc->ID,
+                                 afc->FilePath.isEmpty() ? afc->FileContents : afc->FilePath,
+                                 !afc->FilePath.isEmpty());
                 }
                     break;
                 case bg_worker_command::ExportFile:
@@ -1957,36 +2087,46 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
 }
 
 void PasswordDatabase::_fw_add_file(const QString &conn_str,
-                                     GUtil::CryptoPP::Cryptor &cryptor,
-                                     const FileId &id,
-                                     const char *filepath)
+                                    GUtil::CryptoPP::Cryptor &cryptor,
+                                    const FileId &id,
+                                    const QByteArray &data,
+                                    bool by_path = true)
 {
     QSqlDatabase db(QSqlDatabase::database(conn_str));
     GASSERT(db.isValid());
     QSqlQuery q(db);
-    const QString filename(QFileInfo(filepath).fileName());
 
     // First upload and encrypt the file
-    QByteArray file_data;
+    QByteArray encrypted_data;
     {
-        QByteArrayOutput o(file_data);
-        File f(filepath);
-        f.Open(File::OpenRead);
+        QByteArrayOutput o(encrypted_data);
+        SmartPointer<IInput> data_in;
+
+        // The data can be either a file path or the contents itself,
+        //  depending on the value of the flag
+        if(by_path){
+            File *f = new File(data);
+            data_in = f;
+            f->Open(File::OpenRead);
+        }
+        else{
+            data_in = new QByteArrayInput(data);
+        }
 
         // Get a fresh nonce
         byte nonce[NONCE_LENGTH];
         __get_nonce(nonce);
 
         m_progressMin = 0, m_progressMax = 75;
-        m_curTaskString = QString("Download and encrypt: %1").arg(filename);
-        cryptor.EncryptData(&o, &f, NULL, nonce, DEFAULT_CHUNK_SIZE, this);
+        m_curTaskString = QString("Download and encrypt file");
+        cryptor.EncryptData(&o, data_in, NULL, nonce, DEFAULT_CHUNK_SIZE, this);
     }
 
     // Always notify that the task is complete, even if it's an error
     finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
 
     _fw_fail_if_cancelled();
-    m_curTaskString = QString("Inserting: %1").arg(filename);
+    m_curTaskString = QString("Adding file");
     emit NotifyProgressUpdated(m_progressMax, m_curTaskString);
 
     db.transaction();
@@ -2003,8 +2143,8 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
             // Insert a new file
             q.prepare("INSERT INTO File (Length, Data, ID) VALUES (?,?,?)");
         }
-        q.addBindValue(file_data.length());
-        q.addBindValue(file_data, QSql::In | QSql::Binary);
+        q.addBindValue(encrypted_data.length());
+        q.addBindValue(encrypted_data, QSql::In | QSql::Binary);
         q.addBindValue((QByteArray)id, QSql::In | QSql::Binary);
         DatabaseUtils::ExecuteQuery(q);
 

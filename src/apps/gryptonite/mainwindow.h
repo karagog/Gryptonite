@@ -71,7 +71,6 @@ public:
     /** For proper behavior this must be called before any application cleanup code. */
     void AboutToQuit();
 
-
 signals:
 
     void NotifyUserInteraction();
@@ -101,7 +100,7 @@ private slots:
 
     void _new_open_database();
     void _open_recent_database(QAction *);
-    void _close_database();
+    void _close_database(bool delete_model = true);
     void _save_as();
     void _export_to_portable_safe();
     void _import_from_portable_safe();
@@ -166,6 +165,7 @@ private:
 #endif // Q_OS_WIN
 
     void _new_open_database(const QString &);
+    void _install_new_database_model(Grypt::DatabaseModel *dbm);
     void _update_ui_file_opened(bool);
     void _lock_unlock_interface(bool);
     Grypt::FilteredDatabaseModel *_get_proxy_model() const;

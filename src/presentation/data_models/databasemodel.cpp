@@ -722,7 +722,27 @@ void DatabaseModel::ExportToPortableSafe(const char *export_filename,
 void DatabaseModel::ImportFromPortableSafe(const char *export_filename,
                                            const Credentials &creds)
 {
+    beginResetModel();
     m_db.ImportFromPortableSafe(export_filename, creds);
+    __cleanup_entry_list(m_root);
+    m_index.clear();
+    endResetModel();
+
+    fetchMore();
+    FetchAllEntries();
+}
+
+void DatabaseModel::ImportFromDatabase(const DatabaseModel &other)
+{
+    beginResetModel();
+    m_db.ImportFromDatabase(other.m_db);
+    __cleanup_entry_list(m_root);
+    m_index.clear();
+    endResetModel();
+
+    // re-fetch the model
+    fetchMore();
+    FetchAllEntries();
 }
 
 QHash<FileId, PasswordDatabase::FileInfo_t> DatabaseModel::GetFileSummary()

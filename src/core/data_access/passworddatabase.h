@@ -116,6 +116,11 @@ public:
     /** Causes the background thread to load all entries into the cache. */
     void LoadAllEntries() const;
 
+    /** Iteratively counts all entries in the database. This can be a slow operation,
+     *  and it's used for calculating total progress.
+    */
+    int CountAllEntries() const;
+
     /** This function allows you to synchronize with the background entry thread.
      *  Call this to wait until the background thread is done working.
     */
@@ -198,6 +203,14 @@ public:
     /** Removes the file from the database. */
     void DeleteFile(const FileId &);
 
+    /** Decrypts the file and returns its contents. This is a slow operation
+     *  that happens on the main thread. Use carefully.
+    */
+    QByteArray GetFile(const FileId &) const;
+
+    /** This version adds a file by its contents, rather than file path. */
+    void AddUpdateFile(const FileId &, const QByteArray &contents);
+
     /** Returns the complete list of file ids and associated file sizes.
      *  Note that some files may not be referenced by an entry id.
     */
@@ -221,6 +234,11 @@ public:
     /** Imports data from the portable safe file. */
     void ImportFromPortableSafe(const char *export_filename,
                                 const Credentials &);
+
+    /** Imports data from the other database. New ID's will be given to
+     *  every entry and file, so there is no possibility of collision.
+    */
+    void ImportFromDatabase(const PasswordDatabase &);
 
 
     /** Call this function to iterate through all entries, deleting
@@ -264,7 +282,7 @@ private:
     void _entry_worker(GUtil::CryptoPP::Cryptor *);
 
     // File worker methods and members
-    void _fw_add_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
+    void _fw_add_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const QByteArray &, bool);
     void _fw_exp_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
     void _fw_del_file(const QString &, const FileId &);
     void _fw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);

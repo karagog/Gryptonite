@@ -378,6 +378,36 @@ void MainWindow::_update_recent_files(const QString &latest_path)
     }
 }
 
+void MainWindow::_install_new_database_model(DatabaseModel *dbm)
+{
+    connect(dbm, SIGNAL(NotifyFavoritesUpdated()),
+            this, SLOT(_update_trayIcon_menu()));
+    connect(dbm, SIGNAL(NotifyUndoStackChanged()),
+            this, SLOT(_update_undo_text()));
+
+    // Until I have time to resolve issues with pre-loading grandchildren before
+    //  their ancestors, I will just load all entries up front
+    dbm->FetchAllEntries();
+
+    _get_proxy_model()->setSourceModel(dbm);
+    _update_ui_file_opened(true);
+
+    if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT))
+        m_lockoutTimer.StartLockoutTimer(m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt());
+
+    ui->view_entry->SetDatabaseModel(dbm);
+
+    m_fileLabel->setText(dbm->FilePath());
+
+    // Add this to the recent files list
+    _update_recent_files(dbm->FilePath());
+
+    // Wire up the progress bar control
+    connect(&m_progressBar, SIGNAL(Clicked()), dbm, SLOT(CancelAllBackgroundOperations()));
+    connect(dbm, SIGNAL(NotifyProgressUpdated(int,QString)),
+            this, SLOT(_progress_updated(int,QString)));
+}
+
 void MainWindow::_new_open_database(const QString &path)
 {
     Credentials creds;
@@ -431,9 +461,7 @@ void MainWindow::_new_open_database(const QString &path)
                         .arg(pi.AppName),
                         QMessageBox::Yes | QMessageBox::Cancel,
                         QMessageBox::Cancel);
-        },
-
-        this)
+        })
     );
 
     // Get the user's credentials after successfully locking the database
@@ -460,42 +488,23 @@ void MainWindow::_new_open_database(const QString &path)
         __show_access_denied(this, tr("Invalid Key"));
         return;
     }
-    connect(dbm.Data(), SIGNAL(NotifyFavoritesUpdated()),
-            this, SLOT(_update_trayIcon_menu()));
-    connect(dbm.Data(), SIGNAL(NotifyUndoStackChanged()),
-            this, SLOT(_update_undo_text()));
-
-    // Until I have time to resolve issues with pre-loading grandchildren before
-    //  their ancestors, I will just load all entries up front
-    dbm->FetchAllEntries();
-
-    _get_proxy_model()->setSourceModel(dbm.Data());
-    _update_ui_file_opened(true);
-
-    if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT))
-        m_lockoutTimer.StartLockoutTimer(m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt());
-
-    ui->view_entry->SetDatabaseModel(dbm.Data());
-
-    m_fileLabel->setText(open_path);
-
-    // Add this to the recent files list
-    _update_recent_files(open_path);
-
-    // Wire up the progress bar control
-    connect(&m_progressBar, SIGNAL(Clicked()), dbm.Data(), SLOT(CancelAllBackgroundOperations()));
-    connect(dbm.Data(), SIGNAL(NotifyProgressUpdated(int,QString)),
-            this, SLOT(_progress_updated(int,QString)));
-
+    _install_new_database_model(dbm.Data());
     dbm.Relinquish();
+}
+
+static QString __get_new_database_filename(QWidget *parent,
+                                           const QString &title,
+                                           bool confirm_overwrite)
+{
+    return QFileDialog::getSaveFileName(parent, title,
+                                        QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
+                                        "Grypto DB (*.gdb *.GPdb);;All Files (*)", 0,
+                                        confirm_overwrite ? (QFileDialog::Option)0 : QFileDialog::DontConfirmOverwrite);
 }
 
 void MainWindow::_new_open_database()
 {
-    QString path = QFileDialog::getSaveFileName(this, tr("File Location"),
-                                                QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-                                                "Grypto DB (*.gdb *.GPdb);;All Files (*)", 0,
-                                                QFileDialog::DontConfirmOverwrite);
+    QString path = __get_new_database_filename(this, tr("File Location"), false);
     if(!path.isEmpty())
     {
         QFileInfo fi(path);
@@ -519,16 +528,19 @@ bool MainWindow::IsFileOpen() const
     return _get_proxy_model()->sourceModel() != NULL;
 }
 
-void MainWindow::_close_database()
+void MainWindow::_close_database(bool delete_model)
 {
     if(IsFileOpen())
     {
         m_lockoutTimer.StopLockoutTimer();
 
-        // Delete the old database model
+        // Disconnect the database model
         QAbstractItemModel *old_model = _get_proxy_model()->sourceModel();
         _get_proxy_model()->setSourceModel(NULL);
-        delete old_model;
+
+        // Optionally delete it; maybe we still need it for something
+        if(delete_model)
+            delete old_model;
 
         _lock_unlock_interface(false);
         _update_ui_file_opened(false);
@@ -537,7 +549,42 @@ void MainWindow::_close_database()
 
 void MainWindow::_save_as()
 {
-    throw NotImplementedException<>();
+    GASSERT(IsFileOpen());
+    QString fn = __get_new_database_filename(this, tr("Save as file"), true);
+    if(fn.isEmpty())
+        return;
+    else if(QFileInfo(fn).absoluteFilePath() ==
+            QFileInfo(_get_database_model()->FilePath()).absoluteFilePath())
+        throw Exception<>("Cannot save to the same path as the original");
+
+    // Create the database object, which only reserves a lock on the new database
+    SmartPointer<DatabaseModel> dbm(new DatabaseModel(fn.toUtf8().constData()));
+
+    NewPasswordDialog dlg(m_settings, this);
+    if(QDialog::Accepted != dlg.exec())
+        return;
+
+    if(QFile::exists(fn))
+        if(!QFile::remove(fn))
+            throw Exception<>("Save as file already exists and I couldn't remove it");
+
+    // Initialize the new database
+    dbm->Open(dlg.GetCredentials());
+
+    // Close the old database and install the new one on the main window
+    DatabaseModel *old_model = _get_database_model();
+    _close_database(false);     // Don't delete the old database model!
+    _install_new_database_model(dbm);
+
+    bool tmp = m_progressBar.IsCancellable();
+    m_progressBar.SetIsCancellable(false);
+    finally([&]{ m_progressBar.SetIsCancellable(tmp); });
+
+    // Copy the old database to the new one
+    dbm->ImportFromDatabase(*old_model);
+
+    dbm.Relinquish();
+    delete old_model;
 }
 
 void MainWindow::_export_to_portable_safe()

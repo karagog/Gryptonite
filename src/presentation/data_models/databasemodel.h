@@ -139,6 +139,12 @@ public:
     void ImportFromPortableSafe(const char *export_filename,
                                 const Credentials &);
 
+    /** Imports the contents from the other database model.
+     *  All Entry and File ID's will be new. Both databases
+     *  must already be open.
+    */
+    void ImportFromDatabase(const DatabaseModel &);
+
     /** Cleans up orphan entries and files. */
     void DeleteOrphans();
 
@@ -168,7 +174,7 @@ public:
 
     virtual bool hasChildren(const QModelIndex &) const;
     virtual bool canFetchMore(const QModelIndex &) const;
-    virtual void fetchMore(const QModelIndex &);
+    virtual void fetchMore(const QModelIndex & = QModelIndex());
     /** \} */
 
 

@@ -1175,7 +1175,7 @@ int PasswordDatabase::CountEntriesByParentId(const EntryId &id) const
     return pi->second.children.Length();
 }
 
-vector<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
+QList<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
 {
     FailIfNotOpen();
     G_D;
@@ -1183,7 +1183,7 @@ vector<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
     //  already in the cache, so we can preload its grandchildren
     __command_cache_entries_by_parentid(d, pid);
 
-    vector<Entry> ret;
+    QList<Entry> ret;
     {
         unique_lock<mutex> lkr(d->index_lock);
 
@@ -1194,7 +1194,7 @@ vector<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
         });
 
         foreach(const EntryId &child_id, d->parent_index[pid].children)
-            ret.emplace_back(__convert_cache_to_entry(d->index[child_id], *d->cryptor));
+            ret.append(__convert_cache_to_entry(d->index[child_id], *d->cryptor));
     }
     return ret;
 }
@@ -1213,19 +1213,19 @@ void PasswordDatabase::SetFavoriteEntries(const Vector<EntryId> &favs)
     __queue_entry_command(d, new set_favorite_entries_command(favs));
 }
 
-vector<Entry> PasswordDatabase::FindFavoriteEntries() const
+QList<Entry> PasswordDatabase::FindFavoriteEntries() const
 {
     FailIfNotOpen();
     G_D;
-    vector<entry_cache> rows;
+    QList<entry_cache> rows;
     unique_lock<mutex> lkr(d->index_lock);
     for(const EntryId &id : d->favorite_index)
-        rows.push_back(d->index[id]);
+        rows.append(d->index[id]);
     lkr.unlock();
 
-    vector<Entry> ret;
+    QList<Entry> ret;
     for(const entry_cache &row : rows)
-        ret.emplace_back(__convert_cache_to_entry(row, *d->cryptor));
+        ret.append(__convert_cache_to_entry(row, *d->cryptor));
     return ret;
 }
 

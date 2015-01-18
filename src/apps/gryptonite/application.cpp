@@ -54,6 +54,7 @@ Application::Application(int &argc, char **argv)
     // Register the metatypes we are going to use
     qRegisterMetaType<shared_ptr<Exception<>>>("std::shared_ptr<GUtil::Exception<>>");
     qRegisterMetaType<Grypt::EntryId>("Grypt::EntryId");
+    qRegisterMetaTypeStreamOperators<Grypt::IdType>("Grypt::IdType");
 
     setQuitOnLastWindowClosed(false);
 

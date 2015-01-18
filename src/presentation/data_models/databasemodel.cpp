@@ -215,7 +215,7 @@ Entry DatabaseModel::FindEntryById(const EntryId &id) const
     return m_db.FindEntry(id);
 }
 
-vector<Entry> DatabaseModel::FindFavorites() const
+QList<Entry> DatabaseModel::FindFavorites() const
 {
     return m_db.FindFavoriteEntries();
 }

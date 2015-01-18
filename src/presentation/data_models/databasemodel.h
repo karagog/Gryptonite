@@ -73,7 +73,7 @@ public:
     Entry FindEntryById(const EntryId &) const;
 
     /** Returns the sorted list of favorites. */
-    std::vector<Entry> FindFavorites() const;
+    QList<Entry> FindFavorites() const;
 
     /** Returns a reference to the entry held in the model, or a null pointer
      *  if the index is invalid.

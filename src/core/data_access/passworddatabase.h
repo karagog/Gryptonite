@@ -136,10 +136,10 @@ public:
     int CountEntriesByParentId(const EntryId &) const;
 
     /** Returns a list of entries for the given parent id sorted by row number. */
-    std::vector<Entry> FindEntriesByParentId(const EntryId &) const;
+    QList<Entry> FindEntriesByParentId(const EntryId &) const;
 
     /** Returns a sorted list of the user's favorite entries. */
-    std::vector<Entry> FindFavoriteEntries() const;
+    QList<Entry> FindFavoriteEntries() const;
 
     /** Sets the given entries as favorites, in the order they are given. */
     void SetFavoriteEntries(const GUtil::Vector<EntryId> &);

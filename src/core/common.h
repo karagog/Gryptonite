@@ -19,6 +19,7 @@ limitations under the License.*/
 #include <gutil/exception.h>
 #include <gutil/cryptopp_cryptor.h>
 #include <QMetaType>
+#include <QDataStream>
 
 
 #define GRYPTO_APP_NAME "Gryptonite"
@@ -56,7 +57,24 @@ END_NAMESPACE_GRYPTO
 GUTIL_DEFINE_ID_QHASH(Grypt::IdType::Size)
 
 // So we can store it in a QVariant
-Q_DECLARE_METATYPE(Grypt::IdType)
+Q_DECLARE_METATYPE(Grypt::IdType);
+
+// Define stream operators for help serializing ID data
+inline QDataStream &operator <<(QDataStream &out, const Grypt::IdType &id){
+    out.writeBytes((const char *)id.ConstData(), id.Size);
+    return out;
+}
+inline QDataStream &operator >>(QDataStream &in, Grypt::IdType &id){
+    char *tmp;
+    uint len;
+    in.readBytes(tmp, len);
+    if(len == id.Size)
+        id = Grypt::IdType(tmp);
+    else
+        id = Grypt::IdType::Null();
+    delete tmp;
+    return in;
+}
 
 
 #endif // GRYPTO_MACROS_H

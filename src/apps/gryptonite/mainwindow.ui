@@ -253,6 +253,9 @@
    <property name="text">
     <string>&amp;Save As...</string>
    </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save the current file as a new one.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </action>
   <action name="action_Open">
    <property name="text">
@@ -263,10 +266,16 @@
    <property name="text">
     <string>New/&amp;Open Database</string>
    </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open a database, creating a new one if it doesn't exist.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </action>
   <action name="action_Close">
    <property name="text">
     <string>&amp;Close Database</string>
+   </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Close the file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="action_EditEntry">
@@ -303,20 +312,32 @@
    <property name="text">
     <string>&amp;Lock Database</string>
    </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Locks the interface so nobody can use the file until they enter the right credentials.&lt;/p&gt;&lt;p&gt;You can adjust the application preferences to have it automatically lock after a certain time of inactivity.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </action>
   <action name="action_cryptoTransform">
    <property name="text">
     <string>Cryptographic &amp;Transformations</string>
+   </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A utility that helps you apply cryptographic transformations to data, such as:&lt;/p&gt;&lt;p&gt;    * AES encryption with CCM, one of the most secure encryption algorithms&lt;/p&gt;&lt;p&gt;    * Hash calculator with all major hashes&lt;/p&gt;&lt;p&gt;    * Conversion to base-64 and base-16 strings&lt;/p&gt;&lt;p&gt;You can transform files directly or operate on strings. This utility is included as a supplement to the main application. It is not directly useful to the main function, but it can come in handy when you need to check a hash.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="action_export_ps">
    <property name="text">
     <string>&amp;Portable Safe</string>
    </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export all entries and files to a secure Portable Safe file (.gps).&lt;/p&gt;&lt;p&gt;The Portable Safe file, invented by George Karagoulis, securely stores and obscures everything about the data it contains. It is impossible to determine the file's structure or glean any information about the contents without possessing the user's password and/or keyfile. It is the most secure way to transport your data if you have to expose it to the outside world, such as during a file transfer.&lt;/p&gt;&lt;p&gt;After you export, you can import it by creating a new empty file and saying Import-&amp;gt;Portable Safe.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </action>
   <action name="action_import_ps">
    <property name="text">
     <string>&amp;Portable Safe</string>
+   </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import entries and files from a Portable Safe file (.gps)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="action_About">
@@ -331,7 +352,7 @@
   </action>
   <action name="action_Favorites">
    <property name="text">
-    <string>&amp;Favorites</string>
+    <string>Organize &amp;Favorites</string>
    </property>
   </action>
   <action name="action_add_remove_favorites">

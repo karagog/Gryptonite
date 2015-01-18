@@ -112,6 +112,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
 
     connect(ui->actionQuit, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(ui->actionNewOpenDB, SIGNAL(triggered()), this, SLOT(_new_open_database()));
+    connect(ui->action_Save_As, SIGNAL(triggered()), this, SLOT(_save_as()));
     connect(ui->action_export_ps, SIGNAL(triggered()), this, SLOT(_export_to_portable_safe()));
     connect(ui->action_import_ps, SIGNAL(triggered()), this, SLOT(_import_from_portable_safe()));
     connect(ui->action_Close, SIGNAL(triggered()), this, SLOT(_close_database()));
@@ -292,9 +293,9 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
             QAction *action_collapse = new QAction(tr("Collapse All"), this);
             connect(action_expand, SIGNAL(triggered()), ui->treeView, SLOT(expandAll()));
             connect(action_collapse, SIGNAL(triggered()), ui->treeView, SLOT(collapseAll()));
-            menu->insertAction(ui->action_Undo, action_expand);
-            menu->insertAction(ui->action_Undo, action_collapse);
-            menu->insertSeparator(ui->action_Undo);
+            menu->insertAction(ui->action_Search, action_expand);
+            menu->insertAction(ui->action_Search, action_collapse);
+            menu->insertSeparator(ui->action_Search);
 
             Entry const *e = _get_currently_selected_entry();
             if(e){
@@ -304,10 +305,10 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
                 else
                     m_add_remove_favorites.setText(tr("Add to Favorites"));
 
-                menu->insertAction(ui->action_Undo, &m_add_remove_favorites);
+                menu->insertAction(ui->action_Search, &m_add_remove_favorites);
                 menu->insertSeparator(&m_add_remove_favorites);
             }
-            menu->insertSeparator(ui->action_Undo);
+            menu->insertSeparator(ui->action_Search);
             menu->insertSeparator(ui->action_Search);
 
             menu->move(cm->globalPos());
@@ -457,6 +458,8 @@ void MainWindow::_new_open_database(const QString &path)
     }
     connect(dbm.Data(), SIGNAL(NotifyFavoritesUpdated()),
             this, SLOT(_update_trayIcon_menu()));
+    connect(dbm.Data(), SIGNAL(NotifyUndoStackChanged()),
+            this, SLOT(_update_undo_text()));
 
     // Until I have time to resolve issues with pre-loading grandchildren before
     //  their ancestors, I will just load all entries up front
@@ -526,6 +529,11 @@ void MainWindow::_close_database()
         _lock_unlock_interface(false);
         _update_ui_file_opened(false);
     }
+}
+
+void MainWindow::_save_as()
+{
+    throw NotImplementedException<>();
 }
 
 void MainWindow::_export_to_portable_safe()

@@ -1313,6 +1313,14 @@ QList<Entry> PasswordDatabase::FindFavoriteEntries() const
     return ret;
 }
 
+QList<EntryId> PasswordDatabase::FindFavoriteIds() const
+{
+    FailIfNotOpen();
+    G_D;
+    unique_lock<mutex> lkr(d->index_lock);
+    return d->favorite_index;
+}
+
 void PasswordDatabase::DeleteOrphans()
 {
     FailIfNotOpen();

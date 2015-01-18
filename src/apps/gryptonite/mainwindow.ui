@@ -86,7 +86,7 @@
      <x>0</x>
      <y>0</y>
      <width>600</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -130,9 +130,6 @@
     <addaction name="action_EditEntry"/>
     <addaction name="action_DeleteEntry"/>
     <addaction name="separator"/>
-    <addaction name="action_Undo"/>
-    <addaction name="action_Redo"/>
-    <addaction name="separator"/>
     <addaction name="action_Search"/>
    </widget>
    <widget class="QMenu" name="menu_Tools">
@@ -151,6 +148,9 @@
     <property name="title">
      <string>Edit</string>
     </property>
+    <addaction name="action_Undo"/>
+    <addaction name="action_Redo"/>
+    <addaction name="separator"/>
     <addaction name="action_Favorites"/>
     <addaction name="action_Preferences"/>
    </widget>

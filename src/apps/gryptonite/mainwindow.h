@@ -102,6 +102,7 @@ private slots:
     void _new_open_database();
     void _open_recent_database(QAction *);
     void _close_database();
+    void _save_as();
     void _export_to_portable_safe();
     void _import_from_portable_safe();
 

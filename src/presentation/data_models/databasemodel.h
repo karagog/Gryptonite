@@ -75,6 +75,9 @@ public:
     /** Returns the sorted list of favorites. */
     QList<Entry> FindFavorites() const;
 
+    /** Returns the sorted list of favorites entry ids. */
+    QList<EntryId> FindFavoriteIds() const;
+
     /** Returns a reference to the entry held in the model, or a null pointer
      *  if the index is invalid.
     */
@@ -185,6 +188,7 @@ signals:
 
     void NotifyFavoritesUpdated();
     void NotifyProgressUpdated(int, const QString &);
+    void NotifyUndoStackChanged();
 
 
 private slots:
@@ -210,12 +214,20 @@ private:
     void _edt_entry(Entry &);
     void _mov_entries(const QModelIndex &pind, int r_first, int r_last,
                       const QModelIndex &target_pind, int &r_dest);
+    void _set_favs(const QList<EntryId> &);
+    void _add_fav(const EntryId &);
+    void _del_fav(const EntryId &);
+
+    void _emit_row_changed(const QModelIndex &);
 
     // These are private helper classes only used in the cpp file
     friend class AddEntryCommand;
     friend class EditEntryCommand;
     friend class DeleteEntryCommand;
     friend class MoveEntryCommand;
+    friend class SetFavoriteEntriesCommand;
+    friend class AddFavoriteEntryCommand;
+    friend class RemoveFavoriteEntryCommand;
 };
 
 

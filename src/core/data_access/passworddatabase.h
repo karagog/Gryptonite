@@ -141,6 +141,9 @@ public:
     /** Returns a sorted list of the user's favorite entries. */
     QList<Entry> FindFavoriteEntries() const;
 
+    /** Returns a sorted list of the user's favorite entry ids. */
+    QList<EntryId> FindFavoriteIds() const;
+
     /** Sets the given entries as favorites, in the order they are given. */
     void SetFavoriteEntries(const QList<EntryId> &);
 

@@ -91,6 +91,41 @@ public:
     }
 };
 
+class AddFavoriteEntryCommand : public IUndoableAction {
+    DatabaseModel *m_model;
+    EntryId m_id;
+public:
+    AddFavoriteEntryCommand(const EntryId &id, DatabaseModel *m)
+        :m_model(m), m_id(id) {}
+    void Do(){ m_model->_add_fav(m_id); }
+    void Undo(){ m_model->_del_fav(m_id); }
+    String Text() const{ return "Add to Favorites"; }
+};
+
+class RemoveFavoriteEntryCommand : public IUndoableAction {
+    DatabaseModel *m_model;
+    EntryId m_id;
+public:
+    RemoveFavoriteEntryCommand(const EntryId &id, DatabaseModel *m)
+        :m_model(m), m_id(id) {}
+    void Do(){ m_model->_del_fav(m_id); }
+    void Undo(){ m_model->_add_fav(m_id); }
+    String Text() const{ return "Remove from Favorites"; }
+};
+
+class SetFavoriteEntriesCommand : public IUndoableAction {
+    DatabaseModel *m_model;
+    QList<EntryId> m_favs;
+    QList<EntryId> m_origFavs;
+public:
+    SetFavoriteEntriesCommand(const QList<EntryId> &favs,
+                              DatabaseModel *m)
+        :m_model(m), m_favs(favs), m_origFavs(m->FindFavoriteIds()) {}
+    void Do(){ m_model->_set_favs(m_favs); }
+    void Undo(){ m_model->_set_favs(m_origFavs); }
+    String Text() const{ return "Update Favorites"; }
+};
+
 class MoveEntryCommand : public IUndoableAction {
     DatabaseModel *m_model;
     const QPersistentModelIndex m_sourcePind;
@@ -168,7 +203,8 @@ DatabaseModel::DatabaseModel(const char *f,
                              function<bool(const PasswordDatabase::ProcessInfo &)> ask_for_lock_override,
                              QObject *parent)
     :QAbstractItemModel(parent),
-      m_db(f, ask_for_lock_override)
+      m_db(f, ask_for_lock_override),
+      m_undostack([&]{ emit NotifyUndoStackChanged(); })
 {
     connect(&m_db, SIGNAL(NotifyFavoritesUpdated()),
             this, SIGNAL(NotifyFavoritesUpdated()));
@@ -218,6 +254,11 @@ Entry DatabaseModel::FindEntryById(const EntryId &id) const
 QList<Entry> DatabaseModel::FindFavorites() const
 {
     return m_db.FindFavoriteEntries();
+}
+
+QList<EntryId> DatabaseModel::FindFavoriteIds() const
+{
+    return m_db.FindFavoriteIds();
 }
 
 Entry const *DatabaseModel::GetEntryFromIndex(const QModelIndex &ind) const
@@ -540,6 +581,47 @@ void DatabaseModel::_edt_entry(Entry &e)
     }
 }
 
+void DatabaseModel::_set_favs(const QList<EntryId> &favs)
+{
+    QList<EntryId> orig_favs = m_db.FindFavoriteIds();
+
+    m_db.SetFavoriteEntries(favs);
+
+    for(const EntryId &fid : orig_favs){
+        m_index[fid]->entry.SetFavoriteIndex(-1);
+        if(!favs.contains(fid))
+            _emit_row_changed(FindIndexById(fid));
+    }
+
+    int ctr = 1;
+    for(const EntryId &fid : favs){
+        m_index[fid]->entry.SetFavoriteIndex(ctr++);
+        if(!orig_favs.contains(fid))
+            _emit_row_changed(FindIndexById(fid));
+    }
+}
+
+void DatabaseModel::_add_fav(const EntryId &id)
+{
+    m_db.AddFavoriteEntry(id);
+
+    m_index[id]->entry.SetFavoriteIndex(0);
+
+    _emit_row_changed(FindIndexById(id));
+}
+
+void DatabaseModel::_del_fav(const EntryId &id)
+{
+    m_db.RemoveFavoriteEntry(id);
+
+    QList<Entry> favs = m_db.FindFavoriteEntries();
+    for(const Entry &f : favs)
+        m_index[f.GetId()]->entry.SetFavoriteIndex(f.GetFavoriteIndex());
+    m_index[id]->entry.SetFavoriteIndex(-1);
+
+    _emit_row_changed(FindIndexById(id));
+}
+
 void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_last,
                                  const QModelIndex &targ_pind, int &r_dest)
 {
@@ -737,19 +819,25 @@ void DatabaseModel::MoveEntries(const QModelIndex &src_parent, int src_first, in
                                         dest_parent, dest_row, this));
 }
 
-void DatabaseModel::AddEntryToFavorites(const EntryId &)
+void DatabaseModel::AddEntryToFavorites(const EntryId &id)
 {
-    throw NotImplementedException<>();
+    m_undostack.Do(new AddFavoriteEntryCommand(id, this));
 }
 
-void DatabaseModel::RemoveEntryFromFavorites(const EntryId &)
+void DatabaseModel::RemoveEntryFromFavorites(const EntryId &id)
 {
-    throw NotImplementedException<>();
+    m_undostack.Do(new RemoveFavoriteEntryCommand(id, this));
 }
 
-void DatabaseModel::SetFavoriteEntries(const QList<EntryId> &)
+void DatabaseModel::SetFavoriteEntries(const QList<EntryId> &favs)
 {
-    throw NotImplementedException<>();
+    m_undostack.Do(new SetFavoriteEntriesCommand(favs, this));
+}
+
+void DatabaseModel::_emit_row_changed(const QModelIndex &ind)
+{
+    emit dataChanged(index(ind.row(), 0, ind.parent()),
+                     index(ind.row(), columnCount() - 1, ind.parent()));
 }
 
 Qt::DropActions DatabaseModel::supportedDropActions() const

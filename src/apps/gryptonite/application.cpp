@@ -15,6 +15,7 @@ limitations under the License.*/
 #include "application.h"
 #include "mainwindow.h"
 #include "about.h"
+#include "settings.h"
 #include <grypto_common.h>
 #include <gutil/messageboxlogger.h>
 #include <gutil/cryptopp_rng.h>
@@ -33,6 +34,19 @@ static GUtil::RNG_Initializer __rng_init(&__cryptopp_rng);
 
 #define APPLICATION_LOG  "gryptonite.log"
 
+
+static void __init_default_settings(GUtil::Qt::Settings &settings)
+{
+    if(!settings.Contains(GRYPTONITE_SETTING_AUTOLAUNCH_URLS)){
+        settings.SetValue(GRYPTONITE_SETTING_AUTOLAUNCH_URLS, true);
+        settings.SetValue(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE, true);
+        settings.SetValue(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY, true);
+        settings.SetValue(GRYPTONITE_SETTING_TIME_FORMAT_24HR, false);
+        settings.SetValue(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT, 15);
+        settings.SetValue(GRYPTONITE_SETTING_CLIPBOARD_TIMEOUT, 30);
+        settings.CommitChanges();
+    }
+}
 
 Application::Application(int &argc, char **argv)
     :GUtil::Qt::Application(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING),
@@ -57,6 +71,8 @@ Application::Application(int &argc, char **argv)
     qRegisterMetaTypeStreamOperators<Grypt::IdType>("Grypt::IdType");
 
     setQuitOnLastWindowClosed(false);
+
+    __init_default_settings(settings);
 
     main_window = new MainWindow(&settings);
 }

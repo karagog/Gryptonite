@@ -46,7 +46,7 @@ NAMESPACE_GRYPTO;
 
 
 CryptoTransformsWindow::CryptoTransformsWindow(GUtil::Qt::Settings *settings, Cryptor const *c, QWidget *parent)
-    :QWidget(parent, ::Qt::Window),
+    :QWidget(parent, ::Qt::Dialog),
       ui(new Ui::CryptoTransformsWindow),
       m_settings(settings),
       m_cryptor(c == NULL ? NULL : new Cryptor(*c)),

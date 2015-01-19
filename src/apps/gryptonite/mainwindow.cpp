@@ -1025,15 +1025,16 @@ void MainWindow::_lock_unlock_interface(bool lock)
         m_isLocked = false;
     }
 
-    ui->action_Save_As->setEnabled(!lock && IsFileOpen());
-    ui->menu_Export->setEnabled(!lock && IsFileOpen());
-    ui->menu_Import->setEnabled(!lock && IsFileOpen());
-    ui->actionNew_Entry->setEnabled(!lock);
-    ui->action_EditEntry->setEnabled(!lock);
-    ui->action_DeleteEntry->setEnabled(!lock);
-    ui->action_Undo->setEnabled(!lock);
-    ui->action_Redo->setEnabled(!lock);
-    ui->action_Search->setEnabled(!lock);
+    bool b = !lock && IsFileOpen();
+    ui->action_Save_As->setEnabled(b);
+    ui->menu_Export->setEnabled(b);
+    ui->menu_Import->setEnabled(b);
+    ui->actionNew_Entry->setEnabled(b);
+    ui->action_EditEntry->setEnabled(b);
+    ui->action_DeleteEntry->setEnabled(b);
+    ui->action_Undo->setEnabled(b);
+    ui->action_Redo->setEnabled(b);
+    ui->action_Search->setEnabled(b);
 
     _update_trayIcon_menu();
 }

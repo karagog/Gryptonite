@@ -20,9 +20,16 @@ limitations under the License.*/
 #include "generatepassworddialog.h"
 #include "noteseditdialog.h"
 #include <QFileDialog>
+#include <QMessageBox>
 
 NAMESPACE_GRYPTO;
 
+
+static void __show_message_select_row(QWidget *p)
+{
+    QMessageBox::information(p, QObject::tr("Select a row"),
+                             QObject::tr("You must first select a row in the list"));
+}
 
 EntryEdit::EntryEdit(QWidget *parent)
     :QDialog(parent)
@@ -134,8 +141,10 @@ void EntryEdit::_del_secret()
 void EntryEdit::_toggle_secret()
 {
     QModelIndex ind = ui->tableView->currentIndex();
-    if(!ind.isValid())
+    if(!ind.isValid()){
+        __show_message_select_row(this);
         return;
+    }
 
     QAbstractItemModel *m = ui->tableView->model();
     m->setData(ind, !m->data(ind, EntryModel::IDSecret).toBool(), EntryModel::IDSecret);
@@ -144,8 +153,10 @@ void EntryEdit::_toggle_secret()
 void EntryEdit::_generate_value()
 {
     QModelIndex ind = ui->tableView->currentIndex();
-    if(!ind.isValid())
+    if(!ind.isValid()){
+        __show_message_select_row(this);
         return;
+    }
 
     GeneratePasswordDialog dlg(this);
     if(QDialog::Accepted == dlg.exec() && !dlg.Password().isEmpty())
@@ -158,8 +169,10 @@ void EntryEdit::_generate_value()
 void EntryEdit::_edit_notes()
 {
     QModelIndex ind = ui->tableView->currentIndex();
-    if(!ind.isValid())
+    if(!ind.isValid()){
+        __show_message_select_row(this);
         return;
+    }
 
     NotesEditDialog dlg(ind.data(EntryModel::IDNotes).toString(), this);
     if(QDialog::Accepted == dlg.exec())

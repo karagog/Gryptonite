@@ -18,6 +18,9 @@
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
       <widget class="QWidget" name="page_locked">
        <layout class="QVBoxLayout" name="verticalLayout_6">
         <property name="leftMargin">
@@ -39,6 +42,9 @@
             <horstretch>1</horstretch>
             <verstretch>1</verstretch>
            </sizepolicy>
+          </property>
+          <property name="whatsThis">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;The window is locked. You must enter the correct credentials to continue using this file.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Click to Unlock</string>
@@ -72,7 +78,11 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="Grypt::EntryView" name="view_entry" native="true"/>
+         <widget class="Grypt::EntryView" name="view_entry" native="true">
+          <property name="whatsThis">
+           <string/>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -86,7 +96,7 @@
      <x>0</x>
      <y>0</y>
      <width>600</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -112,12 +122,12 @@
     </widget>
     <addaction name="actionNewOpenDB"/>
     <addaction name="action_Save_As"/>
+    <addaction name="action_Close"/>
     <addaction name="separator"/>
     <addaction name="menu_Export"/>
     <addaction name="menu_Import"/>
     <addaction name="separator"/>
     <addaction name="actionLockUnlock"/>
-    <addaction name="action_Close"/>
     <addaction name="menu_Recent_Files"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -162,11 +172,14 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dw_treeView">
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;View the entries you have stored in the encrypted database. You can organize them into a hierarchy by dragging and dropping them. If you add an entry to favorites, it will appear in the tray icon context menu when you right-click. Use the search window to filter and search the entries.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Entries are stored securely in the encrypted database, and only decrypted when you open it with this application. Entries may contain a file, which is also encrypted securely in the database.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="features">
     <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
    <property name="windowTitle">
-    <string>Navigate</string>
+    <string>Password Database</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -213,6 +226,9 @@
    </attribute>
   </widget>
   <widget class="QDockWidget" name="dw_search">
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Use the search window to filter and highlight entries that match the search parameters in the tree view.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;You can use wildcards or regular expressions, filter by date/time, etc... This should make finding your secrets as easy as possible.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="windowTitle">
     <string>Search</string>
    </property>
@@ -310,7 +326,7 @@
   </action>
   <action name="actionLockUnlock">
    <property name="text">
-    <string>&amp;Lock Database</string>
+    <string>&amp;Lock Application</string>
    </property>
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Locks the interface so nobody can use the file until they enter the right credentials.&lt;/p&gt;&lt;p&gt;You can adjust the application preferences to have it automatically lock after a certain time of inactivity.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

@@ -17,7 +17,7 @@
    <item>
     <widget class="QListWidget" name="listWidget">
      <property name="whatsThis">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Put your favorite entries in the order you want them to appear in the tray icon.&lt;/p&gt;&lt;p&gt;You can rearrange them by drag-and-drop, or remove them from the list by right-clicking removing them individually.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Put your favorite entries in the order you want them to appear in the tray icon.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;You can rearrange them by drag-and-drop, or remove them from the list by right-clicking removing them individually.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="dragEnabled">
       <bool>true</bool>

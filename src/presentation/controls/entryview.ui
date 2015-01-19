@@ -60,6 +60,9 @@
    </item>
    <item row="3" column="0" colspan="4">
     <widget class="QTableView" name="tableView">
+     <property name="whatsThis">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;The secret values of an entry. Double-click a row to copy its contents to the clipboard. If the entry is a hidden one (i.e. obscured by ******) then it will only remain in the clipboard for a short duration defined in the application preferences.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
      </property>
@@ -85,6 +88,9 @@
    </item>
    <item row="2" column="3">
     <widget class="QPushButton" name="btn_exportFile">
+     <property name="whatsThis">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Export the decrypted file to the filesystem&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>Export</string>
      </property>

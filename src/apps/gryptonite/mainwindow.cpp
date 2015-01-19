@@ -93,6 +93,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     btn_navBack = new QToolButton(this);
     btn_navBack->setIcon(QIcon(":/grypto/icons/leftarrow.png"));
     btn_navBack->setToolTip(tr("Navigate Backwards"));
+    btn_navBack->setWhatsThis(tr("Navigate backwards through the history of your selections"));
     btn_navBack->setAutoRaise(true);
     connect(btn_navBack, SIGNAL(clicked()), &m_navStack, SLOT(undo()));
     ui->toolBar->addWidget(btn_navBack);
@@ -100,6 +101,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     btn_navForward = new QToolButton(this);
     btn_navForward->setIcon(QIcon(":/grypto/icons/rightarrow.png"));
     btn_navForward->setToolTip(tr("Navigate Forwards"));
+    btn_navBack->setWhatsThis(tr("Navigate forwards through the history of your selections"));
     btn_navForward->setAutoRaise(true);
     connect(btn_navForward, SIGNAL(clicked()), &m_navStack, SLOT(redo()));
     ui->toolBar->addWidget(btn_navForward);
@@ -739,7 +741,7 @@ void MainWindow::_update_trayIcon_menu()
 
     // Add the user's favorites to the list
     DatabaseModel *dbm = _get_database_model();
-    if(dbm){
+    if(dbm && !IsLocked()){
         QList<Entry> favs = dbm->FindFavorites();
         QActionGroup *ag = new QActionGroup(this);
         connect(ag, SIGNAL(triggered(QAction*)), this, SLOT(_favorite_action_clicked(QAction*)));
@@ -760,6 +762,7 @@ void MainWindow::_update_trayIcon_menu()
         m_trayIcon.contextMenu()->addSeparator();
     }
 
+    m_trayIcon.contextMenu()->addAction(ui->actionLockUnlock);
     m_trayIcon.contextMenu()->addAction(ui->action_Search);
     m_trayIcon.contextMenu()->addSeparator();
     m_trayIcon.contextMenu()->addAction(ui->actionQuit);
@@ -1001,7 +1004,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
         ui->dw_search->hide();
         ui->toolBar->hide();
         ui->stackedWidget->setCurrentIndex(0);
-        ui->actionLockUnlock->setText(tr("&Unlock Interface"));
+        ui->actionLockUnlock->setText(tr("&Unlock Application"));
         ui->actionLockUnlock->setData(false);
         m_isLocked = true;
 
@@ -1017,26 +1020,33 @@ void MainWindow::_lock_unlock_interface(bool lock)
 
         restoreState(m_savedState);
         ui->stackedWidget->setCurrentIndex(1);
-        ui->actionLockUnlock->setText(tr("&Lock Interface"));
+        ui->actionLockUnlock->setText(tr("&Lock Application"));
         ui->actionLockUnlock->setData(true);
         m_isLocked = false;
     }
 
     ui->action_Save_As->setEnabled(!lock && IsFileOpen());
+    ui->menu_Export->setEnabled(!lock && IsFileOpen());
+    ui->menu_Import->setEnabled(!lock && IsFileOpen());
     ui->actionNew_Entry->setEnabled(!lock);
     ui->action_EditEntry->setEnabled(!lock);
     ui->action_DeleteEntry->setEnabled(!lock);
     ui->action_Undo->setEnabled(!lock);
     ui->action_Redo->setEnabled(!lock);
     ui->action_Search->setEnabled(!lock);
+
+    _update_trayIcon_menu();
 }
 
 void MainWindow::_action_lock_unlock_interface()
 {
     if(ui->actionLockUnlock->data().toBool())
         Lock();
-    else
+    else{
+        if(isHidden())
+            showNormal();
         RequestUnlock();
+    }
 }
 
 void MainWindow::RequestUnlock()

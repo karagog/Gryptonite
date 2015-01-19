@@ -1034,6 +1034,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
     ui->action_DeleteEntry->setEnabled(b);
     ui->action_Undo->setEnabled(b);
     ui->action_Redo->setEnabled(b);
+    ui->action_Favorites->setEnabled(b);
     ui->action_Search->setEnabled(b);
 
     _update_trayIcon_menu();

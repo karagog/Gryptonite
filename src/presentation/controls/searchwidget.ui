@@ -22,6 +22,9 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="whatsThis">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;The search string can either be a wildcard or regular expression, depending on the selection below&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
     </widget>
    </item>
    <item row="4" column="0" colspan="3">
@@ -31,6 +34,9 @@
        <horstretch>0</horstretch>
        <verstretch>1</verstretch>
       </sizepolicy>
+     </property>
+     <property name="whatsThis">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Clears the search, re-showing all entries in the view&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Clear Filter</string>
@@ -58,6 +64,9 @@
      <layout class="QGridLayout" name="gridLayout">
       <item row="1" column="0">
        <widget class="QRadioButton" name="rdo_regexp">
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;If this is checked, then the search string is interpreted as a regular expression. Regexp's are much more powerful than wildcards, but they are more difficult to use for novice users.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="text">
          <string>Regular Expression</string>
         </property>
@@ -65,6 +74,9 @@
       </item>
       <item row="0" column="0">
        <widget class="QRadioButton" name="rdo_wildCard">
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;If this is checked, then the search string is interpreted as a wildcard expression. That means you can use the asterisk to match any amount of any characters, and a question mark to match any single character.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="text">
          <string>Wildcard</string>
         </property>
@@ -78,6 +90,9 @@
    </item>
    <item row="3" column="0" colspan="3">
     <widget class="QGroupBox" name="gb_time">
+     <property name="whatsThis">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Select a time range by which to filter entries&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="title">
       <string>Time Selection</string>
      </property>
@@ -119,6 +134,9 @@
    </item>
    <item row="1" column="1">
     <widget class="QCheckBox" name="chk_filter_results">
+     <property name="whatsThis">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;If this is checked, then any rows that don't match the search string will be hidden from view. Note that entries whose ancestors match the search string are still shown.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>Hide Unmatched Rows</string>
      </property>
@@ -126,6 +144,9 @@
    </item>
    <item row="1" column="2">
     <widget class="QCheckBox" name="chk_caseSensitive">
+     <property name="whatsThis">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Controls whether the search string should be interpreted as case-sensitive&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
       <string>Case Sensitive</string>
      </property>

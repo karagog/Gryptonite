@@ -20,7 +20,7 @@
       <string>Close this window and go back to the main window.</string>
      </property>
      <property name="whatsThis">
-      <string>Close this window and go back to the main window.</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Close this window and select the entry in the main window&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Show in Main Window</string>

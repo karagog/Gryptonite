@@ -1,4 +1,4 @@
-QT += widgets network sql xml
+QT += widgets sql xml
 
 win32{
 QT += winextras

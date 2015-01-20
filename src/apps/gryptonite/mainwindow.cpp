@@ -65,7 +65,7 @@ static void __show_access_denied(QWidget *w, const QString &msg)
 MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     :QMainWindow(parent),
       ui(new Ui::MainWindow),
-      m_trayIcon(QIcon(":/grypto/icons/main.png")),
+      m_trayIcon(QIcon(":/grypto/icons/main.png"), this),
       m_fileLabel(new QLabel(this)),
       m_settings(s),
       m_add_remove_favorites(this),

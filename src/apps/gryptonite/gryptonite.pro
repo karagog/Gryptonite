@@ -2,6 +2,7 @@ QT += widgets sql xml
 
 win32{
 QT += winextras
+RC_FILE = gryptonite.rc
 }
 
 TEMPLATE = app

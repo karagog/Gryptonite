@@ -363,8 +363,8 @@ void Password_File::deletion_helpers::
     }
 }
 
-bool Password_File::dropMimeData(const QMimeData *data, Qt::DropAction action,
-                                 int r, int c, const QModelIndex &par)
+bool Password_File::dropMimeData(const QMimeData *, Qt::DropAction,
+                                 int, int, const QModelIndex &)
 {
 //    if (action == Qt::IgnoreAction)
 //        return true;

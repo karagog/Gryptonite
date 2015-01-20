@@ -29,10 +29,13 @@ struct FilterInfo_t
 {
     const bool IsValid;
 
-    bool FilterResults;
-
     QString SearchString;
-    bool IgnoreCase;
+
+    bool FilterResults      = true;
+    bool IgnoreCase         = true;
+    bool ShowOnlyFavorites  = false;
+    bool ShowOnlyFiles      = false;
+    bool AlsoSearchSecrets  = false;
 
     enum StringType{
         Wildcard,
@@ -47,11 +50,20 @@ struct FilterInfo_t
         :IsValid(false) {}
 
     /** Constructs a valid filter. */
-    FilterInfo_t(const QString &ss, bool filter_results, bool ignore_case, StringType type)
+    FilterInfo_t(const QString &ss,
+                 bool filter_results,
+                 bool ignore_case,
+                 bool show_only_favs,
+                 bool show_only_files,
+                 bool also_search_secrets,
+                 StringType type)
         :IsValid(true),
-          FilterResults(filter_results),
           SearchString(ss),
+          FilterResults(filter_results),
           IgnoreCase(ignore_case),
+          ShowOnlyFavorites(show_only_favs),
+          ShowOnlyFiles(show_only_files),
+          AlsoSearchSecrets(also_search_secrets),
           SearchStringType(type) {}
 
     QString ToXml() const;

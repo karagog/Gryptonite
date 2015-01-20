@@ -78,22 +78,29 @@ bool FilteredDatabaseModel::_update_index(const QModelIndex &src_ind, const QReg
     Entry const *e = m->GetEntryFromIndex(src_ind);
     if(src_ind.isValid())
     {
-        bool matches_time = true;
+        // Check if the row fits the pre-filter criteria
+        bool matches_pre_filters = true;
+        if(matches_pre_filters && fi.ShowOnlyFavorites)
+            matches_pre_filters = e->IsFavorite();
+
+        if(matches_pre_filters && fi.ShowOnlyFiles)
+            matches_pre_filters = !e->GetFileId().IsNull();
 
         // If it's outside the given date range then it doesn't match
-        if(fi.StartTime.isValid() || fi.EndTime.isValid())
+        if(matches_pre_filters && (fi.StartTime.isValid() || fi.EndTime.isValid()))
         {
             if(fi.StartTime.isValid() && fi.EndTime.isValid())
-                matches_time = fi.StartTime <= e->GetModifyDate() &&
+                matches_pre_filters = fi.StartTime <= e->GetModifyDate() &&
                         e->GetModifyDate() <= fi.EndTime;
             else if(fi.StartTime.isValid())
-                matches_time = fi.StartTime <= e->GetModifyDate();
+                matches_pre_filters = fi.StartTime <= e->GetModifyDate();
             else
-                matches_time = e->GetModifyDate() <= fi.EndTime;
+                matches_pre_filters = e->GetModifyDate() <= fi.EndTime;
         }
 
-        if(matches_time)
+        if(matches_pre_filters)
         {
+            // Only check the search string if the pre-filters matched
             if(rx.pattern().isEmpty())
                 show_anyway = true;
             else
@@ -106,6 +113,10 @@ bool FilteredDatabaseModel::_update_index(const QModelIndex &src_ind, const QReg
                 for(int i = 0; !row_matches && i < e->Values().count(); ++i)
                 {
                     row_matches = -1 != e->Values()[i].GetNotes().indexOf(rx);
+
+                    // Only search the secret values if the user elects to
+                    if(!row_matches && fi.AlsoSearchSecrets)
+                        row_matches = -1 != e->Values()[i].GetValue().indexOf(rx);
                 }
             }
         }
@@ -180,6 +191,9 @@ QString FilterInfo_t::ToXml() const
         vl.append(SearchString);
         vl.append(FilterResults);
         vl.append(IgnoreCase);
+        vl.append(ShowOnlyFavorites);
+        vl.append(ShowOnlyFiles);
+        vl.append(AlsoSearchSecrets);
         vl.append((int)SearchStringType);
         vl.append(StartTime);
         vl.append(EndTime);
@@ -200,13 +214,15 @@ FilterInfo_t FilterInfo_t::FromXml(const QString &xml)
     if(vl.length() != 6)
         return FilterInfo_t();
 
-    FilterInfo_t ret(
-                vl[0].toString(),
-                vl[1].toBool(),
-                vl[2].toBool(),
-                (FilterInfo_t::StringType)vl[3].toInt());
-    ret.StartTime = vl[4].toDateTime();
-    ret.EndTime = vl[5].toDateTime();
+    FilterInfo_t ret(vl[0].toString(),
+            vl[1].toBool(),
+            vl[2].toBool(),
+            vl[3].toBool(),
+            vl[4].toBool(),
+            vl[5].toBool(),
+            (FilterInfo_t::StringType)vl[6].toInt());
+    ret.StartTime = vl[7].toDateTime();
+    ret.EndTime = vl[8].toDateTime();
     return ret;
 }
 

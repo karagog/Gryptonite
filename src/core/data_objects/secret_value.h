@@ -30,7 +30,7 @@ public:
     {}
 
     PROPERTY(Name, QString);
-    PROPERTY(Value, QByteArray);
+    PROPERTY(Value, QString);
     PROPERTY(Notes, QString);
     PROPERTY(IsHidden, bool);
 

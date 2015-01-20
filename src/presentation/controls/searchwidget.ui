@@ -6,15 +6,31 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>277</height>
+    <width>311</width>
+    <height>454</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_2">
-   <item row="0" column="1" colspan="2">
+  <layout class="QFormLayout" name="formLayout">
+   <property name="fieldGrowthPolicy">
+    <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+   </property>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Search:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
     <widget class="QLineEdit" name="lineEdit">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -22,12 +38,83 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="toolTip">
+      <string>Search the encrypted database</string>
+     </property>
      <property name="whatsThis">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;The search string can either be a wildcard or regular expression, depending on the selection below&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="0" colspan="3">
+   <item row="2" column="0" colspan="2">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Options</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="chk_caseSensitive">
+        <property name="toolTip">
+         <string>Should search be case-sensitive?</string>
+        </property>
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Controls whether the search string should be interpreted as case-sensitive&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Case Sensitive</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QCheckBox" name="chk_onlyFiles">
+        <property name="toolTip">
+         <string>Show only entries with files in the view</string>
+        </property>
+        <property name="text">
+         <string>Show Only  Files</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QCheckBox" name="chk_onlyFavorites">
+        <property name="toolTip">
+         <string>Show only favorites in the view</string>
+        </property>
+        <property name="text">
+         <string>Show Only Favorites</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="chk_filter_results">
+        <property name="toolTip">
+         <string>Should the view filter the unmatched entries?</string>
+        </property>
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;If this is checked, then any rows that don't match the search string will be hidden from view. Note that entries whose ancestors match the search string are still shown.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Filter Results</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QCheckBox" name="chk_alsoSecrets">
+        <property name="toolTip">
+         <string>Search the secret values, such as passwords</string>
+        </property>
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Normally you don't want to search your passwords, but in case one of your passwords gets compromised you can use this function to find every entry where your password is used so you can update them.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Also Search Secrets</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="2">
     <widget class="QPushButton" name="btn_clear">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
@@ -43,23 +130,10 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Search:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0" colspan="3">
+   <item row="3" column="0" colspan="2">
     <widget class="QGroupBox" name="gb_filterType">
      <property name="title">
-      <string>Filter Type</string>
+      <string>Search String Type</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="1" column="0">
@@ -88,13 +162,13 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="0" colspan="3">
+   <item row="4" column="0" colspan="2">
     <widget class="QGroupBox" name="gb_time">
      <property name="whatsThis">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Select a time range by which to filter entries&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="title">
-      <string>Time Selection</string>
+      <string>Time Range Selection</string>
      </property>
      <property name="flat">
       <bool>false</bool>
@@ -132,26 +206,6 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="1">
-    <widget class="QCheckBox" name="chk_filter_results">
-     <property name="whatsThis">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;If this is checked, then any rows that don't match the search string will be hidden from view. Note that entries whose ancestors match the search string are still shown.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Hide Unmatched Rows</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="2">
-    <widget class="QCheckBox" name="chk_caseSensitive">
-     <property name="whatsThis">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Controls whether the search string should be interpreted as case-sensitive&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="text">
-      <string>Case Sensitive</string>
-     </property>
-    </widget>
-   </item>
   </layout>
  </widget>
  <resources/>
@@ -179,8 +233,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>94</x>
-     <y>97</y>
+     <x>120</x>
+     <y>270</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -195,8 +249,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>59</x>
-     <y>111</y>
+     <x>85</x>
+     <y>298</y>
     </hint>
     <hint type="destinationlabel">
      <x>2</x>
@@ -211,8 +265,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>19</x>
-     <y>171</y>
+     <x>28</x>
+     <y>411</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -227,8 +281,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>72</x>
-     <y>172</y>
+     <x>98</x>
+     <y>362</y>
     </hint>
     <hint type="destinationlabel">
      <x>129</x>
@@ -243,8 +297,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>46</x>
-     <y>202</y>
+     <x>72</x>
+     <y>395</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
@@ -259,8 +313,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>227</x>
-     <y>171</y>
+     <x>292</x>
+     <y>367</y>
     </hint>
     <hint type="destinationlabel">
      <x>394</x>
@@ -275,8 +329,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>380</x>
-     <y>205</y>
+     <x>292</x>
+     <y>400</y>
     </hint>
     <hint type="destinationlabel">
      <x>394</x>
@@ -291,8 +345,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>380</x>
-     <y>97</y>
+     <x>292</x>
+     <y>94</y>
     </hint>
     <hint type="destinationlabel">
      <x>344</x>
@@ -307,8 +361,8 @@
    <slot>Clear()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>157</x>
-     <y>259</y>
+     <x>166</x>
+     <y>444</y>
     </hint>
     <hint type="destinationlabel">
      <x>218</x>
@@ -323,12 +377,60 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>54</x>
-     <y>41</y>
+     <x>80</x>
+     <y>122</y>
     </hint>
     <hint type="destinationlabel">
      <x>111</x>
      <y>45</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>chk_onlyFavorites</sender>
+   <signal>clicked()</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>148</x>
+     <y>133</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>165</x>
+     <y>220</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>chk_onlyFiles</sender>
+   <signal>clicked()</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>113</x>
+     <y>172</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>106</x>
+     <y>219</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>chk_alsoSecrets</sender>
+   <signal>clicked()</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>135</x>
+     <y>200</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>4</x>
+     <y>245</y>
     </hint>
    </hints>
   </connection>

@@ -56,7 +56,7 @@ template<>QDomNode XmlConverter::AppendToXmlNode(const Entry &e, QDomNode &root,
             val_elt.setAttribute("note", sv.GetNotes().toUtf8().toBase64().constData());
         if(sv.GetIsHidden())
             val_elt.setAttribute("hide", 1);
-        val_elt.setAttribute("value", sv.GetValue().toBase64().constData());
+        val_elt.setAttribute("value", sv.GetValue().toUtf8().toBase64().constData());
     }
     return ret;
 }
@@ -95,7 +95,7 @@ template<>Entry XmlConverter::FromXmlNode(const QDomElement &elt)
 
         s = c_elt.attribute("value");
         if(!s.isEmpty())
-            v.SetValue(QByteArray::fromBase64(s.toUtf8()));
+            v.SetValue(QString::fromUtf8(QByteArray::fromBase64(s.toUtf8())));
 
         ret.Values().append(v);
     }

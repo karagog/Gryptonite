@@ -111,6 +111,10 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
         ui->searchWidget->SetFilter(
                     FilterInfo_t::FromXml(m_settings->Value(MAINWINDOW_SEARCH_SETTING).toString()));
     }
+    else{
+        // The FilterInfo struct defines the defaults
+        ui->searchWidget->SetFilter(FilterInfo_t());
+    }
 
     connect(ui->actionQuit, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(ui->actionNewOpenDB, SIGNAL(triggered()), this, SLOT(_new_open_database()));
@@ -157,6 +161,13 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
         restoreGeometry(m_settings->Value(MAINWINDOW_GEOMETRY_SETTING).toByteArray());
     if(m_settings->Contains(MAINWINDOW_STATE_SETTING))
         restoreState(m_settings->Value(MAINWINDOW_STATE_SETTING).toByteArray());
+    else{
+        // Prepare the default interface
+        Widget::CenterInScreen(this);
+
+        // The search widget is pretty bulky, so let's hide it by default
+        ui->dw_search->hide();
+    }
 
     _update_ui_file_opened(false);
     _lock_unlock_interface(false);
@@ -554,6 +565,21 @@ void MainWindow::_close_database(bool delete_model)
 void MainWindow::_save_as()
 {
     GASSERT(IsFileOpen());
+    {
+        GetPasswordDialog dlg(m_settings, _get_database_model()->FilePath(), this);
+        if(QDialog::Accepted != dlg.exec())
+            return;
+
+        if(!_get_database_model()->CheckCredentials(dlg.GetCredentials())){
+            QMessageBox::information(this,
+                                     tr("Password Incorrect"),
+                                     tr("The password you entered for the current file"
+                                        " is incorrect. Therefore I am not allowed to "
+                                        " save it with different credentials."));
+            return;
+        }
+    }
+
     QString fn = __get_new_database_filename(this, tr("Save as file"), true);
     if(fn.isEmpty())
         return;
@@ -699,7 +725,7 @@ void MainWindow::_favorite_action_clicked(QAction *a)
                 if(!QDesktopServices::openUrl(QUrl(sv.GetValue()))){
                     QMessageBox::warning(this, tr("Opening URL Failed"),
                                          QString(tr("Could not open URL: %1"))
-                                         .arg(sv.GetValue().constData()));
+                                         .arg(sv.GetValue()));
                 }
             }
         }
@@ -1011,8 +1037,9 @@ void MainWindow::_lock_unlock_interface(bool lock)
         m_isLocked = true;
 
         _hide();
+        m_trayIcon.setToolTip(tr(GRYPTO_APP_NAME " Locked"));
         m_trayIcon.showMessage(tr("Locked"),
-                               tr(GRYPTO_APP_NAME" has been locked."
+                               tr(GRYPTO_APP_NAME " has been locked."
                                   "\nClick icon to unlock."));
     }
     else
@@ -1024,6 +1051,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
         ui->stackedWidget->setCurrentIndex(1);
         ui->actionLockUnlock->setText(tr("&Lock Application"));
         ui->actionLockUnlock->setData(true);
+        m_trayIcon.setToolTip(tr(GRYPTO_APP_NAME " Encrypted Secrets"));
         m_isLocked = false;
     }
 

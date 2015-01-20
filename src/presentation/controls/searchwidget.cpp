@@ -64,6 +64,9 @@ void SearchWidget::SetFilter(const FilterInfo_t &fi)
     ui->lineEdit->setText(fi.SearchString);
     ui->chk_filter_results->setChecked(fi.FilterResults);
     ui->chk_caseSensitive->setChecked(!fi.IgnoreCase);
+    ui->chk_onlyFavorites->setChecked(fi.ShowOnlyFavorites);
+    ui->chk_onlyFiles->setChecked(fi.ShowOnlyFiles);
+    ui->chk_alsoSecrets->setChecked(fi.AlsoSearchSecrets);
     ui->chk_start->setChecked(!fi.StartTime.isNull());
     ui->chk_end->setChecked(!fi.EndTime.isNull());
     ui->dte_start->setDateTime(fi.StartTime);
@@ -74,11 +77,14 @@ void SearchWidget::SetFilter(const FilterInfo_t &fi)
 FilterInfo_t SearchWidget::GetFilter() const
 {
     FilterInfo_t ret(ui->lineEdit->text().trimmed(),
-                    ui->chk_filter_results->isChecked(),
-                    !ui->chk_caseSensitive->isChecked(),
-                    ui->rdo_wildCard->isChecked() ?
-                                    FilterInfo_t::Wildcard :
-                                    FilterInfo_t::RegExp);
+                     ui->chk_filter_results->isChecked(),
+                     !ui->chk_caseSensitive->isChecked(),
+                     ui->chk_onlyFavorites->isChecked(),
+                     ui->chk_onlyFiles->isChecked(),
+                     ui->chk_alsoSecrets->isChecked(),
+                     ui->rdo_wildCard->isChecked() ?
+                         FilterInfo_t::Wildcard :
+                         FilterInfo_t::RegExp);
 
     if(ui->gb_time->isChecked())
     {
@@ -97,11 +103,15 @@ void SearchWidget::Clear()
     ui->gb_time->setChecked(false);
     ui->chk_start->setChecked(false);
     ui->chk_end->setChecked(false);
-    ui->dte_start->setDateTime(QDateTime::currentDateTime());
-    ui->dte_end->setDateTime(QDateTime::currentDateTime());
 
     emit FilterChanged(FilterInfo_t());
     m_suppressUpdates = false;
+}
+
+void SearchWidget::hideEvent(QHideEvent *ev)
+{
+    Clear();
+    QWidget::hideEvent(ev);
 }
 
 void SearchWidget::_something_changed()

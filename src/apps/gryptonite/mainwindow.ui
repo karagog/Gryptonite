@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
-    <height>565</height>
+    <width>795</width>
+    <height>584</height>
    </rect>
   </property>
   <property name="windowIcon">
@@ -95,7 +95,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>600</width>
+     <width>795</width>
      <height>25</height>
     </rect>
    </property>
@@ -112,8 +112,14 @@
      <property name="enabled">
       <bool>false</bool>
      </property>
+     <property name="toolTip">
+      <string>Coming soon!</string>
+     </property>
      <property name="title">
       <string>&amp;Export</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
      </property>
      <addaction name="action_export_ps"/>
     </widget>
@@ -121,8 +127,14 @@
      <property name="enabled">
       <bool>false</bool>
      </property>
+     <property name="toolTip">
+      <string>Coming soon!</string>
+     </property>
      <property name="title">
       <string>&amp;Import</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
      </property>
      <addaction name="action_import_ps"/>
     </widget>
@@ -234,6 +246,9 @@
   <widget class="QDockWidget" name="dw_search">
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Use the search window to filter and highlight entries that match the search parameters in the tree view.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;You can use wildcards or regular expressions, filter by date/time, etc... This should make finding your secrets as easy as possible.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="floating">
+    <bool>true</bool>
    </property>
    <property name="windowTitle">
     <string>Search</string>

@@ -47,6 +47,7 @@ signals:
 protected:
     virtual void focusInEvent(QFocusEvent *ev);
     virtual bool eventFilter(QObject *, QEvent *);
+    virtual void hideEvent(QHideEvent *);
 
 private slots:
     void _something_changed();

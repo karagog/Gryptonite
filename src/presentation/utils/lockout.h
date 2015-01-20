@@ -19,6 +19,8 @@ limitations under the License.*/
 #include <QMutex>
 #include <QDateTime>
 
+namespace Grypt{
+
 
 /** A class to emit a lock signal after a specific timeout. */
 class Lockout : public QObject
@@ -41,6 +43,11 @@ public:
     /** Resets the lockout timer if it was already started, otherwise does nothing. */
     void ResetLockoutTimer(int minutes);
     
+    /** A static helper function that returns true if the event is of the type that
+     *  is considered user activity (such as mouse clicks or focus events)
+    */
+    static bool IsUserActivity(QEvent *);
+
     
 signals:
 
@@ -59,5 +66,7 @@ private:
 
 };
 
+
+}
 
 #endif // LOCKOUT_H

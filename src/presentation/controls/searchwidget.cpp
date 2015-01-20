@@ -14,7 +14,8 @@ limitations under the License.*/
 
 #include "searchwidget.h"
 #include "ui_searchwidget.h"
-#include "grypto_common.h"
+#include <grypto_common.h>
+#include <grypto_lockout.h>
 
 NAMESPACE_GRYPTO;
 
@@ -25,13 +26,30 @@ SearchWidget::SearchWidget(QWidget *parent)
       m_suppressUpdates(false)
 {
     ui->setupUi(this);
-    //setFocusProxy(ui->lineEdit);
     Clear();
+
+    ui->lineEdit->installEventFilter(this);
+    ui->chk_caseSensitive->installEventFilter(this);
+    ui->chk_filter_results->installEventFilter(this);
+    ui->rdo_regexp->installEventFilter(this);
+    ui->rdo_wildCard->installEventFilter(this);
+    ui->chk_start->installEventFilter(this);
+    ui->dte_start->installEventFilter(this);
+    ui->chk_end->installEventFilter(this);
+    ui->dte_end->installEventFilter(this);
+    ui->btn_clear->installEventFilter(this);
 }
 
 SearchWidget::~SearchWidget()
 {
     delete ui;
+}
+
+bool SearchWidget::eventFilter(QObject *, QEvent *ev)
+{
+    if(Lockout::IsUserActivity(ev))
+        emit NotifyUserActivity();
+    return false;
 }
 
 void SearchWidget::focusInEvent(QFocusEvent *ev)

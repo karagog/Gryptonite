@@ -42,9 +42,11 @@ public slots:
 
 signals:
     void FilterChanged(const Grypt::FilterInfo_t &);
+    void NotifyUserActivity();
 
 protected:
     virtual void focusInEvent(QFocusEvent *ev);
+    virtual bool eventFilter(QObject *, QEvent *);
 
 private slots:
     void _something_changed();

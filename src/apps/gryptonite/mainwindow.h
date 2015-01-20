@@ -15,9 +15,9 @@ limitations under the License.*/
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "lockout.h"
 #include "grypto_clipboardaccess.h"
 #include "grypto_databasemodel.h"
+#include <grypto_lockout.h>
 #include <gutil/smartpointer.h>
 #include <gutil/progressbarcontrol.h>
 #include <QMainWindow>
@@ -70,10 +70,6 @@ public:
 
     /** For proper behavior this must be called before any application cleanup code. */
     void AboutToQuit();
-
-signals:
-
-    void NotifyUserInteraction();
 
 
 public slots:
@@ -138,6 +134,8 @@ private slots:
     void _hide();
     void _show();
 
+    void _reset_lockout_timer();
+
 
 private:
     Ui::MainWindow *ui;
@@ -150,7 +148,7 @@ private:
     QAction m_add_remove_favorites;
     QUndoStack m_navStack;
     Grypt::ClipboardAccess m_clipboard;
-    Lockout m_lockoutTimer;
+    Grypt::Lockout m_lockoutTimer;
     bool m_isLocked;
     QByteArray m_savedState;
     GUtil::SmartPointer<QWidget> m_encryptDecryptWindow;
@@ -175,7 +173,6 @@ private:
     Grypt::Entry const *_get_currently_selected_entry() const;
     void _edit_entry(const Grypt::Entry &);
     bool _handle_key_pressed(QKeyEvent *);
-    void _reset_lockout_timer(QEvent *);
 
 };
 

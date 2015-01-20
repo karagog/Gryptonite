@@ -15,7 +15,10 @@ limitations under the License.*/
 #include "lockout.h"
 #include <QTimerEvent>
 
-#define TIMER_RESOLUTION 60001
+#define TIMER_RESOLUTION 2500
+
+namespace Grypt{
+
 
 Lockout::Lockout(QObject *p)
     :QObject(p),
@@ -63,4 +66,28 @@ void Lockout::_kill_timer()
 {
     killTimer(timerId);
     timerId = -1;
+}
+
+bool Lockout::IsUserActivity(QEvent *e)
+{
+    bool ret = false;
+    switch(e->type())
+    {
+    // All of these events cause us to reset the lockout timer
+    case QEvent::ActivationChange:
+    case QEvent::WindowStateChange:
+    case QEvent::FocusIn:
+    case QEvent::Move:
+    case QEvent::KeyPress:
+    case QEvent::MouseButtonPress:
+    case QEvent::Wheel:
+        ret = true;
+        break;
+    default:
+        break;
+    }
+    return ret;
+}
+
+
 }

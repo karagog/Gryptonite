@@ -28,7 +28,6 @@ LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
 
 HEADERS += \
     mainwindow.h \
-    lockout.h \
     application.h \
     about.h \
     preferences_edit.h \
@@ -39,7 +38,6 @@ HEADERS += \
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    lockout.cpp \
     application.cpp \
     about.cpp \
     preferences_edit.cpp \

@@ -149,7 +149,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     connect(&m_lockoutTimer, SIGNAL(Lock()), this, SLOT(Lock()));
 
     ui->treeView->installEventFilter(this);
-    ui->searchWidget->installEventFilter(this);
+    connect(ui->searchWidget, SIGNAL(NotifyUserActivity()),
+            this, SLOT(_reset_lockout_timer()));
 
     // Restore the previous session's window state
     if(m_settings->Contains(MAINWINDOW_GEOMETRY_SETTING))
@@ -260,7 +261,8 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
     bool ret = false;
 
     // Depending on the event, we may need to reset the lockout timer
-    _reset_lockout_timer(ev);
+    if(Lockout::IsUserActivity(ev))
+        _reset_lockout_timer();
 
     if(ev->type() == QEvent::KeyPress)
     {
@@ -1070,29 +1072,18 @@ void MainWindow::RequestUnlock()
 
 bool MainWindow::event(QEvent *e)
 {
-    _reset_lockout_timer(e);
+    if(Lockout::IsUserActivity(e))
+        _reset_lockout_timer();
     return QMainWindow::event(e);
 }
 
-void MainWindow::_reset_lockout_timer(QEvent *e)
+void MainWindow::_reset_lockout_timer()
 {
-    switch(e->type())
-    {
-    // All of these events cause us to reset the lockout timer
-    case QEvent::WindowStateChange:
-    case QEvent::FocusIn:
-    case QEvent::KeyPress:
-    case QEvent::MouseButtonPress:
-    case QEvent::Wheel:
-        if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT))
-            m_lockoutTimer.ResetLockoutTimer(m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt());
+    if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT))
+        m_lockoutTimer.ResetLockoutTimer(m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt());
 
-        // For better debugging of this event, let's hear a beep whenever we reset the timer
-        //QApplication::beep();
-        break;
-    default:
-        break;
-    }
+    // For better debugging of this event, let's hear a beep whenever we reset the timer
+    //QApplication::beep();
 }
 
 void MainWindow::_cryptographic_transformations()

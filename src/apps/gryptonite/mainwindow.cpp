@@ -1108,6 +1108,11 @@ void MainWindow::_progress_updated(int progress, const QString &task_name)
 
     if(progress == 100){
         ui->statusbar->showMessage(QString(tr("Finished %1")).arg(task_name), STATUSBAR_MSG_TIMEOUT);
+
+        // Refresh the entry in the view, because maybe its status changed
+        //  now that the task is complete
+        ui->view_entry->SetEntry(ui->view_entry->GetEntry());
+
 #ifdef Q_OS_WIN
         m_taskbarButton.progress()->hide();
     }

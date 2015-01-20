@@ -33,7 +33,8 @@ HEADERS += \
     preferences_edit.h \
     settings.h \
     entry_popup.h \
-    legacymanager.h
+    legacymanager.h \
+    delegate_time_column.h
 
 SOURCES += \
     main.cpp \

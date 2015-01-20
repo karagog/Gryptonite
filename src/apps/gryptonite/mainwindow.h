@@ -71,7 +71,6 @@ public:
     /** For proper behavior this must be called before any application cleanup code. */
     void AboutToQuit();
 
-
 public slots:
 
     /** Locks the interface. (true = lock)*/
@@ -166,6 +165,7 @@ private:
     void _install_new_database_model(Grypt::DatabaseModel *dbm);
     void _update_ui_file_opened(bool);
     void _lock_unlock_interface(bool);
+    void _update_time_format();
     Grypt::FilteredDatabaseModel *_get_proxy_model() const;
     Grypt::DatabaseModel *_get_database_model() const;
 

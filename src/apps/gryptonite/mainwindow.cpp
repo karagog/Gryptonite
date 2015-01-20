@@ -668,8 +668,8 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->action_Save_As->setEnabled(b);
     ui->action_Close->setEnabled(b);
     ui->menuEntry->setEnabled(b);
-    ui->menu_Export->setEnabled(b);
-    ui->menu_Import->setEnabled(b);
+//    ui->menu_Export->setEnabled(b);
+//    ui->menu_Import->setEnabled(b);
 
     if(!b)
     {
@@ -1029,8 +1029,8 @@ void MainWindow::_lock_unlock_interface(bool lock)
 
     bool b = !lock && IsFileOpen();
     ui->action_Save_As->setEnabled(b);
-    ui->menu_Export->setEnabled(b);
-    ui->menu_Import->setEnabled(b);
+//    ui->menu_Export->setEnabled(b);
+//    ui->menu_Import->setEnabled(b);
     ui->actionNew_Entry->setEnabled(b);
     ui->action_EditEntry->setEnabled(b);
     ui->action_DeleteEntry->setEnabled(b);

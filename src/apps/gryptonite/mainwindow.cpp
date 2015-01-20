@@ -17,7 +17,6 @@ limitations under the License.*/
 #include "preferences_edit.h"
 #include "settings.h"
 #include "legacymanager.h"
-#include "delegate_time_column.h"
 #include "grypto_common.h"
 #include "grypto_newpassworddialog.h"
 #include "grypto_getpassworddialog.h"
@@ -83,7 +82,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
 
     ui->treeView->setModel(new FilteredDatabaseModel(this));
     ui->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    ui->treeView->setItemDelegateForColumn(1, new TimeColumnDelegate(this));
     _update_time_format();
 
     _update_trayIcon_menu();
@@ -1165,8 +1163,9 @@ void MainWindow::_organize_favorites()
 
 void MainWindow::_update_time_format()
 {
-    ((TimeColumnDelegate *)ui->treeView->itemDelegateForColumn(1))
-            ->SetFormat24Hours(m_settings->Value(GRYPTONITE_SETTING_TIME_FORMAT_24HR).toBool());
+    if(_get_database_model())
+        _get_database_model()->SetTimeFormat24Hours(
+                    m_settings->Value(GRYPTONITE_SETTING_TIME_FORMAT_24HR).toBool());
 }
 
 void MainWindow::_edit_preferences()

@@ -61,6 +61,9 @@ public:
 
     /** Returns a reference to the cryptor used by the database object. */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
+    
+    /** Changes the time format shown in views */
+    void SetTimeFormat24Hours(bool = true);
 
 
     /** Returns the model index of the entry, or an invalid one if it can't be found.
@@ -208,6 +211,7 @@ private:
     QList<EntryContainer *> m_root;
     QHash<EntryId, EntryContainer *> m_index;
     GUtil::UndoStack m_undostack;
+    bool m_timeFormat;
 
     EntryContainer *_get_container_from_index(const QModelIndex &) const;
     QList<EntryContainer *> const &_get_child_list(const QModelIndex &) const;

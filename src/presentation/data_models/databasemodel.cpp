@@ -26,6 +26,8 @@ USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);
 using namespace std;
 
+#define GRYPTONITE_DATE_FORMAT_STRING "d MMM yyyy h:m"
+
 NAMESPACE_GRYPTO;
 
 struct EntryContainer
@@ -204,7 +206,8 @@ DatabaseModel::DatabaseModel(const char *f,
                              QObject *parent)
     :QAbstractItemModel(parent),
       m_db(f, ask_for_lock_override),
-      m_undostack([&]{ emit NotifyUndoStackChanged(); })
+      m_undostack([&]{ emit NotifyUndoStackChanged(); }),
+      m_timeFormat(true)
 {
     connect(&m_db, SIGNAL(NotifyFavoritesUpdated()),
             this, SIGNAL(NotifyFavoritesUpdated()));
@@ -313,6 +316,11 @@ Qt::ItemFlags DatabaseModel::flags(const QModelIndex &) const
             Qt::ItemIsDropEnabled;
 }
 
+void DatabaseModel::SetTimeFormat24Hours(bool tf)
+{
+    m_timeFormat = tf;
+}
+
 QVariant DatabaseModel::data(const QModelIndex &ind, int role) const
 {
     QVariant ret;
@@ -326,8 +334,12 @@ QVariant DatabaseModel::data(const QModelIndex &ind, int role) const
         case Qt::DisplayRole:
             if(col == 0)
                 ret = ec->entry.GetName();
-            else if(col == 1)
-                ret = ec->entry.GetModifyDate();
+            else if(col == 1){
+                ret = ec->entry.GetModifyDate().toString(
+                    m_timeFormat ?
+                        GRYPTONITE_DATE_FORMAT_STRING :
+                        GRYPTONITE_DATE_FORMAT_STRING " ap");
+            }
             break;
         case Qt::ToolTipRole:
             ret = ec->entry.GetDescription();

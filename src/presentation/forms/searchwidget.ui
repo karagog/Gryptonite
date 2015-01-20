@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SearchWidget</class>
+ <widget class="QWidget" name="SearchWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>277</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QFormLayout" name="formLayout">
+   <property name="fieldGrowthPolicy">
+    <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+   </property>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Search:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLineEdit" name="lineEdit"/>
+   </item>
+   <item row="1" column="0" colspan="2">
+    <widget class="QGroupBox" name="gb_filterType">
+     <property name="title">
+      <string>Filter Type</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="rdo_regexp">
+        <property name="text">
+         <string>Regular Expression</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="rdo_wildCard">
+        <property name="text">
+         <string>Wildcard</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="chk_caseSensitive">
+        <property name="text">
+         <string>Case Sensitive</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <widget class="QGroupBox" name="gb_time">
+     <property name="title">
+      <string>Time Selection</string>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout_2">
+      <property name="fieldGrowthPolicy">
+       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+      </property>
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="chk_start">
+        <property name="text">
+         <string>Start Time</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QDateTimeEdit" name="dte_start"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="chk_end">
+        <property name="text">
+         <string>End Time</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QDateTimeEdit" name="dte_end"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="2">
+    <widget class="QPushButton" name="btn_clear">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Clear Filter</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>lineEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>121</x>
+     <y>24</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>181</x>
+     <y>34</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>rdo_wildCard</sender>
+   <signal>clicked()</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>75</x>
+     <y>75</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>107</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>rdo_regexp</sender>
+   <signal>clicked()</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>59</x>
+     <y>111</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>2</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>gb_time</sender>
+   <signal>clicked()</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>19</x>
+     <y>171</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>171</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>chk_start</sender>
+   <signal>clicked()</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>72</x>
+     <y>172</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>129</x>
+     <y>157</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>chk_end</sender>
+   <signal>clicked()</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>46</x>
+     <y>202</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>299</x>
+     <y>158</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dte_start</sender>
+   <signal>dateTimeChanged(QDateTime)</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>227</x>
+     <y>171</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>394</x>
+     <y>184</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dte_end</sender>
+   <signal>dateTimeChanged(QDateTime)</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>287</x>
+     <y>208</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>394</x>
+     <y>232</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>chk_caseSensitive</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>225</x>
+     <y>77</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>344</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btn_clear</sender>
+   <signal>clicked()</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_clear_filter()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>157</x>
+     <y>259</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>218</x>
+     <y>285</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>_something_changed()</slot>
+  <slot>_clear_filter()</slot>
+ </slots>
+</ui>

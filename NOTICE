@@ -1,0 +1,13 @@
+   Gryptonite
+
+   This product comprises of software developed at home by George Karagoulis.
+
+   This software links to a static library from another open source project 
+   called "crypto++".
+   
+   It was also built and distributes with with the Qt application 
+   framework, which is as well an open source initiative.
+   
+   This was built for my own purposes, but I am sharing it altruistically
+   with the rest of the world.  Enjoy my generosity, but don't take it for
+   granted!

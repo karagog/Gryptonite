@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/star.png</file>
+        <file>icons/exclamation.png</file>
+        <file>icons/checkmark.png</file>
+        <file>icons/redX.png</file>
+        <file>icons/minus.png</file>
+        <file>icons/plus.png</file>
+        <file>icons/downarrow.png</file>
+        <file>icons/uparrow.png</file>
+        <file>icons/main.png</file>
+        <file>icons/key.png</file>
+        <file>icons/leftarrow.png</file>
+        <file>icons/rightarrow.png</file>
+        <file>icons/notes.png</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,678 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EntryEdit</class>
+ <widget class="QDialog" name="EntryEdit">
+  <property name="windowModality">
+   <enum>Qt::ApplicationModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>433</width>
+    <height>452</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Edit Secret</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../grypto_ui.qrc">
+    <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QGridLayout" name="gridLayout_2">
+     <item row="2" column="4">
+      <widget class="QToolButton" name="btn_fileUpload">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Upload File</string>
+       </property>
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0" colspan="2">
+      <widget class="QLabel" name="label">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Label: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0" colspan="2">
+      <widget class="QLabel" name="label_2">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Description:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QPushButton" name="fav_btn">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Mark this entry as a favorite</string>
+       </property>
+       <property name="whatsThis">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2';&quot;&gt;Mark this entry as one of your favorites.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2';&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2';&quot;&gt;Favorite entries show up in the tray icon menu when you right-click it.  Use favorites to quickly access the secrets you use the most.  Add a &amp;quot;URL&amp;quot; item to the entry, and a web browser will be launched to go there when you select a favorite like this.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="../grypto_ui.qrc">
+         <normaloff>:/icons/star.png</normaloff>:/icons/star.png</iconset>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0" colspan="2">
+      <widget class="QLabel" name="label_3">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>File Status:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <layout class="QVBoxLayout" name="buttonsLayout">
+       <item>
+        <widget class="QPushButton" name="upBtn">
+         <property name="toolTip">
+          <string>Move the selection up</string>
+         </property>
+         <property name="whatsThis">
+          <string/>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="icon">
+          <iconset resource="../grypto_ui.qrc">
+           <normaloff>:/icons/uparrow.png</normaloff>:/icons/uparrow.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="downBtn">
+         <property name="toolTip">
+          <string>Move the selection down</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../grypto_ui.qrc">
+           <normaloff>:/icons/downarrow.png</normaloff>:/icons/downarrow.png</iconset>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="1" colspan="4">
+      <widget class="QTableView" name="tableView">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>1</horstretch>
+         <verstretch>1</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="acceptDrops">
+        <bool>true</bool>
+       </property>
+       <property name="whatsThis">
+        <string>Use this interactive table to quickly edit entries.
+
+You can highlight and drag text content from outside the application into the boxes for quick field population.
+
+Use the arrows on the side to adjust the order that the enries appear in.</string>
+       </property>
+       <property name="editTriggers">
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
+       </property>
+       <property name="tabKeyNavigation">
+        <bool>false</bool>
+       </property>
+       <property name="showDropIndicator" stdset="0">
+        <bool>false</bool>
+       </property>
+       <property name="alternatingRowColors">
+        <bool>true</bool>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::SingleSelection</enum>
+       </property>
+       <property name="selectionBehavior">
+        <enum>QAbstractItemView::SelectRows</enum>
+       </property>
+       <property name="gridStyle">
+        <enum>Qt::DashLine</enum>
+       </property>
+       <property name="cornerButtonEnabled">
+        <bool>false</bool>
+       </property>
+       <attribute name="horizontalHeaderVisible">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="horizontalHeaderMinimumSectionSize">
+        <number>125</number>
+       </attribute>
+       <attribute name="horizontalHeaderStretchLastSection">
+        <bool>true</bool>
+       </attribute>
+       <attribute name="verticalHeaderVisible">
+        <bool>false</bool>
+       </attribute>
+      </widget>
+     </item>
+     <item row="3" column="1" colspan="4">
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QPushButton" name="addBtn">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>75</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Add something you want to remember</string>
+         </property>
+         <property name="whatsThis">
+          <string>Adds a new item to the list below.</string>
+         </property>
+         <property name="autoFillBackground">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../grypto_ui.qrc">
+           <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="remBtn">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>75</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Remove</string>
+         </property>
+         <property name="whatsThis">
+          <string>Removes an item from the list below</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../grypto_ui.qrc">
+           <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="1" column="2" colspan="3">
+      <widget class="QTextEdit" name="descriptionEdit">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>1</horstretch>
+         <verstretch>1</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A description to help you remember the context of this entry.&lt;/p&gt;&lt;p&gt;Also this will aid the search function because it will have more keywords to find.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="whatsThis">
+        <string>Keep a note about this entry.
+
+This will give the searchbar more words to match with, so you can use this to apply tags to help you find entries.</string>
+       </property>
+       <property name="tabChangesFocus">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2" colspan="3">
+      <widget class="QLineEdit" name="labelEdit">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>A label to remember this by</string>
+       </property>
+       <property name="whatsThis">
+        <string>A label by which to remember your secret.</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="2" colspan="2">
+      <widget class="QLabel" name="lbl_fileStatus">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>No file uploaded</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="2" colspan="3">
+      <widget class="QWidget" name="widget" native="true">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QPushButton" name="edit_btn">
+          <property name="toolTip">
+           <string>Edit notes for one of the secret entries above</string>
+          </property>
+          <property name="whatsThis">
+           <string>Each secret you want to keep track of can have a note associated with it.
+
+Notes can help you remember useful things about the context of a password or URL or whatever.</string>
+          </property>
+          <property name="text">
+           <string>Edit Notes</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="toggleBtn">
+          <property name="toolTip">
+           <string>Hide/Show the contents of the selected field</string>
+          </property>
+          <property name="whatsThis">
+           <string>Toggles whether or not the selected item is a secret.
+
+&quot;Secrets&quot; are obscured in the interface by &quot;******&quot; so you can feel free to open this program even when people are looking at the screen.  Note that even though a secret item is obscured by asterisks, you can still access its contents in exactly the same way you would a normal item.</string>
+          </property>
+          <property name="text">
+           <string>Toggle Secret</string>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <property name="flat">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="genBtn">
+          <property name="toolTip">
+           <string>Generate a random value to fill a password field</string>
+          </property>
+          <property name="whatsThis">
+           <string>Generate a password by clicking this button.
+
+Passwords are generated randomly by selecting eight characters A-Z (4 lower case and 4 upper case), two numbers and two special characters (&amp;, %, !, etc...) and placing them in a random sequence.  Therefore you can guarantee by pressing this button that your new password contains a secure variety of 12 characters in a random sequence.
+
+Be careful, because pressing this button will wipe out any content currently held in the selected item.</string>
+          </property>
+          <property name="text">
+           <string>Generate Value</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="pushButton_3">
+       <property name="minimumSize">
+        <size>
+         <width>65</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>75</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>Accept changes</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="../grypto_ui.qrc">
+         <normaloff>:/icons/checkmark.png</normaloff>:/icons/checkmark.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton">
+       <property name="maximumSize">
+        <size>
+         <width>75</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="toolTip">
+        <string>Cancel changes</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="../grypto_ui.qrc">
+         <normaloff>:/icons/exclamation.png</normaloff>:/icons/exclamation.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>labelEdit</tabstop>
+  <tabstop>descriptionEdit</tabstop>
+  <tabstop>tableView</tabstop>
+  <tabstop>pushButton_3</tabstop>
+  <tabstop>pushButton</tabstop>
+  <tabstop>edit_btn</tabstop>
+  <tabstop>toggleBtn</tabstop>
+  <tabstop>genBtn</tabstop>
+  <tabstop>addBtn</tabstop>
+  <tabstop>remBtn</tabstop>
+  <tabstop>fav_btn</tabstop>
+  <tabstop>upBtn</tabstop>
+  <tabstop>downBtn</tabstop>
+  <tabstop>btn_fileUpload</tabstop>
+ </tabstops>
+ <resources>
+  <include location="../grypto_ui.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>pushButton_3</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>384</x>
+     <y>425</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>332</x>
+     <y>375</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>428</x>
+     <y>425</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>421</x>
+     <y>379</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>addBtn</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>_add_secret()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>201</x>
+     <y>190</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>108</x>
+     <y>144</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>remBtn</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>_del_secret()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>352</x>
+     <y>190</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>275</x>
+     <y>138</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggleBtn</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>_toggle_secret()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>61</x>
+     <y>432</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>21</x>
+     <y>331</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>genBtn</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>_generate_value()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>179</x>
+     <y>432</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>106</x>
+     <y>380</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>edit_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>_edit_notes()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>270</x>
+     <y>432</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>189</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>upBtn</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>_move_up()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>38</x>
+     <y>287</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>17</x>
+     <y>205</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>downBtn</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>_move_down()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>30</x>
+     <y>320</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>4</x>
+     <y>277</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btn_fileUpload</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryEdit</receiver>
+   <slot>_select_file()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>422</x>
+     <y>136</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>436</x>
+     <y>161</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>_add_secret()</slot>
+  <slot>_del_secret()</slot>
+  <slot>_toggle_secret()</slot>
+  <slot>_generate_value()</slot>
+  <slot>_edit_notes()</slot>
+  <slot>_move_up()</slot>
+  <slot>_move_down()</slot>
+  <slot>_select_file()</slot>
+ </slots>
+</ui>

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EntryView</class>
+ <widget class="QWidget" name="EntryView">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>395</width>
+    <height>264</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string/>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../grypto_ui.qrc">
+    <normaloff>:/icons/main.png</normaloff>:/icons/main.png</iconset>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="1">
+    <widget class="QPushButton" name="btn_mainWindow">
+     <property name="toolTip">
+      <string>Close this window and go back to the main window.</string>
+     </property>
+     <property name="whatsThis">
+      <string>Close this window and go back to the main window.</string>
+     </property>
+     <property name="text">
+      <string>Show in Big Window</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QPushButton" name="btn_toClipboard">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>Copy the selected item to the clipboard (copy/paste)</string>
+     </property>
+     <property name="whatsThis">
+      <string>Copy the contents of the selected item to the system clipboard.
+
+This allows you to paste it into fields like on a web form.
+
+If the content is secret, then it will be cleared from the clipboard after a timeout.  Configure the length of this timeout in preferences.</string>
+     </property>
+     <property name="text">
+      <string>Copy To Clipboard</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <widget class="QTableView" name="tableView">
+     <property name="contextMenuPolicy">
+      <enum>Qt::ActionsContextMenu</enum>
+     </property>
+     <property name="toolTip">
+      <string>Click-and-Drag
+
+Double-Click</string>
+     </property>
+     <property name="whatsThis">
+      <string>Access your secrets here.
+
+You can click-and-drag them or copy them to clipboard and paste them into forms.</string>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="dragEnabled">
+      <bool>true</bool>
+     </property>
+     <property name="dragDropMode">
+      <enum>QAbstractItemView::DragOnly</enum>
+     </property>
+     <property name="defaultDropAction">
+      <enum>Qt::CopyAction</enum>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::SingleSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <property name="showGrid">
+      <bool>false</bool>
+     </property>
+     <property name="wordWrap">
+      <bool>false</bool>
+     </property>
+     <property name="cornerButtonEnabled">
+      <bool>false</bool>
+     </property>
+     <attribute name="horizontalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
+     <attribute name="verticalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../grypto_ui.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>btn_toClipboard</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryView</receiver>
+   <slot>copy_to_clipboard()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>118</x>
+     <y>190</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>125</x>
+     <y>101</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tableView</sender>
+   <signal>doubleClicked(QModelIndex)</signal>
+   <receiver>EntryView</receiver>
+   <slot>copy_to_clipboard()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>151</x>
+     <y>70</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>122</x>
+     <y>32</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btn_mainWindow</sender>
+   <signal>clicked()</signal>
+   <receiver>EntryView</receiver>
+   <slot>go_back()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>194</x>
+     <y>186</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>228</x>
+     <y>127</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>copy_to_clipboard()</slot>
+  <slot>go_back()</slot>
+ </slots>
+</ui>

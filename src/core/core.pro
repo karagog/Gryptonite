@@ -1,0 +1,36 @@
+
+QT += sql xml
+
+TOP_DIR = ../..
+
+DESTDIR = $$TOP_DIR/lib
+TARGET = grypto_core
+TEMPLATE = lib
+QMAKE_CXXFLAGS += -std=c++0x
+
+CONFIG(debug, debug|release) {
+    #message(Preparing debug build)
+    DEFINES += DEBUG
+}
+else {
+    #message(Preparing release build)
+}
+
+DEFINES += GUTIL_CORE_QT_ADAPTERS
+
+
+INCLUDEPATH += $$TOP_DIR/include $$TOP_DIR/gutil/include
+
+LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
+    -lGUtilQt \
+    -lGUtilCryptoPP \
+    -lGUtil \
+    -lcryptopp
+
+SOURCES +=
+
+HEADERS += globals.h
+
+include(data_access/data_access.pri)
+include(data_objects/data_objects.pri)
+include(workers/workers.pri)

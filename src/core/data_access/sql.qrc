@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/sql">
+        <file>create_db.sql</file>
+    </qresource>
+</RCC>

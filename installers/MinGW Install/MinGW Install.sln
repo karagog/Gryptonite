@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "MinGW Install", "MinGW Install.vdproj", "{1B17A6C0-06BC-49DE-A553-0E69AB82CD67}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Default = Debug|Default
+		Release|Default = Release|Default
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1B17A6C0-06BC-49DE-A553-0E69AB82CD67}.Debug|Default.ActiveCfg = Debug
+		{1B17A6C0-06BC-49DE-A553-0E69AB82CD67}.Debug|Default.Build.0 = Debug
+		{1B17A6C0-06BC-49DE-A553-0E69AB82CD67}.Release|Default.ActiveCfg = Release
+		{1B17A6C0-06BC-49DE-A553-0E69AB82CD67}.Release|Default.Build.0 = Release
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

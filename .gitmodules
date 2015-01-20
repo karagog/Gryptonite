@@ -1,0 +1,4 @@
+[submodule "gutil"]
+	path = gutil
+	url = https://github.com/karagog/gutil.git
+#	url = git@github.com:karagog/gutil.git

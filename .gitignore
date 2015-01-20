@@ -1,0 +1,46 @@
+release
+debug
+
+doc
+include
+bin
+
+build-*-Debug
+build-*-Release
+
+*.[oa]
+*~
+*.lib
+*.dll
+*.so*
+*.user
+*.exe
+*.out
+
+*.dat
+
+
+# Project-specific ignores
+gutil_core.h
+gutil_qt.h
+
+
+# The user can add this specially if they need it
+Makefile*
+
+# Qt-specific ignores
+ui_*.h
+moc_*.cpp
+*.moc
+qrc_*.cpp
+*.Debug
+*.Release
+*.pro.user*
+*-build-desktop
+
+*.sqlite
+*.log
+*.txt
+
+# Doxygen files
+*.tag

@@ -10,6 +10,8 @@
 #define TopDir "..\.."
 #define QtPath "C:\Qt\5.4\mingw491_32"
 
+#define MainExe "gryptonite.exe"
+
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
@@ -35,10 +37,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 0,6.1
+Name: "associate"; Description: "&Associate .gdb and .GPdb files"; GroupDescription: "Files:";
 
 [Files]
 ; Application executables and shared libraries
-Source: "{#TopDir}\bin\gryptonite.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\{#MainExe}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_transforms.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\lib\grypto_core.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\lib\grypto_legacy.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -65,6 +68,16 @@ Source: "{#QtPath}\bin\icuin53.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\bin\icuuc53.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\plugins\platforms\qwindows.dll"; DestDir: "{app}/platforms"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+
+[Registry]
+; Create a handler for regular database files
+Root: HKCR; Subkey: "Gryptonite.gdb"; ValueType: string; ValueData: "Gryptonite Database"; Flags: uninsdeletekey;
+Root: HKCR; Subkey: "Gryptonite.gdb\DefaultIcon"; ValueType: string; ValueData: "{app}\{#MainExe}"; Flags: uninsdeletekey;
+Root: HKCR; Subkey: "Gryptonite.gdb\shell\Open\Command"; ValueType: string; ValueData: "{app}\{#MainExe} ""%1"" "; Flags: uninsdeletekey;
+
+; These file types are only associated if the "associate" task was selected (the default)
+Root: HKCR; Subkey: ".gdb"; ValueType: string; ValueData: "Gryptonite.gdb"; Flags: uninsdeletekey; Tasks: associate
+Root: HKCR; Subkey: ".GPdb"; ValueType: string; ValueData: "Gryptonite.gdb"; Flags: uninsdeletekey; Tasks: associate
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

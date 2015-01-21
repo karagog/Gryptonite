@@ -10,8 +10,6 @@
 #define TopDir "..\.."
 #define QtPath "C:\Qt\5.4\mingw491_32"
 
-#define MainExe "gryptonite.exe"
-
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
@@ -27,7 +25,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={pf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=.
-OutputBaseFilename=setup
+OutputBaseFilename={#MyAppName}_{#MyAppVersion}_setup
 Compression=lzma
 SolidCompression=yes
 
@@ -41,7 +39,7 @@ Name: "associate"; Description: "&Associate .gdb and .GPdb files"; GroupDescript
 
 [Files]
 ; Application executables and shared libraries
-Source: "{#TopDir}\bin\{#MainExe}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_transforms.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\lib\grypto_core.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\lib\grypto_legacy.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -72,8 +70,8 @@ Source: "{#QtPath}\plugins\platforms\qwindows.dll"; DestDir: "{app}/platforms"; 
 [Registry]
 ; Create a handler for regular database files
 Root: HKCR; Subkey: "Gryptonite.gdb"; ValueType: string; ValueData: "Gryptonite Database"; Flags: uninsdeletekey;
-Root: HKCR; Subkey: "Gryptonite.gdb\DefaultIcon"; ValueType: string; ValueData: "{app}\{#MainExe}"; Flags: uninsdeletekey;
-Root: HKCR; Subkey: "Gryptonite.gdb\shell\Open\Command"; ValueType: string; ValueData: "{app}\{#MainExe} ""%1"" "; Flags: uninsdeletekey;
+Root: HKCR; Subkey: "Gryptonite.gdb\DefaultIcon"; ValueType: string; ValueData: "{app}\{#MyAppExeName}"; Flags: uninsdeletekey;
+Root: HKCR; Subkey: "Gryptonite.gdb\shell\Open\Command"; ValueType: string; ValueData: "{app}\{#MyAppExeName} ""%1"" "; Flags: uninsdeletekey;
 
 ; These file types are only associated if the "associate" task was selected (the default)
 Root: HKCR; Subkey: ".gdb"; ValueType: string; ValueData: "Gryptonite.gdb"; Flags: uninsdeletekey; Tasks: associate

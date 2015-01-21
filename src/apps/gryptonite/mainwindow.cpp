@@ -60,6 +60,23 @@ static void __show_access_denied(QWidget *w, const QString &msg)
     QMessageBox::critical(w, QObject::tr("Access Denied"), msg);
 }
 
+// Use this to hide the tray icon menu for the lifetime of this object
+// In Linux, the tray icon menu doesn't show if a modal dialogue is open, but
+//  in Windows it does. The menu should not be shown during a modal dialogue,
+//  so this class helps you hide it.
+class trayicon_menu_hider_t{
+    QSystemTrayIcon &m_trayIcon;
+    QMenu *m_contextMenu;
+public:
+    trayicon_menu_hider_t(QSystemTrayIcon &tray_icon)
+        :m_trayIcon(tray_icon), m_contextMenu(tray_icon.contextMenu()){
+        m_trayIcon.setContextMenu(NULL);
+    }
+    ~trayicon_menu_hider_t(){
+        m_trayIcon.setContextMenu(m_contextMenu);
+    }
+};
+
 
 MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     :QMainWindow(parent),
@@ -354,6 +371,7 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
 
             menu->move(cm->globalPos());
             menu->show();
+            ret = true;
         }
     }
     return ret;
@@ -447,6 +465,7 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
 
 void MainWindow::_new_open_database(const QString &path)
 {
+    trayicon_menu_hider_t mh(m_trayIcon);
     Credentials creds;
     QString open_path = path;
 
@@ -541,6 +560,7 @@ static QString __get_new_database_filename(QWidget *parent,
 
 void MainWindow::_new_open_database()
 {
+    trayicon_menu_hider_t mh(m_trayIcon);
     QString path = __get_new_database_filename(this, tr("File Location"), false);
     if(!path.isEmpty())
     {
@@ -587,6 +607,7 @@ void MainWindow::_close_database(bool delete_model)
 void MainWindow::_save_as()
 {
     GASSERT(IsFileOpen());
+    trayicon_menu_hider_t mh(m_trayIcon);
     {
         GetPasswordDialog dlg(m_settings, _get_database_model()->FilePath(), this);
         if(QDialog::Accepted != dlg.exec())
@@ -692,6 +713,7 @@ void MainWindow::_new_entry()
         e.SetRow(model->rowCount(ind));
     }
 
+    trayicon_menu_hider_t mh(m_trayIcon);
     EntryEdit dlg(e, _get_database_model(), this);
     if(QDialog::Accepted == dlg.exec())
         model->AddEntry(dlg.GetEntry());
@@ -799,7 +821,8 @@ void MainWindow::_update_trayIcon_menu()
     m_trayIcon.contextMenu()->addSeparator();
     m_trayIcon.contextMenu()->addAction(ui->actionQuit);
 
-    if(old_menu) old_menu->deleteLater();
+    if(old_menu)
+        old_menu->deleteLater();
 }
 
 void MainWindow::_update_undo_text()
@@ -861,6 +884,8 @@ void MainWindow::_add_remove_favorite()
 
 void MainWindow::_edit_entry(const Entry &e)
 {
+    trayicon_menu_hider_t mh(m_trayIcon);
+
     EntryEdit dlg(e, _get_database_model(), this);
     if(QDialog::Accepted == dlg.exec())
     {
@@ -1199,6 +1224,7 @@ void MainWindow::_progress_updated(int progress, const QString &task_name)
 void MainWindow::_organize_favorites()
 {
     GASSERT(IsFileOpen());
+    trayicon_menu_hider_t mh(m_trayIcon);
     DatabaseModel *dbm = _get_database_model();
     OrganizeFavoritesDialog dlg(dbm->FindFavorites(), this);
     if(QDialog::Accepted == dlg.exec()){
@@ -1215,6 +1241,8 @@ void MainWindow::_update_time_format()
 
 void MainWindow::_edit_preferences()
 {
+    trayicon_menu_hider_t mh(m_trayIcon);
+    
     PreferencesEdit dlg(m_settings, this);
     if(QDialog::Accepted == dlg.exec()){
         // Update ourselves to reflect the new settings...

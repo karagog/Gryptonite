@@ -96,5 +96,5 @@ void Application::handle_exception(std::exception &ex)
 
 void Application::show_about(QWidget *)
 {
-    ::About(main_window).ShowAbout();
+    (new ::About(main_window))->ShowAbout();
 }

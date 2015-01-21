@@ -991,7 +991,13 @@ void MainWindow::PopOutCurrentEntry()
     }
 
     // Open any URL fields with QDesktopServices
-    if(m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool()){
+    bool autolaunch = m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool();
+
+    // The ctrl key does the opposite
+    if(QApplication::keyboardModifiers() == ::Qt::ControlModifier)
+        autolaunch = !autolaunch;
+
+    if(autolaunch){
         for(const SecretValue &sv : e.Values()){
             if(sv.GetName().toLower() == "url"){
                 if(!QDesktopServices::openUrl(QUrl(sv.GetValue()))){

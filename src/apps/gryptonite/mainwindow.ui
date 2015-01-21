@@ -96,7 +96,7 @@
      <x>0</x>
      <y>0</y>
      <width>795</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -108,42 +108,9 @@
       <string>&amp;Recent Files</string>
      </property>
     </widget>
-    <widget class="QMenu" name="menu_Export">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="toolTip">
-      <string>Coming soon!</string>
-     </property>
-     <property name="title">
-      <string>&amp;Export</string>
-     </property>
-     <property name="toolTipsVisible">
-      <bool>true</bool>
-     </property>
-     <addaction name="action_export_ps"/>
-    </widget>
-    <widget class="QMenu" name="menu_Import">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="toolTip">
-      <string>Coming soon!</string>
-     </property>
-     <property name="title">
-      <string>&amp;Import</string>
-     </property>
-     <property name="toolTipsVisible">
-      <bool>true</bool>
-     </property>
-     <addaction name="action_import_ps"/>
-    </widget>
     <addaction name="actionNewOpenDB"/>
     <addaction name="action_Save_As"/>
     <addaction name="action_Close"/>
-    <addaction name="separator"/>
-    <addaction name="menu_Export"/>
-    <addaction name="menu_Import"/>
     <addaction name="separator"/>
     <addaction name="actionLockUnlock"/>
     <addaction name="menu_Recent_Files"/>
@@ -359,11 +326,6 @@
    </property>
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Opens the search window so you can filter and search your encrypted database&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </action>
-  <action name="actionBla">
-   <property name="text">
-    <string>bla</string>
    </property>
   </action>
   <action name="actionLockUnlock">

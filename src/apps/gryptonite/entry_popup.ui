@@ -46,7 +46,7 @@
    <sender>btn_mainWindow</sender>
    <signal>clicked()</signal>
    <receiver>EntryPopup</receiver>
-   <slot>_show_in_main_window()</slot>
+   <slot>_cede_control()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>157</x>
@@ -60,6 +60,6 @@
   </connection>
  </connections>
  <slots>
-  <slot>_show_in_main_window()</slot>
+  <slot>_cede_control()</slot>
  </slots>
 </ui>

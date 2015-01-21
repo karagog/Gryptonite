@@ -49,10 +49,8 @@ public:
 
 signals:
 
-    /** Indicates that the user wants to select the given entry id
-     *  in the main window
-    */
-    void SelectInMainWindow(const Grypt::EntryId &);
+    /** Indicates that the user wants to give control back to the calling window */
+    void CedeControl();
 
 protected:
 
@@ -64,8 +62,8 @@ protected:
     }
 
 private slots:
-    void _show_in_main_window(){
-        emit SelectInMainWindow(ui.view_entry->GetEntry().GetId());
+    void _cede_control(){
+        emit CedeControl();
         close();
     }
     void _entry_row_activated(int r){

@@ -738,29 +738,11 @@ void MainWindow::_update_ui_file_opened(bool b)
 
 void MainWindow::_favorite_action_clicked(QAction *a)
 {
-    Entry e = _get_database_model()->FindEntryById(a->data().value<EntryId>());
+    // Select the entry first
+    ShowEntryById(a->data().value<EntryId>());
 
-    // Open any URL fields with QDesktopServices
-    if(m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool()){
-        for(const SecretValue &sv : e.Values()){
-            if(sv.GetName().toLower() == "url"){
-                if(!QDesktopServices::openUrl(QUrl(sv.GetValue()))){
-                    QMessageBox::warning(this, tr("Opening URL Failed"),
-                                         QString(tr("Could not open URL: %1"))
-                                         .arg(sv.GetValue()));
-                }
-            }
-        }
-    }
-
-    EntryPopup *ep = new EntryPopup(e, m_settings, this);
-    connect(ep, SIGNAL(SelectInMainWindow(const Grypt::EntryId &)),
-            this, SLOT(ShowEntryById(const Grypt::EntryId &)));
-
-    if(m_entryView)
-        m_entryView->deleteLater();
-    (m_entryView = ep)->show();
-    _hide();
+    // Then pop it out
+    PopOutCurrentEntry();
 }
 
 static QMenu *__create_menu(DatabaseModel *dbm, QActionGroup &ag, const QModelIndex &ind, QWidget *parent)
@@ -843,7 +825,9 @@ DatabaseModel *MainWindow::_get_database_model() const
 
 void MainWindow::_edit_entry()
 {
-    _treeview_doubleclicked(ui->treeView->currentIndex());
+    Entry const *e = _get_currently_selected_entry();
+    if(e)
+        _edit_entry(*e);
 }
 
 void MainWindow::_delete_entry()
@@ -889,8 +873,7 @@ void MainWindow::_treeview_doubleclicked(const QModelIndex &ind)
 {
     if(ind.isValid())
     {
-        Entry const *e = _get_database_model()->GetEntryFromIndex(_get_proxy_model()->mapToSource(ind));
-        _edit_entry(*e);
+        PopOutCurrentEntry();
     }
 }
 
@@ -996,6 +979,37 @@ void MainWindow::ShowEntryById(const Grypt::EntryId &id)
     showNormal();
     activateWindow();
     _select_entry(id);
+}
+
+void MainWindow::PopOutCurrentEntry()
+{
+    Entry e = ui->view_entry->GetEntry();
+    if(e.GetId().IsNull()){
+        QMessageBox::information(this, tr("Select an Entry"),
+                                 tr("You must first select an entry"));
+        return;
+    }
+
+    // Open any URL fields with QDesktopServices
+    if(m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool()){
+        for(const SecretValue &sv : e.Values()){
+            if(sv.GetName().toLower() == "url"){
+                if(!QDesktopServices::openUrl(QUrl(sv.GetValue()))){
+                    QMessageBox::warning(this, tr("Opening URL Failed"),
+                                         QString(tr("Could not open URL: %1"))
+                                         .arg(sv.GetValue()));
+                }
+            }
+        }
+    }
+
+    EntryPopup *ep = new EntryPopup(e, m_settings, this);
+    connect(ep, SIGNAL(CedeControl()), this, SLOT(_show()));
+
+    if(m_entryView)
+        m_entryView->deleteLater();
+    (m_entryView = ep)->show();
+    _hide();
 }
 
 void MainWindow::_filter_updated(const FilterInfo_t &fi)

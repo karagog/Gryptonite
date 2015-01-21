@@ -82,6 +82,9 @@ public slots:
     /** Activates the main window and selects the entry given by id. */
     void ShowEntryById(const Grypt::EntryId &);
 
+    /** Hides the main window and "pops out" the entry into a smaller dialogue window. */
+    void PopOutCurrentEntry();
+
 
 protected:
 

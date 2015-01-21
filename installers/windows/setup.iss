@@ -8,7 +8,7 @@
 #define MyAppExeName "gryptonite.exe"
 
 #define TopDir "..\.."
-#define QtPath "C:\Qt\5.3.2\5.3\mingw482_32\bin"
+#define QtPath "C:\Qt\5.4\mingw491_32"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -51,18 +51,19 @@ Source: "{#TopDir}\gutil\lib\GUtilCryptoPP.dll"; DestDir: "{app}"; Flags: ignore
 Source: "{#TopDir}\gutil\lib\GUtilQt.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Qt shared libraries
-Source: "{#QtPath}\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\Qt5Sql.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\Qt5Xml.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\Qt5WinExtras.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\icudt52.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\icuin52.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\icuuc52.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5Sql.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5Xml.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\Qt5WinExtras.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\icudt53.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\icuin53.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\icuuc53.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\plugins\platforms\qwindows.dll"; DestDir: "{app}/platforms"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

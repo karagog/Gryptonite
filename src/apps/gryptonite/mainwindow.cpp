@@ -160,11 +160,17 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     // Restore the previous session's window state
     if(m_settings->Contains(MAINWINDOW_GEOMETRY_SETTING))
         restoreGeometry(m_settings->Value(MAINWINDOW_GEOMETRY_SETTING).toByteArray());
-    if(m_settings->Contains(MAINWINDOW_STATE_SETTING))
+    if(m_settings->Contains(MAINWINDOW_STATE_SETTING)){
         restoreState(m_settings->Value(MAINWINDOW_STATE_SETTING).toByteArray());
+
+        // As a "safety" measure, make sure the treeview is shown, because
+        //  if it's not then there's no way to show it (it happened to me already,
+        //  so I'm paranoid about post-release bugs like that)
+        if(ui->dw_treeView->isHidden())
+            ui->dw_treeView->show();
+    }
     else{
-        // Prepare the default interface
-        Widget::CenterInScreen(this);
+        // Prepare the default interface if there are no settings
 
         // The search widget is pretty bulky, so let's hide it by default
         ui->dw_search->hide();
@@ -196,6 +202,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::AboutToQuit()
 {
+    bool hidden = isHidden();
+
     // This restores the state of all dock widgets
     _close_database();
 
@@ -204,13 +212,22 @@ void MainWindow::AboutToQuit()
 
     // Save the main window state so we can restore it next session
     m_settings->SetValue(MAINWINDOW_GEOMETRY_SETTING, saveGeometry());
-    m_settings->SetValue(MAINWINDOW_STATE_SETTING, saveState());
+
+    // If the main window was hidden, then restore the state prior to hiding
+    if(hidden)
+        m_settings->SetValue(MAINWINDOW_STATE_SETTING, m_savedState);
+    else
+        m_settings->SetValue(MAINWINDOW_STATE_SETTING, saveState());
+
     m_settings->CommitChanges();
 }
 
 void MainWindow::_hide()
 {
+    m_savedState = saveState();
     hide();
+    ui->dw_search->hide();
+    ui->dw_treeView->hide();
     if(!m_minimize_msg_shown){
         m_trayIcon.showMessage(tr("Minimized to Tray"),
                                tr(GRYPTO_APP_NAME" has been minimized to tray."
@@ -223,6 +240,10 @@ void MainWindow::_show()
 {
     showNormal();
     activateWindow();
+    if(!m_savedState.isEmpty()){
+        restoreState(m_savedState);
+        m_savedState.clear();
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent *ev)
@@ -1008,11 +1029,12 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
 void MainWindow::_search()
 {
     if(isMinimized() || isHidden())
-        showNormal();
+        _show();
 
-    activateWindow();
+    ui->dw_treeView->activateWindow();
     ui->dw_search->show();
-    ui->dw_search->raise();
+    if(ui->dw_search->isFloating())
+        ui->dw_search->activateWindow();
     ui->searchWidget->setFocus();
 }
 
@@ -1027,6 +1049,9 @@ void MainWindow::_lock_unlock_interface(bool lock)
     {
         if(IsLocked() || !IsFileOpen())
             return;
+
+        if(m_entryView)
+            m_entryView->close();
 
         m_savedState = saveState();
         ui->dw_treeView->hide();

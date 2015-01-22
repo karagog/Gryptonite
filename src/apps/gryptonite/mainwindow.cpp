@@ -85,6 +85,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
       m_fileLabel(new QLabel(this)),
       m_settings(s),
       m_add_remove_favorites(this),
+      m_new_child_entry(tr("New &Child"), this),
       m_isLocked(true),
       m_minimize_msg_shown(false),
       m_requesting_unlock(false),
@@ -141,6 +142,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     connect(ui->action_import_ps, SIGNAL(triggered()), this, SLOT(_import_from_portable_safe()));
     connect(ui->action_Close, SIGNAL(triggered()), this, SLOT(_close_database()));
     connect(ui->actionNew_Entry, SIGNAL(triggered()), this, SLOT(_new_entry()));
+    connect(&m_new_child_entry, SIGNAL(triggered()), this, SLOT(_new_child_entry()));
     connect(ui->action_EditEntry, SIGNAL(triggered()), this, SLOT(_edit_entry()));
     connect(ui->action_DeleteEntry, SIGNAL(triggered()), this, SLOT(_delete_entry()));
     connect(&m_add_remove_favorites, SIGNAL(triggered()), this, SLOT(_add_remove_favorite()));
@@ -349,6 +351,8 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
             QMenu *menu = new QMenu(this);
             QList<QAction*> actions = ui->menuEntry->actions();
             menu->addActions(actions);
+
+            menu->insertAction(ui->action_EditEntry, &m_new_child_entry);
 
             QAction *action_expand = new QAction(tr("Expand All"), this);
             QAction *action_collapse = new QAction(tr("Collapse All"), this);
@@ -702,24 +706,35 @@ void MainWindow::_import_from_portable_safe()
 
 void MainWindow::_new_entry()
 {
-    if(!IsFileOpen())
-        return;
+    GASSERT(IsFileOpen());
+    trayicon_menu_hider_t mh(m_trayIcon);
 
-    Entry e;
+    EntryEdit dlg(this);
+    if(QDialog::Accepted == dlg.exec()){
+        _get_database_model()->AddEntry(dlg.GetEntry());
+        _select_entry(dlg.GetEntry().GetId());
+    }
+}
+
+void MainWindow::_new_child_entry()
+{
+    GASSERT(IsFileOpen());
+    trayicon_menu_hider_t mh(m_trayIcon);
+
     DatabaseModel *model = _get_database_model();
     QModelIndex ind = _get_proxy_model()->mapToSource(ui->treeView->currentIndex());
     Entry const *selected = model->GetEntryFromIndex(ind);
 
-    if(selected)
-    {
-        e.SetParentId(selected->GetId());
-        e.SetRow(model->rowCount(ind));
-    }
-
-    trayicon_menu_hider_t mh(m_trayIcon);
-    EntryEdit dlg(e, _get_database_model(), this);
+    EntryEdit dlg(this);
     if(QDialog::Accepted == dlg.exec())
+    {
+        if(selected){
+            dlg.GetEntry().SetParentId(selected->GetId());
+            dlg.GetEntry().SetRow(model->rowCount(ind));
+        }
         model->AddEntry(dlg.GetEntry());
+        _select_entry(dlg.GetEntry().GetId());
+    }
 }
 
 void MainWindow::_update_ui_file_opened(bool b)
@@ -977,6 +992,7 @@ void MainWindow::_nav_index_changed(int ind)
                 ism->select(ind, QItemSelectionModel::Rows | QItemSelectionModel::ClearAndSelect);
                 ui->treeView->setSelectionModel(ism);
                 ui->treeView->ExpandToIndex(ind);
+                ui->treeView->setCurrentIndex(ind);
             }
             success = true;
         } catch(...) {}
@@ -1245,7 +1261,7 @@ void MainWindow::_update_time_format()
 void MainWindow::_edit_preferences()
 {
     trayicon_menu_hider_t mh(m_trayIcon);
-    
+
     PreferencesEdit dlg(m_settings, this);
     if(QDialog::Accepted == dlg.exec()){
         // Update ourselves to reflect the new settings...

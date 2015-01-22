@@ -105,6 +105,7 @@ private slots:
     void _import_from_portable_safe();
 
     void _new_entry();
+    void _new_child_entry();
     void _edit_entry();
     void _delete_entry();
     void _add_remove_favorite();
@@ -149,6 +150,7 @@ private:
     GUtil::Qt::Settings *m_settings;
     GUtil::SmartPointer<QActionGroup> m_recentFilesGroup;
     QAction m_add_remove_favorites;
+    QAction m_new_child_entry;
     QUndoStack m_navStack;
     Grypt::ClipboardAccess m_clipboard;
     Grypt::Lockout m_lockoutTimer;

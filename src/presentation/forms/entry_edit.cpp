@@ -35,6 +35,7 @@ EntryEdit::EntryEdit(QWidget *parent)
     :QDialog(parent)
 {
     _init();
+    setWindowTitle(tr("New Entry"));
 }
 
 EntryEdit::EntryEdit(const Entry &e, DatabaseModel *m, QWidget *parent)
@@ -42,6 +43,8 @@ EntryEdit::EntryEdit(const Entry &e, DatabaseModel *m, QWidget *parent)
       m_entry(e)
 {
     _init();
+    setWindowTitle(tr("Edit Entry"));
+
     ui->labelEdit->setText(e.GetName());
     ui->descriptionEdit->setText(e.GetDescription());
     ui->fav_btn->setChecked(e.IsFavorite());

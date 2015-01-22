@@ -78,7 +78,7 @@ public:
 };
 
 
-MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
+MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *parent)
     :QMainWindow(parent),
       ui(new Ui::MainWindow),
       m_trayIcon(QIcon(":/grypto/icons/main.png"), this),
@@ -199,7 +199,10 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, QWidget *parent)
     // Set up the recent files list and open the most recent
     _update_recent_files();
 
-    if(m_settings->Value(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE).toBool()){
+    if(open_file){
+        _new_open_database(open_file);
+    }
+    else if(m_settings->Value(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE).toBool()){
         QList<QAction *> al = ui->menu_Recent_Files->actions();
         if(al.length() > 0 && QFile::exists(al[0]->data().toString()))
             al[0]->trigger();

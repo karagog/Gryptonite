@@ -19,10 +19,7 @@ limitations under the License.*/
 #include <grypto_common.h>
 #include <gutil/messageboxlogger.h>
 #include <gutil/cryptopp_rng.h>
-#include <gutil/globallogger.h>
-#include <gutil/grouplogger.h>
-#include <gutil/filelogger.h>
-#include <gutil/messageboxlogger.h>
+#include <gutil/commandlineargs.h>
 #include <QStandardPaths>
 #include <QMessageBox>
 USING_NAMESPACE_GUTIL;
@@ -31,8 +28,6 @@ using namespace std;
 // The global RNG should be a good one (from Crypto++)
 static GUtil::CryptoPP::RNG __cryptopp_rng;
 static GUtil::RNG_Initializer __rng_init(&__cryptopp_rng);
-
-#define APPLICATION_LOG  "gryptonite.log"
 
 
 static void __init_default_settings(GUtil::Qt::Settings &settings)
@@ -52,12 +47,11 @@ Application::Application(int &argc, char **argv)
     :GUtil::Qt::Application(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING),
       settings(GRYPTO_SETTINGS_IDENTIFIER)
 {
-    // Log global messages to a logfile and a messagebox
-    SetGlobalLogger(new GroupLogger{
-                        new GUtil::Qt::MessageBoxLogger,   // Comment this line for release
-                        new FileLogger(QString("%1/" APPLICATION_LOG)
-                            .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).toUtf8()),
-                    });
+    CommandLineArgs args(argc, argv);
+    String open_file;
+    if(args.Length() > 1){
+        open_file = args[1];
+    }
 
     // Don't let exceptions crash us, they will be logged to the global logger
     SetTrapExceptions(true);
@@ -74,14 +68,13 @@ Application::Application(int &argc, char **argv)
 
     __init_default_settings(settings);
 
-    main_window = new MainWindow(&settings);
+    main_window = new MainWindow(&settings, open_file);
 }
 
 void Application::about_to_quit()
 {
     main_window->AboutToQuit();
     main_window->deleteLater();
-    SetGlobalLogger(NULL);
 }
 
 void Application::handle_exception(std::exception &ex)

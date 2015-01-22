@@ -617,7 +617,9 @@ void MainWindow::_save_as()
     GASSERT(IsFileOpen());
     trayicon_menu_hider_t mh(m_trayIcon);
     {
-        GetPasswordDialog dlg(m_settings, _get_database_model()->FilePath(), this);
+        GetPasswordDialog dlg(m_settings, 
+                              QFileInfo(_get_database_model()->FilePath()).fileName(),
+                              this);
         if(QDialog::Accepted != dlg.exec())
             return;
 
@@ -697,7 +699,7 @@ void MainWindow::_import_from_portable_safe()
     if(fn.isEmpty() || !QFile::exists(fn))
         return;
 
-    GetPasswordDialog dlg(m_settings, fn, this);
+    GetPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
     if(QDialog::Accepted != dlg.exec())
         return;
 
@@ -1177,7 +1179,9 @@ void MainWindow::RequestUnlock()
         return;
 
     m_requesting_unlock = true;
-    GetPasswordDialog dlg(m_settings, _get_database_model()->FilePath(), this);
+    GetPasswordDialog dlg(m_settings,
+                          QFileInfo(_get_database_model()->FilePath()).fileName(),
+                          this);
     if(QDialog::Accepted == dlg.exec())
     {
         if(_get_database_model()->CheckCredentials(dlg.GetCredentials()))

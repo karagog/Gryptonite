@@ -1,1 +1,1 @@
-IDI_ICON1 ICON DISCARDABLE "icons/main.ico"
+main_icon ICON "icons/main.ico"

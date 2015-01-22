@@ -8,7 +8,7 @@
 #define MyAppExeName "gryptonite.exe"
 
 #define TopDir "..\.."
-#define QtPath "C:\Qt\5.4\mingw491_32"
+#define QtPath "C:\Qt\5.3\mingw482_32"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -61,9 +61,9 @@ Source: "{#QtPath}\bin\Qt5WinExtras.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\bin\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\icudt53.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\icuin53.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\icuuc53.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\icudt52.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\icuin52.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#QtPath}\bin\icuuc52.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\plugins\platforms\qwindows.dll"; DestDir: "{app}/platforms"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

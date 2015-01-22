@@ -17,13 +17,19 @@ limitations under the License.*/
 #include "about.h"
 #include "settings.h"
 #include <grypto_common.h>
+#include <gutil/globallogger.h>
+#include <gutil/grouplogger.h>
+#include <gutil/filelogger.h>
 #include <gutil/messageboxlogger.h>
 #include <gutil/cryptopp_rng.h>
 #include <gutil/commandlineargs.h>
 #include <QStandardPaths>
 #include <QMessageBox>
+#include <QStandardPaths>
 USING_NAMESPACE_GUTIL;
 using namespace std;
+
+#define APPLICATION_LOG     GRYPTO_APP_NAME ".log"
 
 // The global RNG should be a good one (from Crypto++)
 static GUtil::CryptoPP::RNG __cryptopp_rng;
@@ -45,8 +51,19 @@ static void __init_default_settings(GUtil::Qt::Settings &settings)
 
 Application::Application(int &argc, char **argv)
     :GUtil::Qt::Application(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING),
-      settings(GRYPTO_SETTINGS_IDENTIFIER)
+      settings(GRYPTO_SETTINGS_IDENTIFIER),
+      main_window(NULL)
 {
+    // Log global messages to a group logger, which writes to all loggers in the group
+    SetGlobalLogger(new GroupLogger{
+
+                        // Comment this line for release (silently show errors only in log)
+                        new GUtil::Qt::MessageBoxLogger,
+
+                        new FileLogger(QString("%1/" APPLICATION_LOG)
+                            .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).toUtf8()),
+                    });
+
     CommandLineArgs args(argc, argv);
     String open_file;
     if(args.Length() > 1){
@@ -64,17 +81,27 @@ Application::Application(int &argc, char **argv)
     qRegisterMetaType<Grypt::EntryId>("Grypt::EntryId");
     qRegisterMetaTypeStreamOperators<Grypt::IdType>("Grypt::IdType");
 
-    setQuitOnLastWindowClosed(false);
+    try{
+        __init_default_settings(settings);
 
-    __init_default_settings(settings);
+        main_window = new MainWindow(&settings, open_file);
 
-    main_window = new MainWindow(&settings, open_file);
+        // This only gets set if no exception is hit. Otherwise we DO want the application
+        //  to close after it has shown the error message
+        setQuitOnLastWindowClosed(false);
+    }
+    catch(exception &ex){
+        handle_exception(ex);
+    }
 }
 
 void Application::about_to_quit()
 {
-    main_window->AboutToQuit();
-    main_window->deleteLater();
+    if(main_window){
+        main_window->AboutToQuit();
+        main_window->deleteLater();
+    }
+    SetGlobalLogger(NULL);
 }
 
 void Application::handle_exception(std::exception &ex)

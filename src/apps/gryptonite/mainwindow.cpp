@@ -1229,7 +1229,9 @@ void MainWindow::_progress_updated(int progress, const QString &task_name)
 
         // Refresh the entry in the view, because maybe its status changed
         //  now that the task is complete
-        ui->view_entry->SetEntry(ui->view_entry->GetEntry());
+        Entry const *e = _get_currently_selected_entry();
+        if(e)
+            ui->view_entry->SetEntry(*e);
 
 #ifdef Q_OS_WIN
         m_taskbarButton.progress()->hide();

@@ -68,6 +68,8 @@ void EntryEdit::_init()
     ui->tableView->setItemDelegateForColumn(0, new SecretLabelDelegate(this));
 
     ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+    ui->labelEdit->setFocus();
 }
 
 EntryEdit::~EntryEdit()
@@ -220,6 +222,16 @@ void EntryEdit::_select_file()
 
     ui->le_filename->setText(fi.fileName());
     ui->lbl_fileStatus->setText(tr("(Upload pending)"));
+}
+
+void EntryEdit::_remove_file()
+{
+    m_entry.SetFileId(FileId::Null());
+    m_entry.SetFileName(QString::null);
+    m_entry.SetFilePath(QString::null);
+
+    ui->le_filename->clear();
+    ui->lbl_fileStatus->clear();
 }
 
 

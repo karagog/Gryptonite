@@ -53,6 +53,7 @@ private slots:
     void _move_up();
     void _move_down();
     void _select_file();
+    void _remove_file();
 
 
 private:

@@ -35,7 +35,7 @@ class NewPasswordDialog :
     Credentials m_creds;
 public:
 
-    NewPasswordDialog(GUtil::Qt::Settings *, QWidget *par = 0);
+    NewPasswordDialog(GUtil::Qt::Settings *, const QString &title, QWidget *par = 0);
     ~NewPasswordDialog();
 
     Credentials const &GetCredentials() const{ return m_creds; }

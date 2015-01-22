@@ -528,14 +528,15 @@ void MainWindow::_new_open_database(const QString &path)
     );
 
     // Get the user's credentials after successfully locking the database
+    const QString filename = QFileInfo(open_path).fileName();
     if(!existed){
-        NewPasswordDialog dlg(m_settings, this);
+        NewPasswordDialog dlg(m_settings, filename, this);
         if(QDialog::Rejected == dlg.exec())
             return;
         creds = dlg.GetCredentials();
     }
     else if(!file_updated){
-        GetPasswordDialog dlg(m_settings, QFileInfo(path).fileName(), this);
+        GetPasswordDialog dlg(m_settings, filename, this);
         if(QDialog::Rejected == dlg.exec())
             return;
         creds = dlg.GetCredentials();
@@ -640,7 +641,7 @@ void MainWindow::_save_as()
     // Create the database object, which only reserves a lock on the new database
     SmartPointer<DatabaseModel> dbm(new DatabaseModel(fn.toUtf8().constData()));
 
-    NewPasswordDialog dlg(m_settings, this);
+    NewPasswordDialog dlg(m_settings, fn, this);
     if(QDialog::Accepted != dlg.exec())
         return;
 
@@ -676,11 +677,10 @@ void MainWindow::_export_to_portable_safe()
     if(fn.isEmpty())
         return;
 
-    QFileInfo fi(fn);
-    if(fi.suffix().isEmpty())
+    if(QFileInfo(fn).suffix().isEmpty())
         fn.append(".gps");
 
-    NewPasswordDialog dlg(m_settings, this);
+    NewPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
     if(QDialog::Accepted != dlg.exec())
         return;
 

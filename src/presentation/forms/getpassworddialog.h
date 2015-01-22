@@ -37,7 +37,7 @@ class GetPasswordDialog :
 public:
     explicit GetPasswordDialog(
             GUtil::Qt::Settings *,
-            const QString &filename = QString(),
+            const QString &title = QString(),
             QWidget *parent = 0);
     ~GetPasswordDialog();
 

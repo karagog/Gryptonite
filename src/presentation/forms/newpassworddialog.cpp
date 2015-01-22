@@ -26,13 +26,15 @@ NAMESPACE_GRYPTO;
 
 
 NewPasswordDialog::NewPasswordDialog(GUtil::Qt::Settings *settings,
+                                     const QString &filename,
                                      QWidget *par)
     :QDialog(par),
       ui(new Ui::NewPassword),
       m_settings(settings)
 {
-    setWindowModality(Qt::WindowModal);
     ui->setupUi(this);
+    setWindowModality(Qt::WindowModal);
+    setWindowTitle(QString(tr("New Key Info for %1")).arg(filename));
 
     // We want to intercept when the user presses 'return'
     ui->lineEdit->installEventFilter(this);

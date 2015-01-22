@@ -47,9 +47,8 @@ QString LegacyManager::UpgradeDatabase(const QString &path,
                                            QObject::tr("Select updated file path"),
                                            QString(),
                                            "Grypto DB (*.gdb);;All Files (*)");
-        if(!ret.contains('.')){
+        if(QFileInfo(ret).suffix().isEmpty())
             ret.append(".gdb");
-        }
 
         Credentials creds;
         {
@@ -59,7 +58,7 @@ QString LegacyManager::UpgradeDatabase(const QString &path,
             creds = dlg.GetCredentials();
         }
         {
-            NewPasswordDialog dlg(settings, parent);
+            NewPasswordDialog dlg(settings, QFileInfo(ret).fileName(), parent);
             if(QDialog::Rejected == dlg.exec())
                 return ret;
             new_creds = dlg.GetCredentials();

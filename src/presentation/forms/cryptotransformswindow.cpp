@@ -136,7 +136,7 @@ void CryptoTransformsWindow::_update_key_status()
 
 void CryptoTransformsWindow::_change_password()
 {
-    NewPasswordDialog dlg(m_settings, this);
+    NewPasswordDialog dlg(m_settings, tr("Crypttext Generation"), this);
     if(QDialog::Accepted == dlg.exec()){
         if(m_cryptor)
             m_cryptor->ChangeCredentials(dlg.GetCredentials());

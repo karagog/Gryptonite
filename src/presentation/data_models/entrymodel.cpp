@@ -248,7 +248,7 @@ bool EntryModel::dropMimeData(const QMimeData *data,
     else if(action == Qt::CopyAction)
     {
         if(data->hasFormat("text/plain"))
-            setData(index(par.row(), 1), data->data("text/plain"), Qt::DisplayRole);
+            setData(index(par.row(), 1), data->data("text/plain"), Qt::EditRole);
     }
 
     return ret;

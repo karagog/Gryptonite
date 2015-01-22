@@ -190,6 +190,9 @@ p, li { white-space: pre-wrap; }
          <verstretch>1</verstretch>
         </sizepolicy>
        </property>
+       <property name="acceptDrops">
+        <bool>true</bool>
+       </property>
        <property name="whatsThis">
         <string>Use this interactive table to quickly edit entries.
 
@@ -204,7 +207,13 @@ Use the arrows on the side to adjust the order that the enries appear in.</strin
         <bool>false</bool>
        </property>
        <property name="showDropIndicator" stdset="0">
-        <bool>false</bool>
+        <bool>true</bool>
+       </property>
+       <property name="dragDropMode">
+        <enum>QAbstractItemView::DropOnly</enum>
+       </property>
+       <property name="defaultDropAction">
+        <enum>Qt::CopyAction</enum>
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::SingleSelection</enum>

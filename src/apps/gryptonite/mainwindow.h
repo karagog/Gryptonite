@@ -155,6 +155,7 @@ private:
     Grypt::ClipboardAccess m_clipboard;
     Grypt::Lockout m_lockoutTimer;
     bool m_isLocked;
+    QByteArray m_lockedState;
     QByteArray m_savedState;
     GUtil::SmartPointer<QWidget> m_encryptDecryptWindow;
     QPointer<QWidget> m_entryView;

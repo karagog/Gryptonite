@@ -1119,7 +1119,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
         if(m_entryView)
             m_entryView->close();
 
-        m_savedState = saveState();
+        m_lockedState = saveState();
         ui->dw_treeView->hide();
         ui->dw_search->hide();
         ui->toolBar->hide();
@@ -1139,7 +1139,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
         if(!IsLocked())
             return;
 
-        restoreState(m_savedState);
+        restoreState(m_lockedState);
         ui->stackedWidget->setCurrentIndex(1);
         ui->actionLockUnlock->setText(tr("&Lock Application"));
         ui->actionLockUnlock->setData(true);

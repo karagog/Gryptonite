@@ -188,6 +188,9 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
         //  so I'm paranoid about post-release bugs like that)
         if(ui->dw_treeView->isHidden())
             ui->dw_treeView->show();
+
+        if(ui->toolBar->isHidden())
+            ui->toolBar->show();
     }
     else{
         // Prepare the default interface if there are no settings
@@ -225,11 +228,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::AboutToQuit()
 {
-    bool hidden = isHidden();
-
-    // This restores the state of all dock widgets
-    _close_database();
-
     // Save the search settings before we close
     m_settings->SetValue(MAINWINDOW_SEARCH_SETTING, ui->searchWidget->GetFilter().ToXml());
 
@@ -237,12 +235,16 @@ void MainWindow::AboutToQuit()
     m_settings->SetValue(MAINWINDOW_GEOMETRY_SETTING, saveGeometry());
 
     // If the main window was hidden, then restore the state prior to hiding
-    if(hidden)
+    if(!m_lockedState.isEmpty())
+        m_settings->SetValue(MAINWINDOW_STATE_SETTING, m_lockedState);
+    else if(!m_savedState.isEmpty())
         m_settings->SetValue(MAINWINDOW_STATE_SETTING, m_savedState);
     else
         m_settings->SetValue(MAINWINDOW_STATE_SETTING, saveState());
 
     m_settings->CommitChanges();
+
+    _close_database();
 }
 
 void MainWindow::_hide()
@@ -374,8 +376,10 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
                     ret = true;
                 }
                 else if(kev->key() == ::Qt::Key_Escape){
-                    // The escape key nulls out the treeview selection
+                    // The escape key nulls out the selection, clears the views and search filter
+                    ui->searchWidget->Clear();
                     ui->treeView->setCurrentIndex(QModelIndex());
+                    ui->treeView->collapseAll();
                 }
             }
         }
@@ -976,6 +980,8 @@ void MainWindow::_treeview_currentindex_changed(const QModelIndex &ind)
     ui->action_DeleteEntry->setEnabled(e);
     if(e)
         _select_entry(e->GetId());
+    else
+        ui->view_entry->SetEntry(Entry());
 }
 
 void MainWindow::_entry_row_activated(int r)
@@ -1120,23 +1126,27 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
     // Apply the filter
     fm->SetFilter(fi);
 
+    QString title = tr("Password Database");
+
     // Highlight any matching rows
     if(fi.IsValid)
     {
         QItemSelection is;
-
         foreach(QModelIndex ind, fm->GetUnfilteredRows())
         {
             ui->treeView->ExpandToIndex(ind);
             is.append(QItemSelectionRange(ind, fm->index(ind.row(), fm->columnCount() - 1, ind.parent())));
         }
-
         ui->treeView->selectionModel()->select(is, QItemSelectionModel::ClearAndSelect);
+
+        if(fi.FilterResults)
+            title.append(tr(" (filter applied)"));
     }
     else
     {
         ui->treeView->selectionModel()->clearSelection();
     }
+    ui->dw_treeView->setWindowTitle(title);
 }
 
 void MainWindow::_search()
@@ -1187,6 +1197,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
             return;
 
         restoreState(m_lockedState);
+        m_lockedState.clear();
         ui->stackedWidget->setCurrentIndex(1);
         ui->actionLockUnlock->setText(tr("&Lock Application"));
         ui->actionLockUnlock->setData(true);

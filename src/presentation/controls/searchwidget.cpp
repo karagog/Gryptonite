@@ -16,6 +16,7 @@ limitations under the License.*/
 #include "ui_searchwidget.h"
 #include <grypto_common.h>
 #include <grypto_lockout.h>
+#include <QKeyEvent>
 
 NAMESPACE_GRYPTO;
 
@@ -54,7 +55,14 @@ bool SearchWidget::eventFilter(QObject *, QEvent *ev)
 {
     if(Lockout::IsUserActivity(ev))
         emit NotifyUserActivity();
-    return false;
+
+    bool ret = false;
+    if(ev->type() == QEvent::KeyPress){
+        QKeyEvent *kev = (QKeyEvent*)ev;
+        if(::Qt::Key_Escape == kev->key())
+            Clear();
+    }
+    return ret;
 }
 
 void SearchWidget::focusInEvent(QFocusEvent *ev)
@@ -115,7 +123,7 @@ void SearchWidget::Clear()
 
 void SearchWidget::hideEvent(QHideEvent *ev)
 {
-    Clear();
+    //Clear();
     QWidget::hideEvent(ev);
 }
 

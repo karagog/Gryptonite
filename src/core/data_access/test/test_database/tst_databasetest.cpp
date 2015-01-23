@@ -25,6 +25,9 @@ USING_NAMESPACE_GRYPTO;
 #define TEST_FILEPATH  "testdb.sqlite"
 #define TEST_PASSWORD "password...shhh"
 
+#define TEST_KEYFILE        "keyfile.txt"
+#define TEST_KEYFILE_BAD    "wrong_keyfile.txt"
+
 static GUtil::CryptoPP::RNG __cryptopp_rng;
 static GUtil::RNG_Initializer __rng_init(&__cryptopp_rng);
 
@@ -40,7 +43,9 @@ public:
 
 private Q_SLOTS:
     void initTestCase();
-    void test_create();
+    void test_create_password();
+    void test_create_keyfile();
+    void test_create_keyfile_and_password();
     void test_entry();
     void test_entry_insert();
     void test_entry_delete();
@@ -91,7 +96,7 @@ void DatabaseTest::initTestCase()
     QVERIFY(no_exception);
 }
 
-void DatabaseTest::test_create()
+void DatabaseTest::test_create_password()
 {
     _close_database();
 
@@ -112,6 +117,100 @@ void DatabaseTest::test_create()
 
     // Try opening the database with the right key (No exception)
     newdb.Open(creds);
+}
+
+void DatabaseTest::test_create_keyfile()
+{
+    GUtil::String filename = TEST_FILEPATH "_keyfile.gdb";
+    if(QFile::exists(filename.ToQString()))
+        QFile::remove(filename.ToQString());
+
+    Credentials kf_creds(Credentials::KeyfileType);
+    kf_creds.Keyfile = TEST_KEYFILE;
+
+    Credentials kf_badcreds(Credentials::KeyfileType);
+    kf_badcreds.Keyfile = TEST_KEYFILE_BAD;
+
+    // Create the database
+    {
+        PasswordDatabase kf_db(filename);
+        kf_db.Open(kf_creds);
+    }
+
+    // Try opening it with the wrong keyfile
+    {
+        PasswordDatabase kf_db(filename);
+        bool ex_caught = false;
+        try{
+            kf_db.Open(kf_badcreds);
+        }
+        catch(...){
+            ex_caught = true;
+        }
+        QVERIFY(ex_caught);
+    }
+
+    // Try opening it again with the right keyfile
+    {
+        PasswordDatabase kf_db(filename);
+        kf_db.Open(kf_creds);
+    }
+}
+
+void DatabaseTest::test_create_keyfile_and_password()
+{
+    GUtil::String filename = TEST_FILEPATH "_keyfile.gdb";
+    if(QFile::exists(filename.ToQString()))
+        QFile::remove(filename.ToQString());
+
+    Credentials kf_creds(Credentials::PasswordAndKeyfileType);
+    kf_creds.Keyfile = TEST_KEYFILE;
+    kf_creds.Password = TEST_PASSWORD;
+
+    // First credentials have the wrong keyfile but right password
+    Credentials kf_badcreds1(Credentials::PasswordAndKeyfileType);
+    kf_badcreds1.Keyfile = TEST_KEYFILE_BAD;
+    kf_badcreds1.Password = TEST_PASSWORD;
+
+    // Second creds have the right keyfile but wrong password
+    Credentials kf_badcreds2(Credentials::PasswordAndKeyfileType);
+    kf_badcreds1.Keyfile = TEST_KEYFILE;
+    kf_badcreds1.Password = "wrong password";
+
+    // Create the database
+    {
+        PasswordDatabase kf_db(filename);
+        kf_db.Open(kf_creds);
+    }
+
+    // Try opening it with the wrong creds
+    {
+        PasswordDatabase kf_db(filename);
+        bool ex_caught = false;
+        try{
+            kf_db.Open(kf_badcreds1);
+        }
+        catch(...){
+            ex_caught = true;
+        }
+        QVERIFY(ex_caught);
+
+        // Try the second creds
+        ex_caught = false;
+        try{
+            kf_db.Open(kf_badcreds2);
+        }
+        catch(...){
+            ex_caught = true;
+        }
+        QVERIFY(ex_caught);
+    }
+
+    // Try opening it again with the right creds
+    {
+        PasswordDatabase kf_db(filename);
+        kf_db.Open(kf_creds);
+    }
 }
 
 bool __compare_entries(const Entry &lhs, const Entry &rhs)

@@ -65,6 +65,7 @@ Source: "{#QtPath}\bin\icudt52.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\bin\icuin52.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\bin\icuuc52.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#QtPath}\plugins\platforms\qwindows.dll"; DestDir: "{app}/platforms"; Flags: ignoreversion
+Source: "{#QtPath}\plugins\sqldrivers\qsqlite.dll"; DestDir: "{app}/sqldrivers"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Registry]

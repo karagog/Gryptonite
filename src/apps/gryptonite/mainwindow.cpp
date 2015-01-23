@@ -85,7 +85,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
       m_fileLabel(new QLabel(this)),
       m_settings(s),
       m_add_remove_favorites(this),
-      m_new_child_entry(tr("New &Child"), this),
+      m_action_new_child(tr("New &Child"), this),
       m_isLocked(true),
       m_minimize_msg_shown(false),
       m_requesting_unlock(false),
@@ -97,6 +97,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     ui->setupUi(this);
     setWindowTitle(GRYPTO_APP_NAME);
     ui->action_About->setText(tr("&About " GRYPTO_APP_NAME));
+    m_action_new_child.setShortcut(::Qt::ControlModifier | ::Qt::ShiftModifier | ::Qt::Key_N);
 
     ui->treeView->setModel(new FilteredDatabaseModel(this));
     ui->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -142,10 +143,10 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     connect(ui->action_import_ps, SIGNAL(triggered()), this, SLOT(_import_from_portable_safe()));
     connect(ui->action_Close, SIGNAL(triggered()), this, SLOT(_close_database()));
     connect(ui->actionNew_Entry, SIGNAL(triggered()), this, SLOT(_new_entry()));
-    connect(&m_new_child_entry, SIGNAL(triggered()), this, SLOT(_new_child_entry()));
     connect(ui->action_EditEntry, SIGNAL(triggered()), this, SLOT(_edit_entry()));
     connect(ui->action_DeleteEntry, SIGNAL(triggered()), this, SLOT(_delete_entry()));
     connect(&m_add_remove_favorites, SIGNAL(triggered()), this, SLOT(_add_remove_favorite()));
+    connect(&m_action_new_child, SIGNAL(triggered()), this, SLOT(_new_child_entry()));
     connect(ui->action_Undo, SIGNAL(triggered()), this, SLOT(_undo()));
     connect(ui->action_Redo, SIGNAL(triggered()), this, SLOT(_redo()));
     connect(ui->action_Search, SIGNAL(triggered()), this, SLOT(_search()));
@@ -289,14 +290,51 @@ bool MainWindow::_handle_key_pressed(QKeyEvent *ev)
     bool ret = false;
     if(ev->modifiers().testFlag(::Qt::ControlModifier))
     {
+        // Each one triggers an action, and the action keeps track
+        //  of whether or not the action is available in the current
+        //  application state (locked, file closed, etc...)
         if(ev->key() == ::Qt::Key_Z)
         {
-            _undo();
+            ui->action_Undo->trigger();
             ret = true;
         }
         else if(ev->key() == ::Qt::Key_Y)
         {
-            _redo();
+            ui->action_Redo->trigger();
+            ret = true;
+        }
+        else if(ev->key() == ::Qt::Key_F){
+            ui->action_Search->trigger();
+            ret = true;
+        }
+        else if(ev->key() == ::Qt::Key_N){
+            if(ev->modifiers().testFlag(::Qt::ShiftModifier))
+                m_action_new_child.trigger();
+            else
+                ui->actionNew_Entry->trigger();
+            ret = true;
+        }
+        else if(ev->key() == ::Qt::Key_E){
+            ui->action_EditEntry->trigger();
+            ret = true;
+        }
+        else if(ev->key() == ::Qt::Key_O){
+            ui->action_Open->trigger();
+            ret = true;
+        }
+        else if(ev->key() == ::Qt::Key_L){
+            ui->actionLockUnlock->trigger();
+            ret = true;
+        }
+        else if(ev->key() == ::Qt::Key_Escape){
+            if(ev->modifiers().testFlag(::Qt::ShiftModifier))
+                ui->actionQuit->trigger();
+            else
+                ui->action_Close->trigger();
+            ret = true;
+        }
+        else if(ev->modifiers().testFlag(::Qt::ShiftModifier) && ev->key() == ::Qt::Key_S){
+            ui->action_Save_As->trigger();
             ret = true;
         }
     }
@@ -349,32 +387,33 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
         {
             // Customize the menu a little bit
             QMenu *menu = new QMenu(this);
-            QList<QAction*> actions = ui->menuEntry->actions();
-            menu->addActions(actions);
 
-            menu->insertAction(ui->action_EditEntry, &m_new_child_entry);
-
-            QAction *action_expand = new QAction(tr("Expand All"), this);
-            QAction *action_collapse = new QAction(tr("Collapse All"), this);
+            QAction *action_expand = new QAction(tr("E&xpand All"), this);
+            QAction *action_collapse = new QAction(tr("Co&llapse All"), this);
             connect(action_expand, SIGNAL(triggered()), ui->treeView, SLOT(expandAll()));
             connect(action_collapse, SIGNAL(triggered()), ui->treeView, SLOT(collapseAll()));
-            menu->insertAction(ui->action_Search, action_expand);
-            menu->insertAction(ui->action_Search, action_collapse);
-            menu->insertSeparator(ui->action_Search);
+
+            menu->addAction(ui->actionNew_Entry);
+            menu->addAction(&m_action_new_child);
+            menu->addAction(ui->action_EditEntry);
+            menu->addAction(ui->action_DeleteEntry);
+            menu->addSeparator();
 
             Entry const *e = _get_currently_selected_entry();
             if(e){
                 m_add_remove_favorites.setData(e->IsFavorite());
                 if(e->IsFavorite())
-                    m_add_remove_favorites.setText(tr("Remove from Favorites"));
+                    m_add_remove_favorites.setText(tr("&Remove from Favorites"));
                 else
-                    m_add_remove_favorites.setText(tr("Add to Favorites"));
-
-                menu->insertAction(ui->action_Search, &m_add_remove_favorites);
-                menu->insertSeparator(&m_add_remove_favorites);
+                    m_add_remove_favorites.setText(tr("&Add to Favorites"));
+                menu->addAction(&m_add_remove_favorites);
+                menu->addSeparator();
             }
-            menu->insertSeparator(ui->action_Search);
-            menu->insertSeparator(ui->action_Search);
+
+            menu->addAction(action_expand);
+            menu->addAction(action_collapse);
+            menu->addSeparator();
+            menu->addAction(ui->action_Search);
 
             menu->move(cm->globalPos());
             menu->show();
@@ -752,15 +791,20 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->view_entry->setEnabled(b);
     ui->view_entry->SetEntry(Entry());
 
+    // Even though the menu this belongs to is invisible, we still
+    //  have to disable the action because of key shortcuts
+    m_action_new_child.setEnabled(b);
+
     ui->actionNew_Entry->setEnabled(b);
+    ui->action_EditEntry->setEnabled(b);
+    ui->action_DeleteEntry->setEnabled(b);
     ui->action_Favorites->setEnabled(b);
-    m_add_remove_favorites.setEnabled(b);
     ui->action_Search->setEnabled(b);
     ui->actionLockUnlock->setEnabled(b);
 
     ui->action_Save_As->setEnabled(b);
     ui->action_Close->setEnabled(b);
-    ui->menuEntry->setEnabled(b);
+
 //    ui->menu_Export->setEnabled(b);
 //    ui->menu_Import->setEnabled(b);
 
@@ -851,10 +895,10 @@ void MainWindow::_update_trayIcon_menu()
 void MainWindow::_update_undo_text()
 {
     DatabaseModel *m = _get_database_model();
-    ui->action_Undo->setText(m && m->CanUndo() ? QString("Undo %1").arg(m->UndoText().ConstData()) : "Undo");
+    ui->action_Undo->setText(m && m->CanUndo() ? QString("&Undo %1").arg(m->UndoText().ConstData()) : "Undo");
     ui->action_Undo->setEnabled(m && m->CanUndo());
 
-    ui->action_Redo->setText(m && m->CanRedo() ? QString("Redo %1").arg(m->RedoText().ConstData()) : "Redo");
+    ui->action_Redo->setText(m && m->CanRedo() ? QString("&Redo %1").arg(m->RedoText().ConstData()) : "Redo");
     ui->action_Redo->setEnabled(m && m->CanRedo());
 }
 
@@ -1154,6 +1198,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
     ui->action_Save_As->setEnabled(b);
 //    ui->menu_Export->setEnabled(b);
 //    ui->menu_Import->setEnabled(b);
+    m_action_new_child.setEnabled(b);
     ui->actionNew_Entry->setEnabled(b);
     ui->action_EditEntry->setEnabled(b);
     ui->action_DeleteEntry->setEnabled(b);

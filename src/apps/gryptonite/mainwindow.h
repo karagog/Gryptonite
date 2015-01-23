@@ -150,7 +150,7 @@ private:
     GUtil::Qt::Settings *m_settings;
     GUtil::SmartPointer<QActionGroup> m_recentFilesGroup;
     QAction m_add_remove_favorites;
-    QAction m_new_child_entry;
+    QAction m_action_new_child;
     QUndoStack m_navStack;
     Grypt::ClipboardAccess m_clipboard;
     Grypt::Lockout m_lockoutTimer;

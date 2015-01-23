@@ -96,7 +96,7 @@
      <x>0</x>
      <y>0</y>
      <width>795</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -112,20 +112,11 @@
     <addaction name="action_Save_As"/>
     <addaction name="action_Close"/>
     <addaction name="separator"/>
-    <addaction name="actionLockUnlock"/>
     <addaction name="menu_Recent_Files"/>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
-   </widget>
-   <widget class="QMenu" name="menuEntry">
-    <property name="title">
-     <string>&amp;Entry</string>
-    </property>
-    <addaction name="actionNew_Entry"/>
-    <addaction name="action_EditEntry"/>
-    <addaction name="action_DeleteEntry"/>
+    <addaction name="actionLockUnlock"/>
     <addaction name="separator"/>
-    <addaction name="action_Search"/>
+    <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menu_Tools">
     <property name="title">
@@ -141,17 +132,22 @@
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Edit</string>
+     <string>&amp;Edit</string>
     </property>
+    <addaction name="actionNew_Entry"/>
+    <addaction name="action_EditEntry"/>
+    <addaction name="action_DeleteEntry"/>
+    <addaction name="separator"/>
     <addaction name="action_Undo"/>
     <addaction name="action_Redo"/>
+    <addaction name="separator"/>
+    <addaction name="action_Search"/>
     <addaction name="separator"/>
     <addaction name="action_Favorites"/>
     <addaction name="action_Preferences"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menuEdit"/>
-   <addaction name="menuEntry"/>
    <addaction name="menu_Tools"/>
    <addaction name="menu_Help"/>
   </widget>
@@ -250,6 +246,9 @@
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Quit the application&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
+   </property>
   </action>
   <action name="actionNew_Entry">
    <property name="text">
@@ -258,6 +257,9 @@
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Create a new entry&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
   </action>
   <action name="action_Save_As">
    <property name="text">
@@ -265,6 +267,9 @@
    </property>
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Save the current file as a new one.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
    </property>
   </action>
   <action name="action_Open">
@@ -279,6 +284,9 @@
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Open a database, creating a new one if it doesn't exist.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
   </action>
   <action name="action_Close">
    <property name="text">
@@ -286,6 +294,9 @@
    </property>
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Close the file&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Esc</string>
    </property>
   </action>
   <action name="action_EditEntry">
@@ -295,8 +306,15 @@
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Edit the selected entry&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
   </action>
   <action name="action_DeleteEntry">
+   <property name="icon">
+    <iconset resource="../../presentation/grypto_ui.qrc">
+     <normaloff>:/grypto/icons/redX.png</normaloff>:/grypto/icons/redX.png</iconset>
+   </property>
    <property name="text">
     <string>&amp;Delete</string>
    </property>
@@ -311,6 +329,9 @@
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Undo the last action&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
   </action>
   <action name="action_Redo">
    <property name="text">
@@ -318,6 +339,9 @@
    </property>
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Redo the last action you undid&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string>
    </property>
   </action>
   <action name="action_Search">
@@ -327,6 +351,9 @@
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Opens the search window so you can filter and search your encrypted database&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
   </action>
   <action name="actionLockUnlock">
    <property name="text">
@@ -334,6 +361,9 @@
    </property>
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Locks the interface so nobody can use the file until they enter the right credentials.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;You can adjust the application preferences to have it automatically lock after a certain time of inactivity.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
    </property>
   </action>
   <action name="action_cryptoTransform">

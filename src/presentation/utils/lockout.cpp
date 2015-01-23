@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "lockout.h"
+#include <gutil/globals.h>
 #include <QTimerEvent>
 
 #define TIMER_RESOLUTION 2500
@@ -27,10 +28,12 @@ Lockout::Lockout(QObject *p)
 
 void Lockout::StartLockoutTimer(int minutes)
 {
+    GASSERT(minutes >= 0);
+
     QMutexLocker lkr(&lock);
     if(timerId == -1)
     {
-        timeout = QDateTime::currentDateTime().addSecs(minutes * 60);        
+        timeout = QDateTime::currentDateTime().addSecs(minutes * 60);
         timerId = startTimer(TIMER_RESOLUTION);
     }
 }
@@ -46,7 +49,7 @@ void Lockout::ResetLockoutTimer(int minutes)
 {
     QMutexLocker lkr(&lock);
     if(timerId != -1)
-        timeout = QDateTime::currentDateTime().addSecs(minutes * 60);        
+        timeout = QDateTime::currentDateTime().addSecs(minutes * 60);
 }
 
 void Lockout::timerEvent(QTimerEvent *ev)

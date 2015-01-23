@@ -454,8 +454,11 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
     _get_proxy_model()->setSourceModel(dbm);
     _update_ui_file_opened(true);
 
-    if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT))
-        m_lockoutTimer.StartLockoutTimer(m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt());
+    if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT)){
+        int val = m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt();
+        if(val > 0)
+            m_lockoutTimer.StartLockoutTimer(val);
+    }
 
     ui->view_entry->SetDatabaseModel(dbm);
 
@@ -617,7 +620,7 @@ void MainWindow::_save_as()
     GASSERT(IsFileOpen());
     trayicon_menu_hider_t mh(m_trayIcon);
     {
-        GetPasswordDialog dlg(m_settings, 
+        GetPasswordDialog dlg(m_settings,
                               QFileInfo(_get_database_model()->FilePath()).fileName(),
                               this);
         if(QDialog::Accepted != dlg.exec())

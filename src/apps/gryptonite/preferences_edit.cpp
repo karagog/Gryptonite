@@ -49,7 +49,8 @@ void PreferencesEdit::accept()
     m_settings->SetValue(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY, ui.minimize_on_close->isChecked());
     m_settings->SetValue(GRYPTONITE_SETTING_TIME_FORMAT_24HR, ui.timeFrmt->isChecked());
 
-    m_settings->SetValue(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT, ui.delaySlider->value());
+    m_settings->SetValue(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT,
+                         ui.delaySlider->value() == 0 ? -1 : ui.delaySlider->value());
     m_settings->SetValue(GRYPTONITE_SETTING_CLIPBOARD_TIMEOUT, ui.clipboard_slider->value());
 
     m_settings->CommitChanges();
@@ -59,7 +60,7 @@ void PreferencesEdit::accept()
 
 void PreferencesEdit::_lockout_slider_changed(int val)
 {
-    ui.lbl_delay->setText((val == -1) ?
+    ui.lbl_delay->setText((val == 0) ?
                               "Disabled" : QVariant(val).toString() + " minutes");
 }
 

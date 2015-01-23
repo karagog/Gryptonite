@@ -97,6 +97,7 @@ void GetPasswordDialog::accept()
                 return;
         }
     }
+    m_creds.Type = (Credentials::TypeEnum)ui->comboBox->currentIndex();
     m_creds.Password = tmp_password.constData();
     m_creds.Keyfile = tmp_keyfile.constData();
     m_settings->SetValue(SETTING_LAST_CB_INDEX, ui->comboBox->currentIndex());

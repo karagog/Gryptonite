@@ -28,6 +28,11 @@ SearchWidget::SearchWidget(QWidget *parent)
     ui->setupUi(this);
     Clear();
 
+    // By default show dates for the past month
+    QDateTime curdate = QDateTime::currentDateTime();
+    ui->dte_start->setDateTime(curdate.addMonths(-1));
+    ui->dte_end->setDateTime(curdate);
+
     ui->lineEdit->installEventFilter(this);
     ui->chk_caseSensitive->installEventFilter(this);
     ui->chk_filter_results->installEventFilter(this);

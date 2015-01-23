@@ -14,12 +14,14 @@ limitations under the License.*/
 
 #include "about.h"
 #include <grypto_common.h>
+#include <QPushButton>
+#include <QDesktopServices>
 
 
 About::About(QWidget *p)
     :GUtil::Qt::About(p, true, true)
 {
-    _dialog.resize(600, 325);
+    _dialog.resize(600, 360);
 
     SetWindowTitle(QString(tr("About %1")).arg(GRYPTO_APP_NAME));
     _header.setText(QString(tr("%1 - v%2")).arg(GRYPTO_APP_NAME).arg(GRYPTO_VERSION_STRING));
@@ -29,12 +31,23 @@ About::About(QWidget *p)
                       " is unlocked by a single master password (and/or keyfile)."
 
                       "\n\nIt was developed by George Karagoulis using"
-                      " the Qt framework and Crypto++ v5.6.2 encryption libraries. It was created"
-                      " as a personal hobby and labor of love, and therefore comes with no"
-                      " warrantee."
+                      " the Qt framework and Crypto++ encryption libraries. It was created"
+                      " as a personal quest for knowledge in my free time. Unfortunately that"
+                      " also means there is no warrantee of any kind."
 
                       "\n\nIt is open-source software built on top of open-source software, and"
                       " is intended to be free and open forever. That said...you could donate to show"
                       " your appreciation for this developer's hard work ;)"
                       ));
+
+    QPushButton *btn_donate = new QPushButton(QIcon(":/grypto/icons/star.png"),
+                                              tr("Donate"),
+                                              &_dialog);
+    connect(btn_donate, SIGNAL(pressed()), this, SLOT(_donate()));
+    AddPushButton(btn_donate);
+}
+
+void About::_donate()
+{
+    QDesktopServices::openUrl(QUrl(GRYPTO_DONATE_URL));
 }

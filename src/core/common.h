@@ -28,6 +28,8 @@ limitations under the License.*/
 
 #define GRYPTO_SETTINGS_IDENTIFIER "main"
 
+#define GRYPTO_DONATE_URL "https://pledgie.com/campaigns/28056"
+
 
 typedef unsigned char byte;
 

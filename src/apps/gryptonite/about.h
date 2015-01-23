@@ -20,4 +20,7 @@ class About : public GUtil::Qt::About
     Q_OBJECT
 public:
     About(QWidget *p = 0);
+
+public slots:
+    void _donate();
 };

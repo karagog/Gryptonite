@@ -1,0 +1,3 @@
+
+HEADERS += \
+    interfaces/ilegacy.h

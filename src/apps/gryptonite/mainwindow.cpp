@@ -545,8 +545,8 @@ void MainWindow::_new_open_database(const QString &path)
             m_progressBar.SetIsCancellable(false);
             finally([&]{ m_progressBar.SetIsCancellable(tmp); });
 
-            // Call the legacy manager to upgrade the database
-            open_path = LegacyManager::UpgradeDatabase(path, creds, m_settings,
+            // Call on the legacy manager to upgrade the database
+            open_path = LegacyManager().UpgradeDatabase(path, creds, m_settings,
                 [=](int p, const QString &ps){
                     this->_progress_updated(p, ps);
                 },

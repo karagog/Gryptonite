@@ -6,7 +6,7 @@ TOP_DIR = ../..
 DESTDIR = $$TOP_DIR/lib
 TARGET = grypto_legacy
 TEMPLATE = lib
-#CONFIG += staticlib
+CONFIG += staticlib
 QMAKE_CXXFLAGS += -std=c++11
 
 CONFIG(debug, debug|release) {

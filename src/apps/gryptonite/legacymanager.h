@@ -15,46 +15,22 @@ limitations under the License.*/
 #ifndef LEGACYMANAGER_H
 #define LEGACYMANAGER_H
 
-#include <grypto_common.h>
-#include <functional>
-#include <QString>
-class QWidget;
-
-namespace GUtil{ namespace Qt{
-class Settings;
-}}
+#include <grypto_ilegacy.h>
+class QPluginLoader;
 
 /** Manages legacy functions like updating old database formats. */
-class LegacyManager
+class LegacyManager :
+        public Grypt::ILegacy
 {
+    GUtil::SmartPointer<QPluginLoader> m_pl;
 public:
-    /** Takes the user through the process of upgrading the database, and
-     *  returns the path of the upgraded database, if successful.
-     *
-     *  In general you should only call this if it is known that the database
-     *  is not in the latest format, such as when it fails while opening. This
-     *  function will take care to detect the file version (if valid) and upgrade
-     *  the database.
-     *
-     *  \param path The path to the file to be upgraded
-     *  \param new_creds A credentials object to store the user's credentials, if they
-     *          successfully updated the file. This is so you don't have to ask them for it again.
-     *  \param settings A settings object used by the child dialogs
-     *  \param progress_cb A callback that exports the task's progress
-     *  \param parent The parent widget for all widgets this function will create
-     *
-     *  \returns The path to the upgraded database, if it was successful. If the user
-     *  aborted the operation it returns a null string. If there was an error during
-     *  upgrade then an exception is thrown.
-     *
-     *  \throws An exception on error, but if the user cancelled you get a null string
-     *  in the return value.
-    */
-    static QString UpgradeDatabase(const QString &path,
-                                   Grypt::Credentials &new_creds,
-                                   GUtil::Qt::Settings *settings,
-                                   std::function<void(int, const QString &)> progress_cb,
-                                   QWidget *parent);
+    LegacyManager();
+    ~LegacyManager();
+    virtual QString UpgradeDatabase(const QString &path,
+                                    Grypt::Credentials &new_creds,
+                                    GUtil::Qt::Settings *settings,
+                                    std::function<void(int, const QString &)> progress_cb,
+                                    QWidget *parent);
 };
 
 #endif // LEGACYMANAGER_H

@@ -36,4 +36,5 @@ HEADERS += \
 
 include(data_access/data_access.pri)
 include(data_objects/data_objects.pri)
+include(interfaces/interfaces.pri)
 include(workers/workers.pri)

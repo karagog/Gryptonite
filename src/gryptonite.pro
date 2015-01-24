@@ -5,6 +5,7 @@ SUBDIRS += \
     core \
     presentation \
     legacy \
+    plugins \
     apps
 
 CONFIG += ordered

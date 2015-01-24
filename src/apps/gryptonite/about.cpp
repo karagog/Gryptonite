@@ -24,7 +24,9 @@ About::About(QWidget *p)
     _dialog.resize(600, 360);
 
     SetWindowTitle(QString(tr("About %1")).arg(GRYPTO_APP_NAME));
+    SetImage(":/grypto/icons/main.png");
     _header.setText(QString(tr("%1 - v%2")).arg(GRYPTO_APP_NAME).arg(GRYPTO_VERSION_STRING));
+    _buildinfo.setText(QString("Built on %1").arg(__DATE__ " - " __TIME__));
     _text.setText(tr(
                       "Gryptonite is an application that stores your most secret and"
                       " personal information in a securely encrypted database. The database"
@@ -45,6 +47,7 @@ About::About(QWidget *p)
                                               &_dialog);
     connect(btn_donate, SIGNAL(pressed()), this, SLOT(_donate()));
     AddPushButton(btn_donate);
+    btn_donate->setFocus();
 }
 
 void About::_donate()

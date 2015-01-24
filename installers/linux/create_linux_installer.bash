@@ -1,7 +1,7 @@
 #! /bin/bash
 
 TOP_DIR=../..
-QT_DIR=/opt/Qt/5.4/gcc_64
+QT_DIR=/opt/Qt/5.4/gcc
 REPO_DIR=gryptonite_v$1
 
 mkdir $REPO_DIR
@@ -16,12 +16,16 @@ cp $TOP_DIR/gutil/lib/libGUtilQt.so.0           $REPO_DIR
 cp $TOP_DIR/gutil/lib/libGUtilCryptoPP.so.0     $REPO_DIR
 cp $TOP_DIR/gutil/lib/libGUtilAboutPlugin.so    $REPO_DIR
 
+# Copy crypto++
+cp /usr/lib/libcryptopp.so                $REPO_DIR
+
 # Copy Qt libs
 cp $QT_DIR/lib/libQt5Core.so.5                  $REPO_DIR
 cp $QT_DIR/lib/libQt5Gui.so.5                   $REPO_DIR
 cp $QT_DIR/lib/libQt5Widgets.so.5               $REPO_DIR
 cp $QT_DIR/lib/libQt5Sql.so.5                   $REPO_DIR
 cp $QT_DIR/lib/libQt5Xml.so.5                   $REPO_DIR
+cp $QT_DIR/lib/libQt5DBus.so.5                   $REPO_DIR
 cp $QT_DIR/lib/libicui18n.so.53                 $REPO_DIR
 cp $QT_DIR/lib/libicuuc.so.53                   $REPO_DIR
 cp $QT_DIR/lib/libicudata.so.53                 $REPO_DIR
@@ -36,4 +40,8 @@ cp $QT_DIR/plugins/platforms/*                  $REPO_DIR/platforms
 cp install.bash     $REPO_DIR
 chmod +x $REPO_DIR/install.bash
 
-tar -czf $REPO_DIR.tar.gz $REPO_DIR
+archive=$REPO_DIR.tar.gz
+if [ -f $archive ]; then
+	rm $archive
+fi;
+tar -czf $archive $REPO_DIR

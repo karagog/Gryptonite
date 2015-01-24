@@ -26,30 +26,40 @@ Lockout::Lockout(QObject *p)
       timerId(-1)
 {}
 
-void Lockout::StartLockoutTimer(int minutes)
+void Lockout::StartLockoutTimer(int mins)
 {
-    GASSERT(minutes >= 0);
+    GASSERT(mins >= 0);
 
     QMutexLocker lkr(&lock);
     if(timerId == -1)
     {
-        timeout = QDateTime::currentDateTime().addSecs(minutes * 60);
+        timeout = QDateTime::currentDateTime().addSecs(mins * 60);
         timerId = startTimer(TIMER_RESOLUTION);
+        minutes = mins;
     }
 }
 
-void Lockout::StopLockoutTimer()
+bool Lockout::StopLockoutTimer()
 {
+    bool ret = false;
     QMutexLocker lkr(&lock);
-    if(timerId != -1)
+    if(timerId != -1){
         _kill_timer();
+        ret = true;
+    }
+    return ret;
 }
 
-void Lockout::ResetLockoutTimer(int minutes)
+bool Lockout::ResetLockoutTimer(int mins)
 {
+    bool ret = false;
     QMutexLocker lkr(&lock);
-    if(timerId != -1)
-        timeout = QDateTime::currentDateTime().addSecs(minutes * 60);
+    if(timerId != -1){
+        timeout = QDateTime::currentDateTime().addSecs(mins * 60);
+        minutes = mins;
+        ret = true;
+    }
+    return ret;
 }
 
 void Lockout::timerEvent(QTimerEvent *ev)

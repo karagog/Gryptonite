@@ -5,6 +5,7 @@ TOP_DIR = ../..
 
 DESTDIR = $$TOP_DIR/lib
 TARGET = grypto_core
+unix: VERSION = 3.0.0
 TEMPLATE = lib
 QMAKE_CXXFLAGS += -std=c++0x
 
@@ -37,4 +38,5 @@ HEADERS += \
 include(data_access/data_access.pri)
 include(data_objects/data_objects.pri)
 include(interfaces/interfaces.pri)
+include(utils/utils.pri)
 include(workers/workers.pri)

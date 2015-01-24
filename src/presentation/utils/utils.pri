@@ -1,7 +1,5 @@
 HEADERS += \
-    utils/clipboardaccess.h \
-    $$PWD/lockout.h
+    utils/clipboardaccess.h
 
 SOURCES += \
-    utils/clipboardaccess.cpp \
-    $$PWD/lockout.cpp
+    utils/clipboardaccess.cpp

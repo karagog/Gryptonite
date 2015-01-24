@@ -59,20 +59,29 @@ static void __show_access_denied(QWidget *w, const QString &msg)
     QMessageBox::critical(w, QObject::tr("Access Denied"), msg);
 }
 
-// Use this to hide the tray icon menu for the lifetime of this object
-// In Linux, the tray icon menu doesn't show if a modal dialogue is open, but
-//  in Windows it does. The menu should not be shown during a modal dialogue,
-//  so this class helps you hide it.
-class trayicon_menu_hider_t{
+// Use this to help deal with modal dialogs, as certain actions should be disabled
+//  while in a modal dialog
+class modal_dialog_helper_t{
     QSystemTrayIcon &m_trayIcon;
     QMenu *m_contextMenu;
+
+    Lockout &m_lockout;
+    int m_wasLockoutTimerStarted;
+    int m_lockoutMinutes;
 public:
-    trayicon_menu_hider_t(QSystemTrayIcon &tray_icon)
-        :m_trayIcon(tray_icon), m_contextMenu(tray_icon.contextMenu()){
+    modal_dialog_helper_t(QSystemTrayIcon &tray_icon, Lockout &lockout)
+        :m_trayIcon(tray_icon),
+          m_contextMenu(tray_icon.contextMenu()),
+          m_lockout(lockout),
+          m_wasLockoutTimerStarted(lockout.StopLockoutTimer()),
+          m_lockoutMinutes(lockout.Minutes())
+    {
         m_trayIcon.setContextMenu(NULL);
     }
-    ~trayicon_menu_hider_t(){
+    ~modal_dialog_helper_t(){
         m_trayIcon.setContextMenu(m_contextMenu);
+        if(m_wasLockoutTimerStarted)
+            m_lockout.StartLockoutTimer(m_lockoutMinutes);
     }
 };
 
@@ -525,7 +534,7 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
 
 void MainWindow::_new_open_database(const QString &path)
 {
-    trayicon_menu_hider_t mh(m_trayIcon);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
     Credentials creds;
     QString open_path = path;
 
@@ -621,7 +630,7 @@ static QString __get_new_database_filename(QWidget *parent,
 
 void MainWindow::_new_open_database()
 {
-    trayicon_menu_hider_t mh(m_trayIcon);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
     QString path = __get_new_database_filename(this, tr("File Location"), false);
     if(!path.isEmpty())
     {
@@ -668,7 +677,7 @@ void MainWindow::_close_database(bool delete_model)
 void MainWindow::_save_as()
 {
     GASSERT(IsFileOpen());
-    trayicon_menu_hider_t mh(m_trayIcon);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
     {
         GetPasswordDialog dlg(m_settings,
                               QFileInfo(_get_database_model()->FilePath()).fileName(),
@@ -762,7 +771,7 @@ void MainWindow::_import_from_portable_safe()
 void MainWindow::_new_entry()
 {
     GASSERT(IsFileOpen());
-    trayicon_menu_hider_t mh(m_trayIcon);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
 
     EntryEdit dlg(this);
     if(QDialog::Accepted == dlg.exec()){
@@ -774,7 +783,7 @@ void MainWindow::_new_entry()
 void MainWindow::_new_child_entry()
 {
     GASSERT(IsFileOpen());
-    trayicon_menu_hider_t mh(m_trayIcon);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
 
     DatabaseModel *model = _get_database_model();
     QModelIndex ind = _get_proxy_model()->mapToSource(ui->treeView->currentIndex());
@@ -962,7 +971,7 @@ void MainWindow::_add_remove_favorite()
 
 void MainWindow::_edit_entry(const Entry &e)
 {
-    trayicon_menu_hider_t mh(m_trayIcon);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
 
     EntryEdit dlg(e, _get_database_model(), this);
     if(QDialog::Accepted == dlg.exec())
@@ -1315,7 +1324,7 @@ void MainWindow::_progress_updated(int progress, const QString &task_name)
 void MainWindow::_organize_favorites()
 {
     GASSERT(IsFileOpen());
-    trayicon_menu_hider_t mh(m_trayIcon);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
     DatabaseModel *dbm = _get_database_model();
     OrganizeFavoritesDialog dlg(dbm->FindFavorites(), this);
     if(QDialog::Accepted == dlg.exec()){
@@ -1332,7 +1341,7 @@ void MainWindow::_update_time_format()
 
 void MainWindow::_edit_preferences()
 {
-    trayicon_menu_hider_t mh(m_trayIcon);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
 
     PreferencesEdit dlg(m_settings, this);
     if(QDialog::Accepted == dlg.exec()){

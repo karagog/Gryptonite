@@ -247,7 +247,7 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Quit the application&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Esc</string>
+    <string>Ctrl+Shift+Esc</string>
    </property>
   </action>
   <action name="actionNew_Entry">
@@ -285,7 +285,7 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Open a database, creating a new one if it doesn't exist.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Shift+Esc</string>
+    <string>Ctrl+O</string>
    </property>
   </action>
   <action name="action_Close">

@@ -23,6 +23,8 @@ limitations under the License.*/
 
 #define GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE       "gryptonite_autoload"
 
+#define GRYPTONITE_SETTING_RECENT_FILES_LENGTH      "gryptonite_recent_files_length"
+
 #define GRYPTONITE_SETTING_AUTOLAUNCH_URLS          "gryptonite_autolaunch_urls"
 
 #define GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY  "gryptonite_close_minimizes"

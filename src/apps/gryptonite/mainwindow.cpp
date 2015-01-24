@@ -51,9 +51,8 @@ USING_NAMESPACE_GRYPTO;
 using namespace std;
 
 #define STATUSBAR_MSG_TIMEOUT 5000
-#define RECENT_FILE_LIMIT 5
 
-#define SETTING_RECENT_FILES "recent_files"
+#define SETTING_RECENT_FILES             "gryptonite_recent_files"
 
 static void __show_access_denied(QWidget *w, const QString &msg)
 {
@@ -437,11 +436,14 @@ Entry const *MainWindow::_get_currently_selected_entry() const
 void MainWindow::_update_recent_files(const QString &latest_path)
 {
     QStringList paths;
-    if(m_settings->Contains(SETTING_RECENT_FILES))
+    int history_len = 10;
+    if(m_settings->Contains(SETTING_RECENT_FILES)){
         paths = m_settings->Value(SETTING_RECENT_FILES).toStringList();
+        history_len = m_settings->Value(GRYPTONITE_SETTING_RECENT_FILES_LENGTH).toInt();
+    }
 
-    if(!latest_path.isEmpty())
-    {
+    bool paths_changed = false;
+    if(!latest_path.isEmpty()){
         int ind = paths.indexOf(latest_path);
         if(ind != -1)
         {
@@ -449,11 +451,16 @@ void MainWindow::_update_recent_files(const QString &latest_path)
             paths.removeAt(ind);
         }
         paths.append(latest_path);
+        paths_changed = true;
+    }
 
-        // Trim the list to keep it within limits
-        while(paths.length() > RECENT_FILE_LIMIT)
-            paths.removeAt(0);
+    // Trim the list to keep it within limits
+    while(paths.length() > history_len){
+        paths.removeAt(0);
+        paths_changed = true;
+    }
 
+    if(paths_changed){
         m_settings->SetValue(SETTING_RECENT_FILES, paths);
         m_settings->CommitChanges();
     }
@@ -1331,6 +1338,7 @@ void MainWindow::_edit_preferences()
     if(QDialog::Accepted == dlg.exec()){
         // Update ourselves to reflect the new settings...
         _update_time_format();
+        _update_recent_files();
     }
 }
 

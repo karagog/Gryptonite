@@ -33,6 +33,7 @@ private slots:
 
     void _lockout_slider_changed(int);
     void _clipboard_slider_changed(int);
+    void _recent_file_history_changed(int);
 
 };
 

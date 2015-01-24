@@ -31,6 +31,7 @@ PreferencesEdit::PreferencesEdit(Settings *s, QWidget *p)
         ui.minimize_on_close->setChecked(m_settings->Value(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY).toBool());
         ui.timeFrmt->setChecked(m_settings->Value(GRYPTONITE_SETTING_TIME_FORMAT_24HR).toBool());
 
+        ui.spn_fileHistory->setValue(m_settings->Value(GRYPTONITE_SETTING_RECENT_FILES_LENGTH).toInt());
         ui.delaySlider->setValue(m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt());
         ui.clipboard_slider->setValue(m_settings->Value(GRYPTONITE_SETTING_CLIPBOARD_TIMEOUT).toInt());
     }
@@ -39,6 +40,7 @@ PreferencesEdit::PreferencesEdit(Settings *s, QWidget *p)
     //  from settings, the signal doesn't get executed to refresh the display
     _lockout_slider_changed(ui.delaySlider->value());
     _clipboard_slider_changed(ui.clipboard_slider->value());
+    _recent_file_history_changed(ui.spn_fileHistory->value());
 }
 
 void PreferencesEdit::accept()
@@ -49,6 +51,7 @@ void PreferencesEdit::accept()
     m_settings->SetValue(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY, ui.minimize_on_close->isChecked());
     m_settings->SetValue(GRYPTONITE_SETTING_TIME_FORMAT_24HR, ui.timeFrmt->isChecked());
 
+    m_settings->SetValue(GRYPTONITE_SETTING_RECENT_FILES_LENGTH, ui.spn_fileHistory->value());
     m_settings->SetValue(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT,
                          ui.delaySlider->value() == 0 ? -1 : ui.delaySlider->value());
     m_settings->SetValue(GRYPTONITE_SETTING_CLIPBOARD_TIMEOUT, ui.clipboard_slider->value());
@@ -69,4 +72,9 @@ void PreferencesEdit::_clipboard_slider_changed(int val)
     ui.lbl_clipboard->setText(
                 (val == 0) ?
                     "Disabled" : QVariant(val).toString() + " seconds");
+}
+
+void PreferencesEdit::_recent_file_history_changed(int val)
+{
+    ui.autoload->setEnabled(val != 0);
 }

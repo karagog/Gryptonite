@@ -25,40 +25,8 @@
      <property name="title">
       <string>Preferences</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QCheckBox" name="autoload">
-        <property name="toolTip">
-         <string>Automatically open the last file you used?</string>
-        </property>
-        <property name="whatsThis">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Check this box if you want this program to automatically open the last file you used.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>Open last file on startup</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="autoLaunch">
-        <property name="toolTip">
-         <string>If there is a URL should it be opened in a web browser?</string>
-        </property>
-        <property name="whatsThis">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Whenever the small popout window opens, it can automatically launch a URL in a web browser if you check this box.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>Auto-launch URLs in web browser</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="2" column="0" colspan="2">
        <widget class="QCheckBox" name="minimize_on_close">
         <property name="toolTip">
          <string>Should the application hide inside the tray icon, or just close?</string>
@@ -74,7 +42,26 @@
         </property>
        </widget>
       </item>
-      <item>
+      <item row="5" column="1">
+       <widget class="QSpinBox" name="spn_fileHistory">
+        <property name="toolTip">
+         <string>How many files to keep in the recent file history</string>
+        </property>
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;You can configure how many recent files the application will remember. If you want, you can set this to 0 to disable recent file history altogether, but then the application won't be able to automatically open the last file used.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>20</number>
+        </property>
+        <property name="value">
+         <number>10</number>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="2">
        <widget class="QCheckBox" name="timeFrmt">
         <property name="toolTip">
          <string>Date format preference</string>
@@ -94,6 +81,45 @@ p, li { white-space: pre-wrap; }
         </property>
         <property name="tristate">
          <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QCheckBox" name="autoLaunch">
+        <property name="toolTip">
+         <string>If there is a URL should it be opened in a web browser?</string>
+        </property>
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Whenever the small popout window opens, it can automatically launch a URL in a web browser if you check this box.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Auto-launch URLs in web browser</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Recent File History:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QCheckBox" name="autoload">
+        <property name="toolTip">
+         <string>Automatically open the last file you used?</string>
+        </property>
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Check this box if you want this program to automatically open the last file you used.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Open last file on startup</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -230,8 +256,8 @@ p, li { white-space: pre-wrap; }
    <slot>_lockout_slider_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>177</x>
-     <y>215</y>
+     <x>196</x>
+     <y>206</y>
     </hint>
     <hint type="destinationlabel">
      <x>105</x>
@@ -246,8 +272,8 @@ p, li { white-space: pre-wrap; }
    <slot>_clipboard_slider_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>123</x>
-     <y>314</y>
+     <x>142</x>
+     <y>307</y>
     </hint>
     <hint type="destinationlabel">
      <x>89</x>
@@ -287,9 +313,26 @@ p, li { white-space: pre-wrap; }
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>spn_fileHistory</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>PreferencesEdit</receiver>
+   <slot>_recent_file_history_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>215</x>
+     <y>131</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>254</x>
+     <y>157</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>_lockout_slider_changed(int)</slot>
   <slot>_clipboard_slider_changed(int)</slot>
+  <slot>_recent_file_history_changed(int)</slot>
  </slots>
 </ui>

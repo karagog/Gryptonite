@@ -37,6 +37,7 @@ cp $QT_DIR/plugins/sqldrivers/libqsqlite.so     $REPO_DIR/sqldrivers
 cp $QT_DIR/plugins/platforms/*                  $REPO_DIR/platforms
 
 # Copy install scripts
+cp README           $REPO_DIR
 cp install.bash     $REPO_DIR
 chmod +x $REPO_DIR/install.bash
 

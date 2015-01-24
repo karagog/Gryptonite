@@ -1,0 +1,17 @@
+
+You can install Gryptonite by executing "install.bash"
+
+The files will be copied to /usr/local/lib/gryptonite (no other location will work),
+so you will need administrator privileges.
+
+example:
+    cd <gryptonite package directory>
+    sudo ./install.bash
+
+You can run it by executing /usr/local/bin/gryptonite
+
+An uninstaller is included with the library files. You can uninstall everything by executing:
+
+    sudo /usr/local/lib/gryptonite/uninstall.bash
+
+Enjoy!

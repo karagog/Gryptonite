@@ -5,6 +5,7 @@ TOP_DIR = ../../..
 
 TEMPLATE = app
 TARGET = grypto_transforms
+unix: QMAKE_RPATHDIR = /usr/local/lib/gryptonite
 DESTDIR = $$TOP_DIR/bin
 
 QMAKE_CXXFLAGS += -std=c++11

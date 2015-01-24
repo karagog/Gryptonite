@@ -1,20 +1,39 @@
 #! /bin/bash
 
-LIBDIR="/usr/local/lib/gryptonite"
+# You cannot change this location, it is compiled into the application
+INSTALL_DIR_LIBS="/usr/local/lib/gryptonite"
 
-if [ ! -f /usr/local/bin/gryptonite ]; then
-	cp gryptonite /usr/local/bin;
+START_LOC="/usr/local/bin/gryptonite"
+SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-	chmod 755 /usr/local/bin/gryptonite
+cd $SCRIPT_DIR
+
+# Create an uninstall script
+echo "#! /bin/bash"                 > uninstall.bash
+echo "rm $START_LOC"                >> uninstall.bash
+echo "rm -rf $INSTALL_DIR_LIBS"     >> uninstall.bash
+chmod +x uninstall.bash
+
+# Create a startup script
+echo "#! /bin/bash"                                 > $START_LOC
+#echo "export QT_PLUGIN_PATH=$INSTALL_DIR_LIBS"      >> $START_LOC
+echo "$INSTALL_DIR_LIBS/gryptonite"                 >> $START_LOC
+chmod +x $START_LOC
+
+# Create the installation directory
+if [ ! -d "$INSTALL_DIR_LIBS" ]; then
+    mkdir "$INSTALL_DIR_LIBS";
 fi;
 
-if [ ! -d "$LIBDIR" ]; then
-	mkdir "$LIBDIR";
+# Copy files into the libraries directory
+if [ -d "$INSTALL_DIR_LIBS" ]; then
+    cp -r * "$INSTALL_DIR_LIBS";
+    chmod 755 -R "$INSTALL_DIR_LIBS";
 fi;
 
-if [ -d "$LIBDIR" ]; then
-	cp libQt*.so.4 "$LIBDIR";
 
-	chmod 755 -R "$LIBDIR";
+# Show confirmation message
+if [ -f "$START_LOC" ]; then
+    echo "Gryptonite libraries installed to $INSTALL_DIR_LIBS"
+    echo "Start application with:  $START_LOC"
 fi;
-

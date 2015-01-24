@@ -5,9 +5,11 @@ TOP_DIR = ../..
 
 DESTDIR = $$TOP_DIR/lib
 TARGET = grypto_core
-unix: VERSION = 3.0.0
 TEMPLATE = lib
 QMAKE_CXXFLAGS += -std=c++0x
+
+unix: VERSION = 3.0.0
+unix: QMAKE_RPATHDIR = /usr/local/lib/gryptonite
 
 CONFIG(debug, debug|release) {
     #message(Preparing debug build)

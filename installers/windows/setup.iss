@@ -41,8 +41,8 @@ Name: "associate"; Description: "&Associate .gdb and .GPdb files"; GroupDescript
 ; Application executables and shared libraries
 Source: "{#TopDir}\bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_transforms.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\grypto_legacy_plugin.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\lib\grypto_core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#TopDir}\lib\grypto_legacy.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\lib\grypto_ui.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 ; GUtil shared libraries

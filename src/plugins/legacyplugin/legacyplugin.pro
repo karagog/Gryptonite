@@ -13,7 +13,15 @@ DESTDIR = $$TOP_DIR/bin
 DEFINES += GUTIL_CORE_QT_ADAPTERS
 
 TARGET = grypto_legacy_plugin
-unix: QMAKE_RPATHDIR = /usr/local/lib/gryptonite
+
+CONFIG(debug, debug|release) {
+    #message(Preparing debug build)
+    DEFINES += DEBUG
+}
+else {
+    #message(Preparing release build)
+    unix: QMAKE_RPATHDIR = /usr/local/lib/gryptonite
+}
 
 TEMPLATE = lib
 CONFIG += plugin

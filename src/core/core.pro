@@ -9,7 +9,6 @@ TEMPLATE = lib
 QMAKE_CXXFLAGS += -std=c++0x
 
 unix: VERSION = 3.0.0
-unix: QMAKE_RPATHDIR = /usr/local/lib/gryptonite
 
 CONFIG(debug, debug|release) {
     #message(Preparing debug build)
@@ -17,6 +16,7 @@ CONFIG(debug, debug|release) {
 }
 else {
     #message(Preparing release build)
+    unix: QMAKE_RPATHDIR = /usr/local/lib/gryptonite
 }
 
 DEFINES += GUTIL_CORE_QT_ADAPTERS

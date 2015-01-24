@@ -15,6 +15,7 @@ CONFIG(debug, debug|release) {
 }
 else {
     #message(Preparing release build)
+    unix: QMAKE_RPATHDIR = /usr/local/lib/gryptonite
 }
 
 DEFINES += GUTIL_CORE_QT_ADAPTERS

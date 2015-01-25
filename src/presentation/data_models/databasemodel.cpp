@@ -213,8 +213,8 @@ DatabaseModel::DatabaseModel(const char *f,
             this, SIGNAL(NotifyFavoritesUpdated()));
     connect(&m_db, SIGNAL(NotifyExceptionOnBackgroundThread(const std::shared_ptr<GUtil::Exception<>> &)),
             this, SLOT(_handle_database_worker_exception(const std::shared_ptr<GUtil::Exception<>> &)));
-    connect(&m_db, SIGNAL(NotifyProgressUpdated(int, QString)),
-            this, SIGNAL(NotifyProgressUpdated(int, QString)));
+    connect(&m_db, SIGNAL(NotifyProgressUpdated(int, bool, QString)),
+            this, SIGNAL(NotifyProgressUpdated(int, bool, QString)));
 }
 
 DatabaseModel::~DatabaseModel()

@@ -196,7 +196,7 @@ public slots:
 signals:
 
     void NotifyFavoritesUpdated();
-    void NotifyProgressUpdated(int, const QString &);
+    void NotifyProgressUpdated(int, bool, const QString &);
     void NotifyUndoStackChanged();
 
 

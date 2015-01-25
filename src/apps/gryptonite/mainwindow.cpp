@@ -535,8 +535,8 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
 
     // Wire up the progress bar control
     connect(&m_progressBar, SIGNAL(Clicked()), dbm, SLOT(CancelAllBackgroundOperations()));
-    connect(dbm, SIGNAL(NotifyProgressUpdated(int,QString)),
-            this, SLOT(_progress_updated(int,QString)));
+    connect(dbm, SIGNAL(NotifyProgressUpdated(int, bool, QString)),
+            this, SLOT(_progress_updated(int, bool, QString)));
 }
 
 void MainWindow::_new_open_database(const QString &path)
@@ -556,15 +556,10 @@ void MainWindow::_new_open_database(const QString &path)
         catch(...)
         {
             // If validation failed, try to upgrade the file
-            // First we don't allow cancelling during the upgrade
-            bool tmp = m_progressBar.IsCancellable();
-            m_progressBar.SetIsCancellable(false);
-            finally([&]{ m_progressBar.SetIsCancellable(tmp); });
-
             // Call on the legacy manager to upgrade the database
             open_path = LegacyManager().UpgradeDatabase(path, creds, m_settings,
                 [=](int p, const QString &ps){
-                    this->_progress_updated(p, ps);
+                    this->_progress_updated(p, false, ps);
                 },
                 this);
 
@@ -727,10 +722,6 @@ void MainWindow::_save_as()
     DatabaseModel *old_model = _get_database_model();
     _close_database(false);     // Don't delete the old database model!
     _install_new_database_model(dbm);
-
-    bool tmp = m_progressBar.IsCancellable();
-    m_progressBar.SetIsCancellable(false);
-    finally([&]{ m_progressBar.SetIsCancellable(tmp); });
 
     // Copy the old database to the new one
     dbm->ImportFromDatabase(*old_model);
@@ -1304,8 +1295,9 @@ void MainWindow::_cryptographic_transformations()
     m_encryptDecryptWindow->activateWindow();
 }
 
-void MainWindow::_progress_updated(int progress, const QString &task_name)
+void MainWindow::_progress_updated(int progress, bool cancellable, const QString &task_name)
 {
+    m_progressBar.SetIsCancellable(cancellable);
     m_progressBar.SetProgress(progress, task_name);
 #ifdef Q_OS_WIN
     m_taskbarButton.progress()->setValue(progress);

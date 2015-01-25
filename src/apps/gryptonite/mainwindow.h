@@ -129,7 +129,7 @@ private slots:
     void _treeview_currentindex_changed(const QModelIndex &);
 
     void _entry_row_activated(int);
-    void _progress_updated(int, const QString & = QString::null);
+    void _progress_updated(int, bool cancellable, const QString & = QString::null);
 
     void _organize_favorites();
     void _edit_preferences();

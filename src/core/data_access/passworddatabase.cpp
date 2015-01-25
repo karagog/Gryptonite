@@ -102,6 +102,7 @@ struct d_t
     queue<Grypt::bg_worker_command *> file_thread_commands;
     bool cancel_file_thread;
     bool file_thread_idle;
+    bool file_thread_cancellable;
 
     mutex entry_thread_lock;
     condition_variable wc_entry_thread;
@@ -122,6 +123,7 @@ struct d_t
     d_t()
         :cancel_file_thread(false),
           file_thread_idle(true),
+          file_thread_cancellable(false),
           entry_thread_idle(false),
           closing(false)
     {}
@@ -711,7 +713,9 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, const Entry &e)
     G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
     QSqlQuery q(db);
+    QString task_string = tr("Adding entry");
     db.transaction();
+    emit NotifyProgressUpdated(0, false, task_string);
     try{
         bool success = false;
         finally([&]{
@@ -736,6 +740,7 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, const Entry &e)
             q.addBindValue(i);
             DatabaseUtils::ExecuteQuery(q);
         }
+        emit NotifyProgressUpdated(35, false, task_string);
 
 
         // Update the index immediately now that we have everything we need
@@ -763,13 +768,16 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, const Entry &e)
         q.addBindValue(crypttext);
         DatabaseUtils::ExecuteQuery(q);
 
+        emit NotifyProgressUpdated(65, false, task_string);
         success = true;
     }
     catch(...){
         db.rollback();
+        emit NotifyProgressUpdated(100, false, task_string);
         throw;
     }
     db.commit();
+    emit NotifyProgressUpdated(100, false, task_string);
 
     if(e.IsFavorite())
         emit NotifyFavoritesUpdated();
@@ -782,6 +790,8 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, const Entry &e)
 {
     G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
+    QString task_string = tr("Updating entry");
+    emit NotifyProgressUpdated(25, false, task_string);
 
     // First get the entry out of the cache
     entry_cache er;
@@ -804,9 +814,11 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, const Entry &e)
         DatabaseUtils::ExecuteQuery(q);
     } catch(...) {
         db.rollback();
+        emit NotifyProgressUpdated(100, false, task_string);
         throw;
     }
     db.commit();
+    emit NotifyProgressUpdated(100, false, task_string);
 
     // We never remove old files, but we may add new ones here
     __add_new_files(this, e);
@@ -817,12 +829,14 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
 {
     QSqlDatabase db = QSqlDatabase::database(conn_str);
     QSqlQuery q(db);
+    QString task_string = tr("Deleting entry");
     int old_favorite_index;
     EntryId pid;
     uint row;
     uint child_count;
 
     db.transaction();
+    emit NotifyProgressUpdated(0, false, task_string);
     try
     {
         q.prepare("SELECT ParentId,Row,Favorite FROM Entry WHERE Id=?");
@@ -830,6 +844,8 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
         DatabaseUtils::ExecuteQuery(q);
         if(!q.next())
             throw Exception<>("Entry not found");
+
+        emit NotifyProgressUpdated(10, false, task_string);
 
         pid = q.record().value(0).toByteArray();
         row = q.record().value(1).toInt();
@@ -839,9 +855,13 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
         //  has been deleted from the index
         child_count = __count_entries_by_parent_id(q, pid);
 
+        emit NotifyProgressUpdated(25, false, task_string);
+
         q.prepare("DELETE FROM Entry WHERE ID=?");
         q.addBindValue((QByteArray)id);
         DatabaseUtils::ExecuteQuery(q);
+
+        emit NotifyProgressUpdated(65, false, task_string);
 
         // Do not delete any files; the user has to manually clean them up
 
@@ -861,9 +881,11 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
     catch(...)
     {
         db.rollback();
+        emit NotifyProgressUpdated(100, false, task_string);
         throw;
     }
     db.commit();
+    emit NotifyProgressUpdated(100, false, task_string);
 
     if(old_favorite_index >= 0)
         emit NotifyFavoritesUpdated();
@@ -878,7 +900,9 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
 
     QSqlDatabase db = QSqlDatabase::database(conn_str);
     QSqlQuery q(db);
+    QString task_string = tr("Moving entry");
     db.transaction();
+    emit NotifyProgressUpdated(0, false, task_string);
     try
     {
         QByteArray special_zero_id(EntryId::Size, (char)0);
@@ -903,6 +927,8 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
             DatabaseUtils::ExecuteQuery(q);
         }
 
+        emit NotifyProgressUpdated(15, false, task_string);
+
         // Count the siblings at the dest. We do this later because the source
         //  may be the dest, in which case we need to count after removing the source rows.
         int dest_siblings_cnt = __count_entries_by_parent_id(q, dest_parent);
@@ -918,6 +944,8 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
             DatabaseUtils::ExecuteQuery(q);
         }
 
+        emit NotifyProgressUpdated(40, false, task_string);
+
         // Update the siblings at the dest
         for(int i = dest_siblings_cnt - 1; i >= (int)row_dest; --i){
             q.prepare(QString("UPDATE Entry SET Row=? WHERE ParentID%1 AND Row=?")
@@ -929,18 +957,24 @@ void PasswordDatabase::_ew_move_entry(const QString &conn_str,
             DatabaseUtils::ExecuteQuery(q);
         }
 
+        emit NotifyProgressUpdated(65, false, task_string);
+
         // Finally move the rows into the dest
         q.prepare("UPDATE Entry SET ParentID=? WHERE ParentID=?");
         q.addBindValue((QByteArray)dest_parent);
         q.addBindValue(special_zero_id);
         DatabaseUtils::ExecuteQuery(q);
+
+        emit NotifyProgressUpdated(85, false, task_string);
     }
     catch(...)
     {
         db.rollback();
+        emit NotifyProgressUpdated(100, false, task_string);
         throw;
     }
     db.commit();
+    emit NotifyProgressUpdated(100, false, task_string);
 }
 
 static QByteArray __generate_crypttext(Cryptor &cryptor, const Entry &e)
@@ -1579,12 +1613,12 @@ void PasswordDatabase::ImportFromDatabase(const PasswordDatabase &other)
     FailIfNotOpen();
     G_D;
     QString progress_label(QString(tr("Importing entries from %1")).arg(other.FilePath()));
-    emit NotifyProgressUpdated(0, progress_label);
-    finally([&]{ emit NotifyProgressUpdated(100, progress_label); });
+    emit NotifyProgressUpdated(0, false, progress_label);
+    finally([&]{ emit NotifyProgressUpdated(100, false, progress_label); });
 
     int progress_ctr = 0;
     int entry_count = other.CountAllEntries();
-    emit NotifyProgressUpdated(10, progress_label);
+    emit NotifyProgressUpdated(10, false, progress_label);
 
     QList<QPair<FileId, FileId>> file_list;
     __import_children(d,
@@ -1596,17 +1630,18 @@ void PasswordDatabase::ImportFromDatabase(const PasswordDatabase &other)
                       progress_ctr,
                       [&]{
         emit NotifyProgressUpdated((float)progress_ctr*100/entry_count * 0.9 + 10,
+                                   false,
                                    progress_label);
     });
 
     progress_label = QString(tr("Importing files from %1")).arg(other.FilePath());
-    emit NotifyProgressUpdated(0, progress_label);
+    emit NotifyProgressUpdated(0, false, progress_label);
 
     int file_count = file_list.length();
     for(int i = 0; i < file_count; ++i){
         QByteArray cur_file = other.GetFile(file_list[i].first);
         AddUpdateFile(file_list[i].second, cur_file);
-        emit NotifyProgressUpdated((float)i/file_count*100, progress_label);
+        emit NotifyProgressUpdated((float)i/file_count*100, false, progress_label);
     }
 
     RefreshFavorites();
@@ -1733,11 +1768,16 @@ void PasswordDatabase::_ew_refresh_favorites(const QString &conn_str)
 
 void PasswordDatabase::_ew_set_favorites(const QString &conn_str, const QList<EntryId> &favs)
 {
+    QString task_string = tr("Setting favorites");
+    emit NotifyProgressUpdated(0, false, task_string);
+    finally([&]{ emit NotifyProgressUpdated(100, false, task_string); });
+
     QSqlDatabase db(QSqlDatabase::database(conn_str));
     db.transaction();
     try{
         // First clear all existing favorites
         QSqlQuery q("UPDATE Entry SET Favorite=-1", db);
+        emit NotifyProgressUpdated(50, false, task_string);
 
         // Then apply favorites in the order they were given
         for(int i = 0; i < favs.length(); ++i){
@@ -1756,12 +1796,18 @@ void PasswordDatabase::_ew_set_favorites(const QString &conn_str, const QList<En
 
 void PasswordDatabase::_ew_add_favorite(const QString &conn_str, const EntryId &id)
 {
+    QString task_string = tr("Adding favorite");
+    emit NotifyProgressUpdated(0, false, task_string);
+    finally([&]{ emit NotifyProgressUpdated(100, false, task_string); });
+
     QSqlQuery q(QSqlDatabase::database(conn_str));
     q.prepare("SELECT Favorite FROM Entry WHERE ID=?");
     q.addBindValue((QByteArray)id);
     DatabaseUtils::ExecuteQuery(q);
     if(!q.next())
         return;
+
+    emit NotifyProgressUpdated(15, false, task_string);
 
     if(0 > q.value(0).toInt()){
         q.prepare("UPDATE Entry SET Favorite=0 WHERE ID=?");
@@ -1772,6 +1818,10 @@ void PasswordDatabase::_ew_add_favorite(const QString &conn_str, const EntryId &
 
 void PasswordDatabase::_ew_remove_favorite(const QString &conn_str, const EntryId &id)
 {
+    QString task_string = tr("Removing favorite");
+    emit NotifyProgressUpdated(0, false, task_string);
+    finally([&]{ emit NotifyProgressUpdated(100, false, task_string); });
+
     QSqlDatabase db(QSqlDatabase::database(conn_str));
     QSqlQuery q(db);
     entry_cache ec = __fetch_entry_row_by_id(q, id);
@@ -1786,6 +1836,8 @@ void PasswordDatabase::_ew_remove_favorite(const QString &conn_str, const EntryI
             q.addBindValue(ec.favoriteindex);
             DatabaseUtils::ExecuteQuery(q);
 
+            emit NotifyProgressUpdated(10, false, task_string);
+
             int ctr = 0;
             QSqlQuery q2(db);
             while(q.next()){
@@ -1796,6 +1848,7 @@ void PasswordDatabase::_ew_remove_favorite(const QString &conn_str, const EntryI
                 ctr++;
             }
         }
+        emit NotifyProgressUpdated(65, false, task_string);
 
         q.prepare("UPDATE Entry SET Favorite=-1 WHERE ID=?");
         q.addBindValue((QByteArray)id);
@@ -2094,9 +2147,14 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
                                     const QByteArray &data,
                                     bool by_path = true)
 {
+    G_D;
     QSqlDatabase db(QSqlDatabase::database(conn_str));
     GASSERT(db.isValid());
     QSqlQuery q(db);
+
+    // Always notify that the task is complete, even if it's an error
+    finally([&]{ emit NotifyProgressUpdated(100, false, m_curTaskString); });
+    emit NotifyProgressUpdated(0, false);
 
     // First upload and encrypt the file
     QByteArray encrypted_data;
@@ -2121,15 +2179,13 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
 
         m_progressMin = 0, m_progressMax = 75;
         m_curTaskString = QString("Download and encrypt file");
+        d->file_thread_cancellable = true;
         cryptor.EncryptData(&o, data_in, NULL, nonce, DEFAULT_CHUNK_SIZE, this);
     }
 
-    // Always notify that the task is complete, even if it's an error
-    finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
-
     _fw_fail_if_cancelled();
     m_curTaskString = QString("Adding file");
-    emit NotifyProgressUpdated(m_progressMax, m_curTaskString);
+    emit NotifyProgressUpdated(m_progressMax, true, m_curTaskString);
 
     db.transaction();
     try{
@@ -2151,6 +2207,7 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
         DatabaseUtils::ExecuteQuery(q);
 
         // One last chance before we commit
+        emit NotifyProgressUpdated(m_progressMax + 10, true, m_curTaskString);
         _fw_fail_if_cancelled();
     }
     catch(...){
@@ -2165,16 +2222,17 @@ void PasswordDatabase::_fw_exp_file(const QString &conn_str,
                                      const FileId &id,
                                      const char *filepath)
 {
+    G_D;
     QSqlDatabase db(QSqlDatabase::database(conn_str));
     GASSERT(db.isValid());
     QSqlQuery q(db);
     const QString filename(QFileInfo(filepath).fileName());
 
     m_curTaskString = QString(tr("Decrypt and Export: %1")).arg(filename);
-    emit NotifyProgressUpdated(0, m_curTaskString);
+    emit NotifyProgressUpdated(0, true, m_curTaskString);
 
     // Always notify that the task is complete, even if it's an error
-    finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
+    finally([&]{ emit NotifyProgressUpdated(100, false, m_curTaskString); });
 
     // First fetch the file from the database
     q.prepare("SELECT Data FROM File WHERE ID=?");
@@ -2184,7 +2242,7 @@ void PasswordDatabase::_fw_exp_file(const QString &conn_str,
     if(!q.next())
         throw Exception<>("File ID not found");
     _fw_fail_if_cancelled();
-    emit NotifyProgressUpdated(25, m_curTaskString);
+    emit NotifyProgressUpdated(25, true, m_curTaskString);
 
     const QByteArray encrypted_data(q.record().value(0).toByteArray());
     {
@@ -2193,9 +2251,10 @@ void PasswordDatabase::_fw_exp_file(const QString &conn_str,
         f.Open(File::OpenReadWriteTruncate);
 
         _fw_fail_if_cancelled();
-        emit NotifyProgressUpdated(35, m_curTaskString);
+        emit NotifyProgressUpdated(35, true, m_curTaskString);
 
         m_progressMin = 35, m_progressMax = 100;
+        d->file_thread_cancellable = true;
         cryptor.DecryptData(&f, &i, NULL, DEFAULT_CHUNK_SIZE, this);
     }
 }
@@ -2226,10 +2285,10 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
     int progress_counter = 0;
     m_curTaskString = QString(tr("Exporting to Portable Safe: %1"))
                             .arg(QFileInfo(ps_filepath).fileName());
-    emit NotifyProgressUpdated(progress_counter, m_curTaskString);
+    emit NotifyProgressUpdated(progress_counter, true, m_curTaskString);
 
     // Always notify that the task is complete, even if it's an error
-    finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
+    finally([&]{ emit NotifyProgressUpdated(100, false, m_curTaskString); });
 
     QSqlDatabase db(QSqlDatabase::database(conn_str));
     GASSERT(db.isValid());
@@ -2239,19 +2298,19 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
     //  this makes sure nobody changes anything while we're exporting
     db.transaction();
     try{
-        emit NotifyProgressUpdated(progress_counter+=5, m_curTaskString);
+        emit NotifyProgressUpdated(progress_counter+=5, true, m_curTaskString);
 
         // First get the main payload: the entire entry structure in XML
         QDomDocument xdoc;
         QDomNode root = xdoc.appendChild(xdoc.createElement("Grypto_XML"));
         __append_children_to_xml(xdoc, root, q, my_cryptor, EntryId::Null());
 
-        emit NotifyProgressUpdated(progress_counter+=15, m_curTaskString);
+        emit NotifyProgressUpdated(progress_counter+=15, true, m_curTaskString);
         _fw_fail_if_cancelled();
 
         // Open the target file
         GPSFile_Export gps_file(ps_filepath, creds);
-        emit NotifyProgressUpdated(progress_counter+=5, m_curTaskString);
+        emit NotifyProgressUpdated(progress_counter+=5, true, m_curTaskString);
         _fw_fail_if_cancelled();
 
         // Compress the entry data and write it as the main payload
@@ -2260,7 +2319,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
             gps_file.AppendPayload((byte const *)xml_compressed.constData(),
                                    xml_compressed.length());
         }
-        emit NotifyProgressUpdated(progress_counter+=10, m_curTaskString);
+        emit NotifyProgressUpdated(progress_counter+=10, true, m_curTaskString);
         _fw_fail_if_cancelled();
 
         // Now let's export all the files as attachments
@@ -2298,6 +2357,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
             ++file_cnt;
             emit NotifyProgressUpdated(
                         progress_counter + (remaining_progress*((float)file_cnt/files.size())),
+                        true,
                         m_curTaskString);
             _fw_fail_if_cancelled();
         }
@@ -2309,10 +2369,10 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
     db.commit();    // Nothing should have changed, is a rollback better here?
 }
 
-void PasswordDatabase::_fw_import_from_gps(const QString &conn_str,
-                                           GUtil::CryptoPP::Cryptor &my_cryptor,
-                                           const char *ps_filepath,
-                                           const Credentials &creds)
+void PasswordDatabase::_fw_import_from_gps(const QString &,
+                                           GUtil::CryptoPP::Cryptor &,
+                                           const char *,
+                                           const Credentials &)
 {
     // Always notify that the task is complete, even if it's an error
     //finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
@@ -2325,7 +2385,9 @@ void PasswordDatabase::_fw_import_from_gps(const QString &conn_str,
 void PasswordDatabase::ProgressUpdated(int prg)
 {
     // prg is between 0 and 100, so scale it to m_progressMax-m_progressMin
+    G_D;
     emit NotifyProgressUpdated(m_progressMin + ((float)prg*(m_progressMax-m_progressMin))/100,
+                               d->file_thread_cancellable,
                                m_curTaskString);
 }
 

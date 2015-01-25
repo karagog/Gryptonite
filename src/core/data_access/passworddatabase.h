@@ -256,7 +256,7 @@ signals:
     /** Notifies that progress of a background task has updated.
      *  The task string provides a description of the task being done.
     */
-    void NotifyProgressUpdated(int progress, const QString &task_string = QString());
+    void NotifyProgressUpdated(int progress, bool cancellable, const QString &task_string = QString());
 
     /** Notifies that the exception was received on the background thread. */
     void NotifyExceptionOnBackgroundThread(const std::shared_ptr<GUtil::Exception<>> &);

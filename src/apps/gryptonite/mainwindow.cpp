@@ -1123,7 +1123,7 @@ void MainWindow::PopOutCurrentEntry()
         }
     }
 
-    EntryPopup *ep = new EntryPopup(e, m_settings, this);
+    EntryPopup *ep = new EntryPopup(e, _get_database_model(), m_settings, this);
     connect(ep, SIGNAL(CedeControl()), this, SLOT(_show()));
 
     if(m_entryView)

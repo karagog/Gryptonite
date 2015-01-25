@@ -18,6 +18,7 @@ limitations under the License.*/
 #include "ui_entry_popup.h"
 #include "settings.h"
 #include <grypto_clipboardaccess.h>
+#include <grypto_databasemodel.h>
 #include <gutil/qt_settings.h>
 
 #define SETTING_ENTRY_POPUP_GEOMETRY "ep_geometry"
@@ -31,7 +32,7 @@ class EntryPopup : public QWidget
     Grypt::ClipboardAccess m_clipboard;
 public:
 
-    EntryPopup(const Grypt::Entry &e, GUtil::Qt::Settings *settings = 0, QWidget *parent = 0)
+    EntryPopup(const Grypt::Entry &e, Grypt::DatabaseModel *mdl, GUtil::Qt::Settings *settings = 0, QWidget *parent = 0)
         :QWidget(parent, Qt::Dialog | Qt::WindowStaysOnTopHint),
           m_settings(settings)
     {
@@ -42,6 +43,7 @@ public:
         if(settings && settings->Contains(SETTING_ENTRY_POPUP_GEOMETRY))
             restoreGeometry(settings->Value(SETTING_ENTRY_POPUP_GEOMETRY).toByteArray());
 
+        ui.view_entry->SetDatabaseModel(mdl);
         ui.view_entry->SetEntry(e);
         connect(ui.view_entry, SIGNAL(RowActivated(int)),
                 this, SLOT(_entry_row_activated(int)));

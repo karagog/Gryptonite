@@ -158,7 +158,8 @@ private:
     bool m_isLocked;
     QByteArray m_lockedState;
     QByteArray m_savedState;
-    GUtil::SmartPointer<QWidget> m_encryptDecryptWindow;
+    QPointer<QWidget> m_encryptDecryptWindow;
+    bool m_cryptoTransformsVisible;
     QPointer<QWidget> m_entryView;
 
     bool m_minimize_msg_shown;

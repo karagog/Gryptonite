@@ -96,6 +96,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
       m_action_new_child(tr("New &Child"), this),
       m_btn_pop_out(tr("Pop Out")),
       m_isLocked(true),
+      m_cryptoTransformsVisible(false),
       m_minimize_msg_shown(false),
       m_requesting_unlock(false),
       m_progressBar(true)
@@ -1204,6 +1205,11 @@ void MainWindow::_lock_unlock_interface(bool lock)
         m_isLocked = true;
 
         _hide();
+        m_cryptoTransformsVisible = false;
+        if(m_encryptDecryptWindow && m_encryptDecryptWindow->isVisible()){
+            m_encryptDecryptWindow->hide();
+            m_cryptoTransformsVisible = true;
+        }
         m_trayIcon.setToolTip(tr(GRYPTO_APP_NAME " Locked"));
         m_trayIcon.showMessage(tr("Locked"),
                                tr(GRYPTO_APP_NAME " has been locked."
@@ -1214,8 +1220,11 @@ void MainWindow::_lock_unlock_interface(bool lock)
         if(!IsLocked())
             return;
 
+        if(m_cryptoTransformsVisible)
+            m_encryptDecryptWindow->show();
         restoreState(m_lockedState);
         m_lockedState.clear();
+        m_savedState.clear();
         ui->stackedWidget->setCurrentIndex(1);
         ui->actionLockUnlock->setText(tr("&Lock Application"));
         ui->actionLockUnlock->setData(true);

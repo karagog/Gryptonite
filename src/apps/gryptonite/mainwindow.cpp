@@ -192,6 +192,9 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     connect(ui->searchWidget, SIGNAL(NotifyUserActivity()),
             this, SLOT(_reset_lockout_timer()));
 
+    connect(&m_trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
+            this, SLOT(_reset_lockout_timer()));
+
     // Restore the previous session's window state
     if(m_settings->Contains(MAINWINDOW_GEOMETRY_SETTING))
         restoreGeometry(m_settings->Value(MAINWINDOW_GEOMETRY_SETTING).toByteArray());

@@ -94,8 +94,11 @@
    </item>
    <item row="2" column="3">
     <widget class="QPushButton" name="btn_exportFile">
+     <property name="toolTip">
+      <string>Export file to filesystem</string>
+     </property>
      <property name="whatsThis">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Export the decrypted file to the filesystem&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Decrypt the file and export it to the filesystem&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Export</string>

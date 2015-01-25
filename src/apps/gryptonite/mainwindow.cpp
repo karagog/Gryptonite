@@ -775,9 +775,17 @@ void MainWindow::_new_entry()
     GASSERT(IsFileOpen());
     modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
 
+    DatabaseModel *model = _get_database_model();
+    QModelIndex ind = _get_proxy_model()->mapToSource(ui->treeView->currentIndex());
+    Entry const *selected = model->GetEntryFromIndex(ind);
+
     EntryEdit dlg(this);
     if(QDialog::Accepted == dlg.exec()){
-        _get_database_model()->AddEntry(dlg.GetEntry());
+        if(selected){
+            dlg.GetEntry().SetParentId(selected->GetParentId());
+            dlg.GetEntry().SetRow(selected->GetRow() + 1);
+        }
+        model->AddEntry(dlg.GetEntry());
         _select_entry(dlg.GetEntry().GetId());
     }
 }

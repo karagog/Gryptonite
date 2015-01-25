@@ -38,6 +38,12 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 Name: "associate"; Description: "&Associate .gdb and .GPdb files"; GroupDescription: "Files:";
 
 [Files]
+; License files
+Source: "{#TopDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\NOTICE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\installers\LICENSE_CRYPTOPP"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\installers\LICENSE_QT"; DestDir: "{app}"; Flags: ignoreversion
+
 ; Application executables and shared libraries
 Source: "{#TopDir}\bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_transforms.exe"; DestDir: "{app}"; Flags: ignoreversion

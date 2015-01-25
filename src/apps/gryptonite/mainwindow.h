@@ -151,6 +151,7 @@ private:
     GUtil::SmartPointer<QActionGroup> m_recentFilesGroup;
     QAction m_add_remove_favorites;
     QAction m_action_new_child;
+    QPushButton m_btn_pop_out;
     QUndoStack m_navStack;
     Grypt::ClipboardAccess m_clipboard;
     Grypt::Lockout m_lockoutTimer;

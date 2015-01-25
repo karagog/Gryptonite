@@ -94,6 +94,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
       m_settings(s),
       m_add_remove_favorites(this),
       m_action_new_child(tr("New &Child"), this),
+      m_btn_pop_out(tr("Pop Out")),
       m_isLocked(true),
       m_minimize_msg_shown(false),
       m_requesting_unlock(false),
@@ -133,6 +134,12 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     btn_navForward->setAutoRaise(true);
     connect(btn_navForward, SIGNAL(clicked()), &m_navStack, SLOT(redo()));
     ui->toolBar->addWidget(btn_navForward);
+
+    m_btn_pop_out.setToolTip(tr("View entry in a smaller window"));
+    m_btn_pop_out.setWhatsThis(tr("Opens the current entry in a smaller window, and"
+                                  " launches a URL if there is one"));
+    connect(&m_btn_pop_out, SIGNAL(pressed()), this, SLOT(PopOutCurrentEntry()));
+    ui->toolBar->addWidget(&m_btn_pop_out);
 
     // Restore search parameters
     if(m_settings->Contains(MAINWINDOW_SEARCH_SETTING)){
@@ -994,6 +1001,7 @@ void MainWindow::_treeview_currentindex_changed(const QModelIndex &ind)
     Entry const *e = _get_database_model()->GetEntryFromIndex(_get_proxy_model()->mapToSource(ind));
     ui->action_EditEntry->setEnabled(e);
     ui->action_DeleteEntry->setEnabled(e);
+    m_btn_pop_out.setEnabled(e);
     if(e)
         _select_entry(e->GetId());
     else

@@ -67,8 +67,11 @@ QString LegacyManager::UpgradeDatabase(const QString &path,
         }
     }
     else{
+        QByteArray err = m_pl->errorString().toUtf8();
         m_pl.Clear();
-        throw Exception<>(String::Format("Unable to load legacy plugin: %s", fn.constData()));
+        throw Exception<>(String::Format("Unable to load legacy plugin %s:\n%s",
+                                         fn.constData(),
+                                         err.constData()));
     }
     return ret;
 }

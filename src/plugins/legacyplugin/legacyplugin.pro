@@ -30,8 +30,12 @@ QMAKE_CXXFLAGS += -std=c++11
 
 INCLUDEPATH += $$TOP_DIR/include $$TOP_DIR/gutil/include
 
-LIBS += -L$$TOP_DIR/lib \
-    -lgrypto_legacy
+LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
+    -lgrypto_legacy \
+    -lgrypto_core \
+    -lgrypto_ui \
+    -lGUtil \
+    -lcryptopp
 
 SOURCES += legacyplugin.cpp
 

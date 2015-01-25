@@ -19,6 +19,9 @@
      <property name="text">
       <string>Description</string>
      </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item row="0" column="0" colspan="4">

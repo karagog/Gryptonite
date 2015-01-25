@@ -41,6 +41,7 @@ static void __init_default_settings(GUtil::Qt::Settings &settings)
     if(!settings.Contains(GRYPTONITE_SETTING_AUTOLAUNCH_URLS)){
         settings.SetValue(GRYPTONITE_SETTING_AUTOLAUNCH_URLS, true);
         settings.SetValue(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE, true);
+        settings.SetValue(GRYPTONITE_SETTING_RECENT_FILES_LENGTH, 10);
         settings.SetValue(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY, true);
         settings.SetValue(GRYPTONITE_SETTING_TIME_FORMAT_24HR, true);
         settings.SetValue(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT, 15);

@@ -37,6 +37,9 @@ SearchWidget::SearchWidget(QWidget *parent)
     ui->lineEdit->installEventFilter(this);
     ui->chk_caseSensitive->installEventFilter(this);
     ui->chk_filter_results->installEventFilter(this);
+    ui->chk_onlyFavorites->installEventFilter(this);
+    ui->chk_onlyFiles->installEventFilter(this);
+    ui->chk_alsoSecrets->installEventFilter(this);
     ui->rdo_regexp->installEventFilter(this);
     ui->rdo_wildCard->installEventFilter(this);
     ui->chk_start->installEventFilter(this);
@@ -44,6 +47,7 @@ SearchWidget::SearchWidget(QWidget *parent)
     ui->chk_end->installEventFilter(this);
     ui->dte_end->installEventFilter(this);
     ui->btn_clear->installEventFilter(this);
+    ui->gb_time->installEventFilter(this);
 }
 
 SearchWidget::~SearchWidget()

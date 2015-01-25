@@ -2156,6 +2156,15 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
     finally([&]{ emit NotifyProgressUpdated(100, false, m_curTaskString); });
     emit NotifyProgressUpdated(0, false);
 
+    // First remove the existing file, if there is one. We do this right away
+    //  because we want this to happen even if the user cancels.
+    bool exists = __file_exists(q, id);
+    if(exists){
+        q.prepare("DELETE FROM File WHERE ID=?");
+        q.addBindValue((QByteArray)id);
+        DatabaseUtils::ExecuteQuery(q);
+    }
+
     // First upload and encrypt the file
     QByteArray encrypted_data;
     {
@@ -2189,18 +2198,10 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
 
     db.transaction();
     try{
-        bool exists = __file_exists(q, id);
         _fw_fail_if_cancelled();
-        if(exists)
-        {
-            // Update the existing file
-            q.prepare("UPDATE File SET Length=?,Data=? WHERE ID=?");
-        }
-        else
-        {
-            // Insert a new file
-            q.prepare("INSERT INTO File (Length, Data, ID) VALUES (?,?,?)");
-        }
+
+        // Insert a new file
+        q.prepare("INSERT INTO File (Length, Data, ID) VALUES (?,?,?)");
         q.addBindValue(encrypted_data.length());
         q.addBindValue(encrypted_data, QSql::In | QSql::Binary);
         q.addBindValue((QByteArray)id, QSql::In | QSql::Binary);

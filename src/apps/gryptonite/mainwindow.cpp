@@ -1253,6 +1253,8 @@ void MainWindow::_lock_unlock_interface(bool lock)
     ui->action_Favorites->setEnabled(b);
     ui->action_Search->setEnabled(b);
 
+    ui->action_cryptoTransform->setEnabled(!lock);
+
     _update_trayIcon_menu();
 }
 

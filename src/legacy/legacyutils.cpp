@@ -221,7 +221,7 @@ void LegacyUtils::UpdateFileToCurrentVersion(
             progress_cb(10 + 90.0 * ((float)entry_ctr / entry_cnt), progress_msg);
     });
 
-    progress_msg = QObject::tr("Updated database");
+    progress_msg = QObject::tr("Updating database");
     progress_cb(100, progress_msg);
 }
 

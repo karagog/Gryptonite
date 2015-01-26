@@ -46,7 +46,7 @@ QString LegacyPlugin::UpgradeDatabase(const QString &path,
                              QString("The file you selected is either unrecognized, or in an older format."
                                      " Would you like to attempt to update it?  (The original file will be preserved)"),
                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No)){
-            return ret;
+            return QString::null;
         }
 
         // Get the path of the new file
@@ -54,20 +54,22 @@ QString LegacyPlugin::UpgradeDatabase(const QString &path,
                                            QObject::tr("Select updated file path"),
                                            QString(),
                                            "Grypto DB (*.gdb);;All Files (*)");
-        if(QFileInfo(ret).suffix().isEmpty())
+        if(ret.isEmpty())
+            return QString::null;
+        else if(QFileInfo(ret).suffix().isEmpty())
             ret.append(".gdb");
 
         Credentials creds;
         {
             GetPasswordDialog dlg(settings, QFileInfo(path).fileName(), parent);
             if(QDialog::Rejected == dlg.exec())
-                return ret;
+                return QString::null;
             creds = dlg.GetCredentials();
         }
         {
             NewPasswordDialog dlg(settings, QFileInfo(ret).fileName(), parent);
             if(QDialog::Rejected == dlg.exec())
-                return ret;
+                return QString::null;
             new_creds = dlg.GetCredentials();
         }
 

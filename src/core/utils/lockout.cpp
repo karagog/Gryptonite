@@ -64,15 +64,22 @@ bool Lockout::ResetLockoutTimer(int mins)
 
 void Lockout::timerEvent(QTimerEvent *ev)
 {
+    bool do_lock = false;
     QMutexLocker lkr(&lock);
     if(ev->timerId() == timerId)
     {
         if(timeout <= QDateTime::currentDateTime())
         {
             _kill_timer();
-            emit Lock();
+            do_lock = true;
         }
     }
+    lkr.unlock();
+    
+    // It's important that we emit the signal after releasing the lock,
+    //  because the slots may depend on 
+    if(do_lock)
+        emit Lock();
 }
 
 void Lockout::_kill_timer()

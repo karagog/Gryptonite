@@ -268,23 +268,29 @@ void MainWindow::AboutToQuit()
 
 void MainWindow::_hide()
 {
-    m_savedState = saveState();
+    if(isVisible()){
+        // Only save the state if we were visible
+        m_savedState = saveState();
+     
+        if(!m_minimize_msg_shown){
+            m_trayIcon.showMessage(tr("Minimized to Tray"),
+                                   tr(GRYPTO_APP_NAME" has been minimized to tray."
+                                      "\nClick icon to reopen."));
+            m_minimize_msg_shown = true;
+        }
+    }
+    
+    // Make doubly sure to hide these things, even if the main window was not visible
     hide();
     ui->dw_search->hide();
     ui->dw_treeView->hide();
-    if(!m_minimize_msg_shown){
-        m_trayIcon.showMessage(tr("Minimized to Tray"),
-                               tr(GRYPTO_APP_NAME" has been minimized to tray."
-                                  "\nClick icon to reopen."));
-        m_minimize_msg_shown = true;
-    }
 }
 
 void MainWindow::_show()
 {
     showNormal();
     activateWindow();
-    if(!m_savedState.isEmpty()){
+    if(!IsLocked() && !m_savedState.isEmpty()){
         restoreState(m_savedState);
         m_savedState.clear();
     }
@@ -1203,7 +1209,8 @@ void MainWindow::_lock_unlock_interface(bool lock)
         if(m_entryView)
             m_entryView->close();
 
-        m_lockedState = saveState();
+        if(isVisible())
+            m_lockedState = saveState();
         ui->dw_treeView->hide();
         ui->dw_search->hide();
         ui->toolBar->hide();
@@ -1222,6 +1229,10 @@ void MainWindow::_lock_unlock_interface(bool lock)
         m_trayIcon.showMessage(tr("Locked"),
                                tr(GRYPTO_APP_NAME " has been locked."
                                   "\nClick icon to unlock."));
+        
+        // Sometimes the user manually locks, so we have to be sure to disable
+        //  the lockout timer
+        m_lockoutTimer.StopLockoutTimer();
     }
     else
     {
@@ -1230,7 +1241,11 @@ void MainWindow::_lock_unlock_interface(bool lock)
 
         if(m_cryptoTransformsVisible)
             m_encryptDecryptWindow->show();
-        restoreState(m_lockedState);
+        
+        if(!m_lockedState.isEmpty())
+            restoreState(m_lockedState);
+        else if(!m_savedState.isEmpty())
+            restoreState(m_savedState);
         m_lockedState.clear();
         m_savedState.clear();
         ui->stackedWidget->setCurrentIndex(1);
@@ -1238,6 +1253,11 @@ void MainWindow::_lock_unlock_interface(bool lock)
         ui->actionLockUnlock->setData(true);
         m_trayIcon.setToolTip(tr(GRYPTO_APP_NAME " Encrypted Secrets"));
         m_isLocked = false;
+
+        // We have to start the lockout timer again, because it was stopped when we locked
+        int minutes = m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt();
+        if(minutes > 0)
+            m_lockoutTimer.StartLockoutTimer(minutes);
     }
 
     bool b = !lock && IsFileOpen();

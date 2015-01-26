@@ -131,7 +131,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     btn_navForward = new QToolButton(this);
     btn_navForward->setIcon(QIcon(":/grypto/icons/rightarrow.png"));
     btn_navForward->setToolTip(tr("Navigate Forwards"));
-    btn_navBack->setWhatsThis(tr("Navigate forwards through the history of your selections"));
+    btn_navForward->setWhatsThis(tr("Navigate forwards through the history of your selections"));
     btn_navForward->setAutoRaise(true);
     connect(btn_navForward, SIGNAL(clicked()), &m_navStack, SLOT(redo()));
     ui->toolBar->addWidget(btn_navForward);

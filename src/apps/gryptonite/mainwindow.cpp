@@ -864,7 +864,7 @@ void MainWindow::_update_ui_file_opened(bool b)
 void MainWindow::_favorite_action_clicked(QAction *a)
 {
     // Select the entry first
-    ShowEntryById(a->data().value<EntryId>());
+    _select_entry(a->data().value<EntryId>());
 
     // Then pop it out
     PopOutCurrentEntry();

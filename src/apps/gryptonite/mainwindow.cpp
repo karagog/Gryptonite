@@ -68,18 +68,23 @@ class modal_dialog_helper_t{
     Lockout &m_lockout;
     int m_wasLockoutTimerStarted;
     int m_lockoutMinutes;
+    
+    MainWindow *m_mainWindow;
 public:
-    modal_dialog_helper_t(QSystemTrayIcon &tray_icon, Lockout &lockout)
+    modal_dialog_helper_t(QSystemTrayIcon &tray_icon, Lockout &lockout, MainWindow *mw)
         :m_trayIcon(tray_icon),
           m_contextMenu(tray_icon.contextMenu()),
           m_lockout(lockout),
           m_wasLockoutTimerStarted(lockout.StopLockoutTimer()),
-          m_lockoutMinutes(lockout.Minutes())
+          m_lockoutMinutes(lockout.Minutes()),
+          m_mainWindow(mw)
     {
         m_trayIcon.setContextMenu(NULL);
+        m_mainWindow->m_canHide = false;
     }
     ~modal_dialog_helper_t(){
         m_trayIcon.setContextMenu(m_contextMenu);
+        m_mainWindow->m_canHide = true;
         if(m_wasLockoutTimerStarted)
             m_lockout.StartLockoutTimer(m_lockoutMinutes);
     }
@@ -99,6 +104,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
       m_cryptoTransformsVisible(false),
       m_minimize_msg_shown(false),
       m_requesting_unlock(false),
+      m_canHide(true),
       m_progressBar(true)
 #ifdef Q_OS_WIN
       ,m_taskbarButton(this)
@@ -271,6 +277,9 @@ void MainWindow::AboutToQuit()
 
 void MainWindow::_hide()
 {
+    if(!m_canHide)
+        return;
+
     if(isVisible()){
         // Only save the state if we were visible
         m_savedState = saveState();
@@ -554,7 +563,7 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
 
 void MainWindow::_new_open_database(const QString &path)
 {
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
     Credentials creds;
     QString open_path = path;
 
@@ -607,12 +616,14 @@ void MainWindow::_new_open_database(const QString &path)
     // Get the user's credentials after successfully locking the database
     const QString filename = QFileInfo(open_path).fileName();
     if(!existed){
+        modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
         NewPasswordDialog dlg(m_settings, filename, this);
         if(QDialog::Rejected == dlg.exec())
             return;
         creds = dlg.GetCredentials();
     }
     else if(!file_updated){
+        modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
         GetPasswordDialog dlg(m_settings, filename, this);
         if(QDialog::Rejected == dlg.exec())
             return;
@@ -645,7 +656,7 @@ static QString __get_new_database_filename(QWidget *parent,
 
 void MainWindow::_new_open_database()
 {
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
     QString path = __get_new_database_filename(this, tr("File Location"), false);
     if(!path.isEmpty())
     {
@@ -692,7 +703,7 @@ void MainWindow::_close_database(bool delete_model)
 void MainWindow::_save_as()
 {
     GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
     {
         GetPasswordDialog dlg(m_settings,
                               QFileInfo(_get_database_model()->FilePath()).fileName(),
@@ -756,8 +767,11 @@ void MainWindow::_export_to_portable_safe()
         fn.append(".gps");
 
     NewPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
-    if(QDialog::Accepted != dlg.exec())
-        return;
+    {
+        modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+        if(QDialog::Accepted != dlg.exec())
+            return;
+    }
 
     _get_database_model()->ExportToPortableSafe(fn.toUtf8(), dlg.GetCredentials());
 }
@@ -773,8 +787,11 @@ void MainWindow::_import_from_portable_safe()
         return;
 
     GetPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
-    if(QDialog::Accepted != dlg.exec())
-        return;
+    {
+        modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+        if(QDialog::Accepted != dlg.exec())
+            return;
+    }
 
     _get_database_model()->ImportFromPortableSafe(fn.toUtf8(), dlg.GetCredentials());
 }
@@ -782,7 +799,7 @@ void MainWindow::_import_from_portable_safe()
 void MainWindow::_new_entry()
 {
     GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
 
     DatabaseModel *model = _get_database_model();
     QModelIndex ind = _get_proxy_model()->mapToSource(ui->treeView->currentIndex());
@@ -802,7 +819,7 @@ void MainWindow::_new_entry()
 void MainWindow::_new_child_entry()
 {
     GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
 
     DatabaseModel *model = _get_database_model();
     QModelIndex ind = _get_proxy_model()->mapToSource(ui->treeView->currentIndex());
@@ -990,7 +1007,7 @@ void MainWindow::_add_remove_favorite()
 
 void MainWindow::_edit_entry(const Entry &e)
 {
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
 
     EntryEdit dlg(e, _get_database_model(), this);
     if(QDialog::Accepted == dlg.exec())
@@ -1298,6 +1315,7 @@ void MainWindow::RequestUnlock()
         return;
 
     m_requesting_unlock = true;
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
     GetPasswordDialog dlg(m_settings,
                           QFileInfo(_get_database_model()->FilePath()).fileName(),
                           this);
@@ -1369,7 +1387,7 @@ void MainWindow::_progress_updated(int progress, bool cancellable, const QString
 void MainWindow::_organize_favorites()
 {
     GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
     DatabaseModel *dbm = _get_database_model();
     OrganizeFavoritesDialog dlg(dbm->FindFavorites(), this);
     if(QDialog::Accepted == dlg.exec()){
@@ -1386,7 +1404,7 @@ void MainWindow::_update_time_format()
 
 void MainWindow::_edit_preferences()
 {
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer);
+    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
 
     PreferencesEdit dlg(m_settings, this);
     if(QDialog::Accepted == dlg.exec()){

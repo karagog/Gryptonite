@@ -59,6 +59,7 @@ class QActionGroup;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
+    friend class modal_dialog_helper_t;
 public:
 
     /** Creates a main window, optionally opening the given file. */
@@ -164,6 +165,7 @@ private:
 
     bool m_minimize_msg_shown;
     bool m_requesting_unlock;
+    bool m_canHide;
 
     GUtil::Qt::ProgressBarControl m_progressBar;
 #ifdef Q_OS_WIN

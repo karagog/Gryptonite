@@ -8,7 +8,6 @@
 #define MyAppExeName "gryptonite.exe"
 
 #define TopDir "..\.."
-#define QtPath "C:\Qt\5.3\mingw482_32"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -58,20 +57,24 @@ Source: "{#TopDir}\gutil\lib\GUtilCryptoPP.dll"; DestDir: "{app}"; Flags: ignore
 Source: "{#TopDir}\gutil\lib\GUtilQt.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Qt shared libraries
-Source: "{#QtPath}\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\Qt5Sql.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\Qt5Xml.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\Qt5WinExtras.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\icudt52.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\icuin52.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\bin\icuuc52.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#QtPath}\plugins\platforms\qwindows.dll"; DestDir: "{app}/platforms"; Flags: ignoreversion
-Source: "{#QtPath}\plugins\sqldrivers\qsqlite.dll"; DestDir: "{app}/sqldrivers"; Flags: ignoreversion
+Source: "{#TopDir}\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\Qt5Sql.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\Qt5Svg.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\Qt5Xml.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\Qt5WinExtras.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\icudt52.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\icuin52.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\icuuc52.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\platforms\qwindows.dll"; DestDir: "{app}/platforms"; Flags: ignoreversion
+Source: "{#TopDir}\bin\sqldrivers\qsqlite.dll"; DestDir: "{app}/sqldrivers"; Flags: ignoreversion
+Source: "{#TopDir}\bin\accessible\*"; DestDir: "{app}/accessible"; Flags: ignoreversion
+Source: "{#TopDir}\bin\imageformats\*"; DestDir: "{app}/imageformats"; Flags: ignoreversion
+Source: "{#TopDir}\bin\iconengines\*"; DestDir: "{app}/iconengines"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Registry]

@@ -615,7 +615,7 @@ void PasswordDatabase::Open(const Credentials &creds)
             // Insert a version record
             q.prepare("INSERT INTO Version (Version,Salt,KeyCheck)"
                         " VALUES (?,?,?)");
-            q.addBindValue(GRYPTO_VERSION_STRING);
+            q.addBindValue(GRYPTO_DATABASE_VERSION);
             q.addBindValue(QByteArray((const char *)salt, sizeof(salt)));
             q.addBindValue(keycheck_ct);
             DatabaseUtils::ExecuteQuery(q);

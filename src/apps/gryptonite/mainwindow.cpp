@@ -247,6 +247,9 @@ MainWindow::~MainWindow()
 
 void MainWindow::AboutToQuit()
 {
+    m_minimize_msg_shown = true;
+    _hide();
+
     // Save the search settings before we close
     m_settings->SetValue(MAINWINDOW_SEARCH_SETTING, ui->searchWidget->GetFilter().ToXml());
 

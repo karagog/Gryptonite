@@ -51,6 +51,8 @@ using namespace std;
 // The length of the nonce used by the cryptor
 #define NONCE_LENGTH 10
 
+#define GRYPTO_DATABASE_VERSION "3.0.0"
+
 namespace Grypt{
 class bg_worker_command;
 }
@@ -502,7 +504,7 @@ static void __check_version(const QString &dbstring)
             throw Exception<>("Found multiple version rows; there should be exactly one");
 
         QString ver = q.record().value("Version").toString();
-        if(ver != GRYPTO_VERSION_STRING)
+        if(ver != GRYPTO_DATABASE_VERSION)
             throw Exception<>(String::Format("Wrong database version: %s", ver.toUtf8().constData()));
     }
     if(cnt == 0)

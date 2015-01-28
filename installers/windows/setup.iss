@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Gryptonite"
-#define MyAppVersion "3.0.0"
+#define MyAppVersion "3.0.1_alpha"
 #define MyAppPublisher "Rapstallion"
 #define MyAppURL "https://github.com/karagog/Gryptonite"
 #define MyAppExeName "gryptonite.exe"
@@ -13,7 +13,7 @@
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{9F2CE13A-FF14-4147-AB50-437FC8AE234F}
+AppId={{60E0B876-8466-4046-B96F-F40B00515DFD}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}

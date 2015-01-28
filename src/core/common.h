@@ -24,7 +24,7 @@ limitations under the License.*/
 
 #define GRYPTO_APP_NAME "Gryptonite"
 
-#define GRYPTO_VERSION_STRING "3.0.0"
+#define GRYPTO_VERSION_STRING "3.0.1_alpha"
 
 #define GRYPTO_SETTINGS_IDENTIFIER "main"
 

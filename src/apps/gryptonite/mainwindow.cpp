@@ -62,31 +62,27 @@ static void __show_access_denied(QWidget *w, const QString &msg)
 // Use this to help deal with modal dialogs, as certain actions should be disabled
 //  while in a modal dialog
 class modal_dialog_helper_t{
-    QSystemTrayIcon &m_trayIcon;
+    MainWindow *m_mainWindow;
+    
     QMenu *m_contextMenu;
 
-    Lockout &m_lockout;
     int m_wasLockoutTimerStarted;
     int m_lockoutMinutes;
-    
-    MainWindow *m_mainWindow;
 public:
-    modal_dialog_helper_t(QSystemTrayIcon &tray_icon, Lockout &lockout, MainWindow *mw)
-        :m_trayIcon(tray_icon),
-          m_contextMenu(tray_icon.contextMenu()),
-          m_lockout(lockout),
-          m_wasLockoutTimerStarted(lockout.StopLockoutTimer()),
-          m_lockoutMinutes(lockout.Minutes()),
-          m_mainWindow(mw)
+    modal_dialog_helper_t(MainWindow *mw)
+        :m_mainWindow(mw),
+          m_contextMenu(mw->m_trayIcon.contextMenu()),
+          m_wasLockoutTimerStarted(mw->m_lockoutTimer.StopLockoutTimer()),
+          m_lockoutMinutes(mw->m_lockoutTimer.Minutes())
     {
-        m_trayIcon.setContextMenu(NULL);
+        m_mainWindow->m_trayIcon.setContextMenu(NULL);
         m_mainWindow->m_canHide = false;
     }
     ~modal_dialog_helper_t(){
-        m_trayIcon.setContextMenu(m_contextMenu);
+        m_mainWindow->m_trayIcon.setContextMenu(m_contextMenu);
         m_mainWindow->m_canHide = true;
         if(m_wasLockoutTimerStarted)
-            m_lockout.StartLockoutTimer(m_lockoutMinutes);
+            m_mainWindow->m_lockoutTimer.StartLockoutTimer(m_lockoutMinutes);
     }
 };
 
@@ -563,7 +559,7 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
 
 void MainWindow::_new_open_database(const QString &path)
 {
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+    modal_dialog_helper_t mh(this);
     Credentials creds;
     QString open_path = path;
 
@@ -616,14 +612,14 @@ void MainWindow::_new_open_database(const QString &path)
     // Get the user's credentials after successfully locking the database
     const QString filename = QFileInfo(open_path).fileName();
     if(!existed){
-        modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+        modal_dialog_helper_t mh(this);
         NewPasswordDialog dlg(m_settings, filename, this);
         if(QDialog::Rejected == dlg.exec())
             return;
         creds = dlg.GetCredentials();
     }
     else if(!file_updated){
-        modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+        modal_dialog_helper_t mh(this);
         GetPasswordDialog dlg(m_settings, filename, this);
         if(QDialog::Rejected == dlg.exec())
             return;
@@ -656,7 +652,7 @@ static QString __get_new_database_filename(QWidget *parent,
 
 void MainWindow::_new_open_database()
 {
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+    modal_dialog_helper_t mh(this);
     QString path = __get_new_database_filename(this, tr("File Location"), false);
     if(!path.isEmpty())
     {
@@ -703,7 +699,7 @@ void MainWindow::_close_database(bool delete_model)
 void MainWindow::_save_as()
 {
     GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+    modal_dialog_helper_t mh(this);
     {
         GetPasswordDialog dlg(m_settings,
                               QFileInfo(_get_database_model()->FilePath()).fileName(),
@@ -768,7 +764,7 @@ void MainWindow::_export_to_portable_safe()
 
     NewPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
     {
-        modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+        modal_dialog_helper_t mh(this);
         if(QDialog::Accepted != dlg.exec())
             return;
     }
@@ -788,7 +784,7 @@ void MainWindow::_import_from_portable_safe()
 
     GetPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
     {
-        modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+        modal_dialog_helper_t mh(this);
         if(QDialog::Accepted != dlg.exec())
             return;
     }
@@ -799,7 +795,7 @@ void MainWindow::_import_from_portable_safe()
 void MainWindow::_new_entry()
 {
     GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+    modal_dialog_helper_t mh(this);
 
     DatabaseModel *model = _get_database_model();
     QModelIndex ind = _get_proxy_model()->mapToSource(ui->treeView->currentIndex());
@@ -819,7 +815,7 @@ void MainWindow::_new_entry()
 void MainWindow::_new_child_entry()
 {
     GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+    modal_dialog_helper_t mh(this);
 
     DatabaseModel *model = _get_database_model();
     QModelIndex ind = _get_proxy_model()->mapToSource(ui->treeView->currentIndex());
@@ -1007,7 +1003,7 @@ void MainWindow::_add_remove_favorite()
 
 void MainWindow::_edit_entry(const Entry &e)
 {
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+    modal_dialog_helper_t mh(this);
 
     EntryEdit dlg(e, _get_database_model(), this);
     if(QDialog::Accepted == dlg.exec())
@@ -1315,7 +1311,7 @@ void MainWindow::RequestUnlock()
         return;
 
     m_requesting_unlock = true;
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+    modal_dialog_helper_t mh(this);
     GetPasswordDialog dlg(m_settings,
                           QFileInfo(_get_database_model()->FilePath()).fileName(),
                           this);
@@ -1387,7 +1383,7 @@ void MainWindow::_progress_updated(int progress, bool cancellable, const QString
 void MainWindow::_organize_favorites()
 {
     GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+    modal_dialog_helper_t mh(this);
     DatabaseModel *dbm = _get_database_model();
     OrganizeFavoritesDialog dlg(dbm->FindFavorites(), this);
     if(QDialog::Accepted == dlg.exec()){
@@ -1404,7 +1400,7 @@ void MainWindow::_update_time_format()
 
 void MainWindow::_edit_preferences()
 {
-    modal_dialog_helper_t mh(m_trayIcon, m_lockoutTimer, this);
+    modal_dialog_helper_t mh(this);
 
     PreferencesEdit dlg(m_settings, this);
     if(QDialog::Accepted == dlg.exec()){

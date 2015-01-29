@@ -292,6 +292,7 @@ void MainWindow::_hide()
     hide();
     ui->dw_search->hide();
     ui->dw_treeView->hide();
+    ui->toolBar->hide();
 }
 
 void MainWindow::_show()

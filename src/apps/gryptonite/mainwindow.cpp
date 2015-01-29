@@ -1416,8 +1416,12 @@ void MainWindow::_tray_icon_activated(QSystemTrayIcon::ActivationReason ar)
     {
     case QSystemTrayIcon::DoubleClick:
     case QSystemTrayIcon::Trigger:
-        if(isVisible())
-            _hide();
+        if(isVisible()){
+            if(m_canHide)
+                _hide();
+            else
+                activateWindow();
+        }
         else{
             _show();
             if(IsLocked())

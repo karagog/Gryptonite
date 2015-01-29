@@ -1,14 +1,21 @@
 
 You can install Gryptonite by executing "install.bash"
 
-The files will be copied to /usr/local/lib/gryptonite (no other location will work),
-so you will need administrator privileges.
+The files will be copied to /usr/local/lib/gryptonite (no other location will
+work, unless you compile it with a different rpath), so you will need 
+administrator privileges to install.
 
 example:
     cd <gryptonite package directory>
     sudo ./install.bash
 
-You can run it by executing /usr/local/bin/gryptonite
+You can run it by executing "gryptonite" in /usr/local/bin, which is a short 
+bash script that calls the executable in /usr/local/lib/gryptonite.
+
+FYI there is another executable included alongside gryptonite called grypto_transforms,
+which is just the cryptographic transformation window without the full rest of the
+gryptonite application. It is not included in the path, but you can find it and make
+your own link to it in /usr/local/lib/gryptonite
 
 An uninstaller is included with the library files. You can uninstall everything by executing:
 

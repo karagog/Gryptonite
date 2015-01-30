@@ -479,13 +479,14 @@ void MainWindow::_update_recent_files(const QString &latest_path)
 
     bool paths_changed = false;
     if(!latest_path.isEmpty()){
-        int ind = paths.indexOf(latest_path);
+        QString path = QDir::fromNativeSeparators(latest_path);
+        int ind = paths.indexOf(path);
         if(ind != -1)
         {
             // Move the path to the front
             paths.removeAt(ind);
         }
-        paths.append(latest_path);
+        paths.append(path);
         paths_changed = true;
     }
 

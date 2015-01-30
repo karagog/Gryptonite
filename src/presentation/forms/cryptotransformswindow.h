@@ -50,10 +50,7 @@ class CryptoTransformsWindow : public QWidget
     bool m_stateSaved;
 public:
 
-    /** Initialize the widget with a cryptor object. If you give it a null pointer then it will
-        not be able to encrypt/decrypt without the user setting it manually in the interface.
-    */
-    explicit CryptoTransformsWindow(GUtil::Qt::Settings *, GUtil::CryptoPP::Cryptor const * = 0, QWidget *parent = 0);
+    explicit CryptoTransformsWindow(GUtil::Qt::Settings *, QWidget *parent = 0);
     ~CryptoTransformsWindow();
 
     virtual void closeEvent(QCloseEvent *);

@@ -1345,11 +1345,8 @@ void MainWindow::_reset_lockout_timer()
 void MainWindow::_cryptographic_transformations()
 {
     if(!m_encryptDecryptWindow){
-        m_encryptDecryptWindow = new CryptoTransformsWindow(
-                    m_settings,
-                    IsFileOpen() ? &_get_database_model()->Cryptor() : NULL
-                                   );
-        m_encryptDecryptWindow->setAttribute(::Qt::WA_DeleteOnClose, false);
+        m_encryptDecryptWindow = new CryptoTransformsWindow(m_settings, this);
+        m_encryptDecryptWindow->setAttribute(::Qt::WA_DeleteOnClose);
     }
     m_encryptDecryptWindow->show();
     m_encryptDecryptWindow->activateWindow();

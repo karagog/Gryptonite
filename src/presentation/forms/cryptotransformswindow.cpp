@@ -45,11 +45,10 @@ USING_NAMESPACE_GUTIL1(CryptoPP);
 NAMESPACE_GRYPTO;
 
 
-CryptoTransformsWindow::CryptoTransformsWindow(GUtil::Qt::Settings *settings, Cryptor const *c, QWidget *parent)
+CryptoTransformsWindow::CryptoTransformsWindow(GUtil::Qt::Settings *settings, QWidget *parent)
     :QWidget(parent, ::Qt::Dialog),
       ui(new Ui::CryptoTransformsWindow),
       m_settings(settings),
-      m_cryptor(c == NULL ? NULL : new Cryptor(*c)),
       m_progressDialog(tr("Processing..."), tr("Cancel"), 0, 100, this),
       m_stateSaved(false)
 {

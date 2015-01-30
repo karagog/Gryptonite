@@ -277,8 +277,9 @@ void MainWindow::_hide()
         return;
 
     if(isVisible()){
-        // Only save the state if we were visible
-        m_savedState = saveState();
+        // Only save the state if we were visible and unlocked
+        if(!IsLocked())
+            m_savedState = saveState();
      
         if(!m_minimize_msg_shown){
             m_trayIcon.showMessage(tr("Minimized to Tray"),
@@ -1228,6 +1229,11 @@ void MainWindow::_lock_unlock_interface(bool lock)
 
         if(isVisible())
             m_lockedState = saveState();
+        else{
+            m_lockedState = m_savedState;
+            m_savedState.clear();
+        }
+            
         ui->dw_treeView->hide();
         ui->dw_search->hide();
         ui->toolBar->hide();
@@ -1259,12 +1265,9 @@ void MainWindow::_lock_unlock_interface(bool lock)
         if(m_cryptoTransformsVisible)
             m_encryptDecryptWindow->show();
         
-        if(!m_lockedState.isEmpty())
-            restoreState(m_lockedState);
-        else if(!m_savedState.isEmpty())
-            restoreState(m_savedState);
+        restoreState(m_lockedState);
         m_lockedState.clear();
-        m_savedState.clear();
+        GASSERT(m_savedState.isEmpty());
         ui->stackedWidget->setCurrentIndex(1);
         ui->actionLockUnlock->setText(tr("&Lock Application"));
         ui->actionLockUnlock->setData(true);

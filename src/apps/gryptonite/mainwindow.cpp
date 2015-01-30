@@ -99,7 +99,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
       m_isLocked(true),
       m_cryptoTransformsVisible(false),
       m_minimize_msg_shown(false),
-      m_requesting_unlock(false),
       m_canHide(true),
       m_progressBar(true)
 #ifdef Q_OS_WIN
@@ -1311,22 +1310,24 @@ void MainWindow::_action_lock_unlock_interface()
 
 void MainWindow::RequestUnlock()
 {
-    if(m_requesting_unlock)
-        return;
-
-    m_requesting_unlock = true;
-    modal_dialog_helper_t mh(this);
-    GetPasswordDialog dlg(m_settings,
-                          QFileInfo(_get_database_model()->FilePath()).fileName(),
-                          this);
-    if(QDialog::Accepted == dlg.exec())
     {
-        if(_get_database_model()->CheckCredentials(dlg.GetCredentials()))
-            _lock_unlock_interface(false);
-        else
-            __show_access_denied(this, tr("Invalid Password"));
+        bool unlock = false;
+        modal_dialog_helper_t mh(this);
+        GetPasswordDialog dlg(m_settings,
+                              QFileInfo(_get_database_model()->FilePath()).fileName(),
+                              this);
+        if(QDialog::Accepted == dlg.exec()){
+            if(_get_database_model()->CheckCredentials(dlg.GetCredentials()))
+                unlock = true;
+            else
+                __show_access_denied(this, tr("Invalid Password"));
+        }
+        
+        if(!unlock)
+            return;
     }
-    m_requesting_unlock = false;
+    
+    _lock_unlock_interface(false);
 }
 
 bool MainWindow::event(QEvent *e)

@@ -164,7 +164,6 @@ private:
     QPointer<QWidget> m_entryView;
 
     bool m_minimize_msg_shown;
-    bool m_requesting_unlock;
     bool m_canHide;
 
     GUtil::Qt::ProgressBarControl m_progressBar;

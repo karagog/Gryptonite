@@ -20,7 +20,7 @@ CONFIG(debug, debug|release) {
 }
 else {
     #message(Preparing release build)
-    unix: QMAKE_RPATHDIR = /usr/local/lib/gryptonite
+    unix: QMAKE_RPATHDIR =
 }
 
 TEMPLATE = lib

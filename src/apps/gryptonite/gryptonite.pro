@@ -11,7 +11,7 @@ TOP_DIR = ../../..
 
 DESTDIR = $$TOP_DIR/bin
 TARGET = gryptonite
-unix: QMAKE_RPATHDIR = /usr/local/lib/gryptonite
+unix: QMAKE_RPATHDIR =
 
 QMAKE_CXXFLAGS += -std=c++11
 

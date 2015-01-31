@@ -1,9 +1,9 @@
 
 You can install Gryptonite by executing "install.bash"
 
-The files will be copied to /usr/local/lib/gryptonite (no other location will
-work, unless you compile it with a different rpath), so you will need 
-administrator privileges to install.
+The files will be copied to /usr/local/lib/gryptonite. If you want to 
+install to a different directory, then update the location in install.bash
+before executing it.
 
 example:
     cd <gryptonite package directory>

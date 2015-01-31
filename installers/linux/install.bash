@@ -17,6 +17,7 @@ chmod +x uninstall.bash
 # Create a startup script
 echo "#! /bin/bash"                                 > $START_LOC
 #echo "export QT_PLUGIN_PATH=$INSTALL_DIR_LIBS"      >> $START_LOC
+echo "export LD_LIBRARY_PATH=$INSTALL_DIR_LIBS"      >> $START_LOC
 echo "$INSTALL_DIR_LIBS/gryptonite"                 >> $START_LOC
 chmod +x $START_LOC
 
@@ -25,7 +26,7 @@ if [ ! -d "$INSTALL_DIR_LIBS" ]; then
     mkdir "$INSTALL_DIR_LIBS";
 fi;
 
-# Copy files into the libraries directory
+
 if [ -d "$INSTALL_DIR_LIBS" ]; then
     cp -r * "$INSTALL_DIR_LIBS";
     chmod 755 -R "$INSTALL_DIR_LIBS";

@@ -63,7 +63,7 @@ static void __show_access_denied(QWidget *w, const QString &msg)
 //  while in a modal dialog
 class modal_dialog_helper_t{
     MainWindow *m_mainWindow;
-    
+
     QMenu *m_contextMenu;
 
     int m_wasLockoutTimerStarted;
@@ -279,7 +279,7 @@ void MainWindow::_hide()
         // Only save the state if we were visible and unlocked
         if(!IsLocked())
             m_savedState = saveState();
-     
+
         if(!m_minimize_msg_shown){
             m_trayIcon.showMessage(tr("Minimized to Tray"),
                                    tr(GRYPTO_APP_NAME" has been minimized to tray."
@@ -287,7 +287,7 @@ void MainWindow::_hide()
             m_minimize_msg_shown = true;
         }
     }
-    
+
     // Make doubly sure to hide these things, even if the main window was not visible
     hide();
     ui->dw_search->hide();
@@ -1029,6 +1029,7 @@ void MainWindow::_treeview_currentindex_changed(const QModelIndex &ind)
     ui->action_EditEntry->setEnabled(e);
     ui->action_DeleteEntry->setEnabled(e);
     m_btn_pop_out.setEnabled(e);
+    m_action_new_child.setEnabled(e);
     if(e)
         _select_entry(e->GetId());
     else
@@ -1233,7 +1234,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
             m_lockedState = m_savedState;
             m_savedState.clear();
         }
-            
+
         ui->dw_treeView->hide();
         ui->dw_search->hide();
         ui->toolBar->hide();
@@ -1252,7 +1253,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
         m_trayIcon.showMessage(tr("Locked"),
                                tr(GRYPTO_APP_NAME " has been locked."
                                   "\nClick icon to unlock."));
-        
+
         // Sometimes the user manually locks, so we have to be sure to disable
         //  the lockout timer
         m_lockoutTimer.StopLockoutTimer();
@@ -1264,7 +1265,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
 
         if(m_cryptoTransformsVisible)
             m_encryptDecryptWindow->show();
-        
+
         restoreState(m_lockedState);
         m_lockedState.clear();
         GASSERT(m_savedState.isEmpty());
@@ -1323,11 +1324,11 @@ void MainWindow::RequestUnlock()
             else
                 __show_access_denied(this, tr("Invalid Password"));
         }
-        
+
         if(!unlock)
             return;
     }
-    
+
     _lock_unlock_interface(false);
 }
 

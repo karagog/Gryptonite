@@ -1114,15 +1114,20 @@ void MainWindow::_nav_index_changed(int ind)
 
 void MainWindow::_select_entry(const EntryId &id)
 {
-    bool allow = true;
+    bool push = true;
     if(m_navStack.index() > 0)
     {
-        allow = id !=
+        push = id !=
                 static_cast<const navigation_command *>(m_navStack.command(m_navStack.index() - 1))->CurEntryId;
     }
 
-    if(allow)
+    if(push)
         m_navStack.push(new navigation_command(id));
+    else{
+        // Refresh the view even if the id was at the top of the nav stack
+        //  (it could have been cleared from the view)
+        ui->view_entry->SetEntry(_get_database_model()->FindEntryById(id));
+    }
 }
 
 void MainWindow::ShowEntryById(const Grypt::EntryId &id)

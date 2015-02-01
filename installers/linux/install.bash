@@ -1,11 +1,16 @@
 #! /bin/bash
 
-# You cannot change this location, it is compiled into the application
+# You may update these locations to install wherever you want. BUT
+#  BE CAREFUL if you update this because the uninstaller will
+#  remove the entire directory!
 INSTALL_DIR_LIBS="/usr/local/lib/gryptonite"
 
+# You will call this startup script to launch gryptonite. It exports
+#  the proper LD_LIBRARY_PATH and calls the executable in the lib directory
 START_LOC="/usr/local/bin/gryptonite"
-SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
+# This is a fancy expression that gets the install script's current directory
+SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd $SCRIPT_DIR
 
 # Create an uninstall script

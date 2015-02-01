@@ -35,6 +35,10 @@ which was not possible in the old database format. I really hope you enjoy the n
 version, as this application has been a big part of my life since 2009, both as a
 developer and a user.
 
+<br/>
+<img src="http://s1.softpedia-static.com/_img/sp100free.png"/>
+<br/>
+
 <a href='https://pledgie.com/campaigns/28056' >
     <img alt='Click here to lend your support to: Gryptonite Encrypted Database and make a donation at pledgie.com !' src='https://pledgie.com/campaigns/28056.png?skin_name=chrome' border='0' >
 </a>

@@ -19,7 +19,7 @@ limitations under the License.*/
 
 
 About::About(QWidget *p)
-    :GUtil::Qt::About(p, true, true)
+    :GUtil::Qt::About(p, true, true, false)
 {
     _dialog.resize(600, 360);
 

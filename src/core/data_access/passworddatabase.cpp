@@ -1282,13 +1282,21 @@ void PasswordDatabase::SetFavoriteEntries(const QList<EntryId> &favs)
     d->index_lock.lock();
     {
         // Update the favorite index
+        // Remove the old favorites from the index
+        for(const EntryId &eid : d->favorite_index){
+            auto iter = d->index.find(eid);
+            if(iter != d->index.end())
+                iter->second.favoriteindex = -1;
+        }
+
         d->favorite_index = favs;
 
         int ctr = 0;
         for(const EntryId &eid : favs){
             ctr++;  // Start counting at 1
-            if(d->index.find(eid) != d->index.end())
-                d->index[eid].favoriteindex = ctr;
+            auto iter = d->index.find(eid);
+            if(iter != d->index.end())
+                iter->second.favoriteindex = ctr;
         }
     }
     d->index_lock.unlock();

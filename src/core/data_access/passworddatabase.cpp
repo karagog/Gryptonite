@@ -558,15 +558,18 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
             m_lockfile->getLockInfo(&pi.ProcessId, &pi.HostName, &pi.AppName);
             if(ask_for_lock_override(pi)){
                 if(!m_lockfile->removeStaleLockFile())
-                    throw LockException<>("Unable to remove lockfile (is the locking process still alive?)");
+                    throw Exception<>("Unable to remove lockfile (is the locking process still alive?)");
                 if(!m_lockfile->tryLock(0))
-                    throw LockException<>("Database still locked even after removing the lockfile!");
+                    throw Exception<>("Database still locked even after removing the lockfile!");
             }
-            else
-                throw LockException<>("Database Locked");
+            else{
+                // The LockException should be expected if the user decides not
+                //  to override the lock. Otherwise expect another kind of exception.
+                throw LockException<>();
+            }
         }
         else{
-            throw LockException<>("Unknown error while locking the database");
+            throw Exception<>("Unknown error while locking the database");
         }
     }
 }

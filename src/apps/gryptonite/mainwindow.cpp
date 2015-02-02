@@ -600,25 +600,36 @@ void MainWindow::_new_open_database(const QString &path)
     }
 
     // Create a database model, which locks the database for us exclusively and prepares it to be opened
-    SmartPointer<DatabaseModel> dbm(new DatabaseModel(open_path.toUtf8(),
+    SmartPointer<DatabaseModel> dbm;
+    try
+    {
+        DatabaseModel *tmp_dbm = new DatabaseModel(open_path.toUtf8(),
 
-        // A function to confirm overriding the lockfile
-        [&](const PasswordDatabase::ProcessInfo &pi){
-            return QMessageBox::Yes == QMessageBox::warning(this,
-                        tr("Locked by another process"),
-                        QString(tr("The database is currently locked by another process:\n"
-                                   "\n\tProcess ID: %1"
-                                   "\n\tHost Name: %2"
-                                   "\n\tApp Name: %3\n"
-                                   "\nDo you want to override the lock and open the file anyways?"
-                                   " (NOT recommended unless you know what you're doing!)"))
-                        .arg(pi.ProcessId)
-                        .arg(pi.HostName.isEmpty() ? tr("(Unknown)") : pi.HostName)
-                        .arg(pi.AppName),
-                        QMessageBox::Yes | QMessageBox::Cancel,
-                        QMessageBox::Cancel);
-        })
-    );
+            // A function to confirm overriding the lockfile
+            [&](const PasswordDatabase::ProcessInfo &pi){
+               return QMessageBox::Yes == QMessageBox::warning(this,
+                           tr("Locked by another process"),
+                           QString(tr("The database is currently locked by another process:\n"
+                                      "\n\tProcess ID: %1"
+                                      "\n\tHost Name: %2"
+                                      "\n\tApp Name: %3\n"
+                                      "\nDo you want to override the lock and open the file anyways?"
+                                      " (NOT recommended unless you know what you're doing!)"))
+                           .arg(pi.ProcessId)
+                           .arg(pi.HostName.isEmpty() ? tr("(Unknown)") : pi.HostName)
+                           .arg(pi.AppName),
+                           QMessageBox::Yes | QMessageBox::Cancel,
+                           QMessageBox::Cancel);
+            });
+
+        dbm = tmp_dbm;
+    }
+    catch(const LockException<> &)
+    {
+        // Return silently, as this means that the user decided not to override the lock
+        //  (other exceptions will escape, leading to the display of proper error messages)
+        return;
+    }
 
     // Get the user's credentials after successfully locking the database
     const QString filename = QFileInfo(open_path).fileName();

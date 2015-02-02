@@ -122,7 +122,7 @@
     <property name="title">
      <string>&amp;Tools</string>
     </property>
-    <addaction name="action_cryptoTransform"/>
+    <addaction name="action_grypto_transforms"/>
    </widget>
    <widget class="QMenu" name="menu_Help">
     <property name="title">
@@ -366,9 +366,9 @@
     <string>Ctrl+L</string>
    </property>
   </action>
-  <action name="action_cryptoTransform">
+  <action name="action_grypto_transforms">
    <property name="text">
-    <string>Cryptographic &amp;Transformations</string>
+    <string>Grypto-&amp;Transforms</string>
    </property>
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;A utility that helps you apply cryptographic transformations to data, such as:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;* AES encryption with CCM, one of the most secure encryption algorithms&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;* Hash calculator with all major hashes&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;* Conversion to base-64 and base-16 strings&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;You can transform files directly or operate on strings. This utility is included as a supplement to the main application. It is not directly useful to the main function, but it can come in handy when you need to check a hash.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

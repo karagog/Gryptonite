@@ -167,7 +167,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     connect(ui->action_Redo, SIGNAL(triggered()), this, SLOT(_redo()));
     connect(ui->action_Search, SIGNAL(triggered()), this, SLOT(_search()));
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
-    connect(ui->action_cryptoTransform, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
+    connect(ui->action_grypto_transforms, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
     connect(ui->action_Favorites, SIGNAL(triggered()), this, SLOT(_organize_favorites()));
     connect(ui->action_Preferences, SIGNAL(triggered()), this, SLOT(_edit_preferences()));
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
@@ -1318,7 +1318,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
     ui->action_Favorites->setEnabled(b);
     ui->action_Search->setEnabled(b);
 
-    ui->action_cryptoTransform->setEnabled(!lock);
+    ui->action_grypto_transforms->setEnabled(!lock);
 
     _update_trayIcon_menu();
 }

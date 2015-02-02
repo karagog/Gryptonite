@@ -1,4 +1,4 @@
-/*Copyright 2010 George Karagoulis
+/*Copyright 2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,7 +24,11 @@ namespace Grypt
 {
 
 
-class CryptoTransformWorker :
+/** The base class for all worker threads. It provides a basic framework
+ *  to make it easy to extend the functionality. Simply override the do_work()
+ *  function, which executes on the background thread.
+*/
+class CryptoTransformsWorker :
     public QThread,
     protected GUtil::IProgressHandler
 {
@@ -36,7 +40,7 @@ public:
 
     QString const &ErrorString() const{ return m_errorString; }
 
-    virtual ~CryptoTransformWorker();
+    virtual ~CryptoTransformsWorker();
 
 
 signals:
@@ -54,7 +58,7 @@ public slots:
 protected:
 
     /** This is an abstract base class; only derived classes can instantiate us. */
-    explicit CryptoTransformWorker(QObject *p = 0);
+    explicit CryptoTransformsWorker(QObject *p = 0);
 
     /** The worker thread code. */
     virtual void run();
@@ -72,7 +76,7 @@ protected:
 };
 
 
-class EncryptionWorker : public CryptoTransformWorker
+class EncryptionWorker : public CryptoTransformsWorker
 {
     GUtil::CryptoPP::Cryptor m_cryptor;
     GUtil::SmartPointer<GUtil::IInput> m_in;
@@ -109,7 +113,7 @@ protected:
 };
 
 
-class HashingWorker : public CryptoTransformWorker
+class HashingWorker : public CryptoTransformsWorker
 {
     GUtil::SmartPointer<GUtil::IInput> m_dataIn;
     GUtil::SmartPointer<GUtil::IOutput> m_digestOut;

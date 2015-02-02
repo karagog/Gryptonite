@@ -15,7 +15,7 @@ limitations under the License.*/
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "about.h"
-#include <grypto_cryptotransformswindow.h>
+#include "cryptotransforms.h"
 #include <QWhatsThis>
 USING_NAMESPACE_GRYPTO;
 
@@ -38,7 +38,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
         restoreState(m_settings->Value(SETTING_LAST_STATE).toByteArray());
     }
 
-    CryptoTransformsWindow *ctw = new CryptoTransformsWindow(m_settings, this);
+    CryptoTransforms *ctw = new CryptoTransforms(m_settings, this);
     setCentralWidget(ctw);
     ctw->show();
 

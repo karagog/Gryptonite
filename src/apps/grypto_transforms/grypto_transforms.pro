@@ -22,11 +22,16 @@ LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
     -lcryptopp
 
 SOURCES += main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    cryptotransforms.cpp \
+    cryptotransformsworker.cpp
 
 FORMS += \
-    mainwindow.ui
+    mainwindow.ui \
+    cryptotransforms.ui
 
 HEADERS += \
     mainwindow.h \
-    about.h
+    about.h \
+    cryptotransforms.h \
+    cryptotransformsworker.h

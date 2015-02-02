@@ -12,12 +12,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#include "cryptotransformswindow.h"
-#include "ui_cryptotransformswindow.h"
-#include "newpassworddialog.h"
-#include "getpassworddialog.h"
+#include "cryptotransforms.h"
+#include "cryptotransformsworker.h"
+#include "ui_cryptotransforms.h"
+#include <grypto_newpassworddialog.h>
+#include <grypto_getpassworddialog.h>
 #include <grypto_common.h>
-#include <grypto_cryptotransformworker.h>
 #include <gutil/sourcesandsinks.h>
 #include <gutil/qtsourcesandsinks.h>
 #include <gutil/cryptopp_cryptor.h>
@@ -45,9 +45,9 @@ USING_NAMESPACE_GUTIL1(CryptoPP);
 NAMESPACE_GRYPTO;
 
 
-CryptoTransformsWindow::CryptoTransformsWindow(GUtil::Qt::Settings *settings, QWidget *parent)
-    :QWidget(parent, ::Qt::Widget),
-      ui(new Ui::CryptoTransformsWindow),
+CryptoTransforms::CryptoTransforms(GUtil::Qt::Settings *settings, QWidget *parent)
+    :QWidget(parent),
+      ui(new Ui::CryptoTransforms),
       m_settings(settings),
       m_progressDialog(tr("Processing..."), tr("Cancel"), 0, 100, this),
       m_stateSaved(false)
@@ -94,19 +94,19 @@ CryptoTransformsWindow::CryptoTransformsWindow(GUtil::Qt::Settings *settings, QW
     _update_key_status();
 }
 
-CryptoTransformsWindow::~CryptoTransformsWindow()
+CryptoTransforms::~CryptoTransforms()
 {
     _save_state();
     delete ui;
 }
 
-void CryptoTransformsWindow::closeEvent(QCloseEvent *ev)
+void CryptoTransforms::closeEvent(QCloseEvent *ev)
 {
     _save_state();
     QWidget::closeEvent(ev);
 }
 
-void CryptoTransformsWindow::_save_state()
+void CryptoTransforms::_save_state()
 {
     if(!m_stateSaved){
         m_settings->SetValue(SETTING_GEOMETRY, saveGeometry());
@@ -121,7 +121,7 @@ void CryptoTransformsWindow::_save_state()
     }
 }
 
-void CryptoTransformsWindow::_update_key_status()
+void CryptoTransforms::_update_key_status()
 {
     if(m_cryptor){
         ui->lbl_keyStatus->setText(tr("Key Set"));
@@ -133,7 +133,7 @@ void CryptoTransformsWindow::_update_key_status()
     }
 }
 
-void CryptoTransformsWindow::_change_password()
+void CryptoTransforms::_change_password()
 {
     NewPasswordDialog dlg(m_settings, tr("Crypttext Generation"), this);
     if(QDialog::Accepted == dlg.exec()){
@@ -145,7 +145,7 @@ void CryptoTransformsWindow::_change_password()
     _update_key_status();
 }
 
-void CryptoTransformsWindow::_test_password()
+void CryptoTransforms::_test_password()
 {
     GetPasswordDialog dlg(m_settings, QString(), this);
     if(QDialog::Accepted == dlg.exec()){
@@ -158,17 +158,17 @@ void CryptoTransformsWindow::_test_password()
     }
 }
 
-bool CryptoTransformsWindow::_encrypting() const
+bool CryptoTransforms::_encrypting() const
 {
     return ui->cb_mode->currentIndex() == 0;
 }
 
-bool CryptoTransformsWindow::_is_string_output() const
+bool CryptoTransforms::_is_string_output() const
 {
     return ui->cb_dest->currentIndex() == 1;
 }
 
-bool CryptoTransformsWindow::_is_file_output() const
+bool CryptoTransforms::_is_file_output() const
 {
     return ui->cb_dest->currentIndex() == 0;
 }
@@ -222,7 +222,7 @@ static QByteArray __convert_to_encoding(const QByteArray &text, int encoding)
     return ret;
 }
 
-void CryptoTransformsWindow::_do_it()
+void CryptoTransforms::_do_it()
 {
     if(m_worker)
         return;
@@ -314,7 +314,7 @@ void CryptoTransformsWindow::_do_it()
     }
 }
 
-void CryptoTransformsWindow::_worker_finished()
+void CryptoTransforms::_worker_finished()
 {
     QString err_str;
     if(m_worker)
@@ -361,21 +361,21 @@ void CryptoTransformsWindow::_worker_finished()
     m_destString.clear();
 }
 
-void CryptoTransformsWindow::_select_file_src()
+void CryptoTransforms::_select_file_src()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Select source file"));
     if(!path.isEmpty())
         ui->le_src->setText(path);
 }
 
-void CryptoTransformsWindow::_select_file_dest()
+void CryptoTransforms::_select_file_dest()
 {
     QString path = QFileDialog::getSaveFileName(this, tr("Select destination file"));
     if(!path.isEmpty())
         ui->le_dest->setText(path);
 }
 
-void CryptoTransformsWindow::_mode_changed(int i)
+void CryptoTransforms::_mode_changed(int i)
 {
     switch(i)
     {

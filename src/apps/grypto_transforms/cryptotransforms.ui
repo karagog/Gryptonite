@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>CryptoTransformsWindow</class>
- <widget class="QWidget" name="CryptoTransformsWindow">
+ <class>CryptoTransforms</class>
+ <widget class="QWidget" name="CryptoTransforms">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -20,7 +20,7 @@
    <string>Cryptographic Transformations</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../grypto_ui.qrc">
+   <iconset resource="../../presentation/grypto_ui.qrc">
     <normaloff>:/grypto/icons/main.png</normaloff>:/grypto/icons/main.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -506,7 +506,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../grypto_ui.qrc"/>
+  <include location="../../presentation/grypto_ui.qrc"/>
  </resources>
  <connections>
   <connection>
@@ -544,7 +544,7 @@
   <connection>
    <sender>pushButton</sender>
    <signal>clicked()</signal>
-   <receiver>CryptoTransformsWindow</receiver>
+   <receiver>CryptoTransforms</receiver>
    <slot>_do_it()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -560,7 +560,7 @@
   <connection>
    <sender>toolButton_2</sender>
    <signal>clicked()</signal>
-   <receiver>CryptoTransformsWindow</receiver>
+   <receiver>CryptoTransforms</receiver>
    <slot>_select_file_src()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -576,7 +576,7 @@
   <connection>
    <sender>toolButton</sender>
    <signal>clicked()</signal>
-   <receiver>CryptoTransformsWindow</receiver>
+   <receiver>CryptoTransforms</receiver>
    <slot>_select_file_dest()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -592,7 +592,7 @@
   <connection>
    <sender>btn_changePassword</sender>
    <signal>clicked()</signal>
-   <receiver>CryptoTransformsWindow</receiver>
+   <receiver>CryptoTransforms</receiver>
    <slot>_change_password()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -608,7 +608,7 @@
   <connection>
    <sender>btn_testPassword</sender>
    <signal>clicked()</signal>
-   <receiver>CryptoTransformsWindow</receiver>
+   <receiver>CryptoTransforms</receiver>
    <slot>_test_password()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -624,7 +624,7 @@
   <connection>
    <sender>cb_mode</sender>
    <signal>currentIndexChanged(int)</signal>
-   <receiver>CryptoTransformsWindow</receiver>
+   <receiver>CryptoTransforms</receiver>
    <slot>_mode_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">

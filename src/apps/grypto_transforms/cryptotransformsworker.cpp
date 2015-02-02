@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#include "cryptotransformworker.h"
-#include "grypto_common.h"
+#include "cryptotransformsworker.h"
+#include <grypto_common.h>
 #include <gutil/file.h>
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);
@@ -25,18 +25,18 @@ NAMESPACE_GRYPTO;
 #define DEFAULT_CHUNK_SIZE 0x4000
 
 
-CryptoTransformWorker::CryptoTransformWorker(QObject *p)
+CryptoTransformsWorker::CryptoTransformsWorker(QObject *p)
     :QThread(p),
       m_cancel(false),
       m_ran(false)
 {}
 
-CryptoTransformWorker::~CryptoTransformWorker()
+CryptoTransformsWorker::~CryptoTransformsWorker()
 {
     wait();
 }
 
-void CryptoTransformWorker::run()
+void CryptoTransformsWorker::run()
 {
     if(m_ran){
         m_errorString = tr("The worker thread is designed for one-time use");
@@ -69,17 +69,17 @@ void CryptoTransformWorker::run()
     }
 }
 
-void CryptoTransformWorker::Cancel()
+void CryptoTransformsWorker::Cancel()
 {
     m_cancel = true;
 }
 
-bool CryptoTransformWorker::ShouldOperationCancel()
+bool CryptoTransformsWorker::ShouldOperationCancel()
 {
     return m_cancel;
 }
 
-void CryptoTransformWorker::ProgressUpdated(int p)
+void CryptoTransformsWorker::ProgressUpdated(int p)
 {
     // This function is called on the background thread, so we emit a signal
     //  which will be queued on the receiver's event queue and executed on the main thread.
@@ -93,7 +93,7 @@ EncryptionWorker::EncryptionWorker(const Cryptor &c,
                                    IOutput *out,
                                    IInput *aData,
                                    QObject *p)
-    :CryptoTransformWorker(p),
+    :CryptoTransformsWorker(p),
       m_cryptor(c),
       m_in(in),
       m_out(out),
@@ -113,7 +113,7 @@ HashingWorker::HashingWorker(HashAlgorithmEnum algorithm,
                              IInput *in,
                              IOutput *out,
                              QObject *p)
-    :CryptoTransformWorker(p),
+    :CryptoTransformsWorker(p),
       m_dataIn(in),
       m_digestOut(out),
       m_hash(GUtil::CryptoPP::Hash<>::CreateHash(algorithm))

@@ -24,7 +24,6 @@ limitations under the License.*/
 #include "grypto_filtereddatabasemodel.h"
 #include "grypto_entry_edit.h"
 #include "entry_popup.h"
-#include "grypto_cryptotransformswindow.h"
 #include <grypto_organizefavoritesdialog.h>
 #include <gutil/qt_settings.h>
 #include <gutil/widget.h>

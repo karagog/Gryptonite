@@ -20,7 +20,7 @@ limitations under the License.*/
 #include <QProgressDialog>
 
 namespace Ui {
-class CryptoTransformsWindow;
+class CryptoTransforms;
 }
 
 namespace GUtil{ namespace CryptoPP{
@@ -34,24 +34,24 @@ class Settings;
 namespace Grypt
 {
 
-class CryptoTransformWorker;
+class CryptoTransformsWorker;
 
 
-class CryptoTransformsWindow : public QWidget
+class CryptoTransforms : public QWidget
 {
     Q_OBJECT
-    Ui::CryptoTransformsWindow *ui;
+    Ui::CryptoTransforms *ui;
     GUtil::Qt::Settings *m_settings;
     GUtil::SmartPointer<GUtil::CryptoPP::Cryptor> m_cryptor;
-    GUtil::SmartPointer<CryptoTransformWorker> m_worker;
+    GUtil::SmartPointer<CryptoTransformsWorker> m_worker;
     QProgressDialog m_progressDialog;
     QByteArray m_sourceString;
     QByteArray m_destString;
     bool m_stateSaved;
 public:
 
-    explicit CryptoTransformsWindow(GUtil::Qt::Settings *, QWidget *parent = 0);
-    ~CryptoTransformsWindow();
+    explicit CryptoTransforms(GUtil::Qt::Settings *, QWidget *parent = 0);
+    ~CryptoTransforms();
 
 
 protected:

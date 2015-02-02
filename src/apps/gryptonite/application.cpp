@@ -55,12 +55,11 @@ Application::Application(int &argc, char **argv)
       settings("main"),
       main_window(NULL)
 {
+    GUtil::Qt::MessageBoxLogger *mbl = new GUtil::Qt::MessageBoxLogger;
+
     // Log global messages to a group logger, which writes to all loggers in the group
     SetGlobalLogger(new GroupLogger{
-
-                        // Comment this line for release (silently show errors only in log)
-                        new GUtil::Qt::MessageBoxLogger,
-
+                        mbl,
                         new FileLogger(QString("%1/" APPLICATION_LOG)
                             .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).toUtf8()),
                     });
@@ -94,6 +93,8 @@ Application::Application(int &argc, char **argv)
     catch(exception &ex){
         handle_exception(ex);
     }
+
+    mbl->SetParentWidget(main_window);
 }
 
 void Application::about_to_quit()

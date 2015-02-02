@@ -1378,10 +1378,14 @@ void MainWindow::_cryptographic_transformations()
         m_grypto_transforms.write("activate\n");
     }
     else{
-        m_grypto_transforms.start(QApplication::applicationDirPath() + "/grypto_transforms");
+        QString path = QString("\"%1/%2\"")
+                .arg(QApplication::applicationDirPath())
+                .arg("grypto_transforms");
+        m_grypto_transforms.start(path);
         if(!m_grypto_transforms.waitForStarted()){
             QMessageBox::critical(this, tr("Error"),
-                                  QString(tr("Unable to start process: %1")
+                                  QString(tr("Unable to start %1: %2")
+                                          .arg(path)
                                           .arg(m_grypto_transforms.errorString())));
         }
     }

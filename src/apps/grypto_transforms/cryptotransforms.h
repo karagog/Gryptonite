@@ -15,6 +15,7 @@ limitations under the License.*/
 #ifndef GRYPTO_CRYPTO_TRANSFORMS_WINDOW_H
 #define GRYPTO_CRYPTO_TRANSFORMS_WINDOW_H
 
+#include <gutil/string.h>
 #include <gutil/smartpointer.h>
 #include <QWidget>
 #include <QProgressDialog>
@@ -45,8 +46,8 @@ class CryptoTransforms : public QWidget
     GUtil::SmartPointer<GUtil::CryptoPP::Cryptor> m_cryptor;
     GUtil::SmartPointer<CryptoTransformsWorker> m_worker;
     QProgressDialog m_progressDialog;
-    QByteArray m_sourceString;
-    QByteArray m_destString;
+    GUtil::String m_sourceString;
+    GUtil::String m_destString;
     bool m_stateSaved;
 public:
 

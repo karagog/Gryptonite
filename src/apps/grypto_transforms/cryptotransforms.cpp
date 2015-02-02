@@ -173,22 +173,22 @@ bool CryptoTransforms::_is_file_output() const
     return ui->cb_dest->currentIndex() == 0;
 }
 
-static QByteArray __convert_from_encoding(const QByteArray &raw_text, int encoding)
+static String __convert_from_encoding(const QByteArray &raw_text, int encoding)
 {
-    QByteArray ret;
+    String ret;
     switch(encoding)
     {
     case 0:
         // Hex string
-        ret = QByteArray::fromHex(raw_text);
+        ret = String::FromBase16(raw_text);
         break;
     case 1:
         // Base-64
-        ret = QByteArray::fromBase64(raw_text);
+        ret = String::FromBase64(raw_text);
         break;
     case 2:
         // Regular text
-        ret = raw_text;
+        ret = String(raw_text.constData(), raw_text.length());
         break;
     default:
         GASSERT(false);
@@ -196,22 +196,22 @@ static QByteArray __convert_from_encoding(const QByteArray &raw_text, int encodi
     return ret;
 }
 
-static QByteArray __convert_to_encoding(const QByteArray &text, int encoding)
+static String __convert_to_encoding(const String &text, int encoding)
 {
-    QByteArray ret;
+    String ret;
     switch(encoding)
     {
     case 0:
         // Hex string
-        ret = text.toHex();
+        ret = text.ToBase16();
         break;
     case 1:
         // Base-64
-        ret = text.toBase64();
+        ret = text.ToBase64();
         break;
     case 2:
         // Regular text (make sure it's valid UTF-8)
-        if(String::IsValidUTF8(text.constData(), text.constData() + text.length()))
+        if(text.IsValidUTF8())
             ret = text;
         else
             throw ValidationException<>("Invalid UTF-8 sequence");
@@ -250,8 +250,8 @@ void CryptoTransforms::_do_it()
         else{
             // Source is a string
             m_sourceString = __convert_from_encoding(ui->te_src->toPlainText().toUtf8(), ui->cb_sourceEncoding->currentIndex());
-            if(!m_sourceString.isEmpty())
-                input = new ByteArrayInput(m_sourceString.constData(), m_sourceString.length());
+            if(!m_sourceString.IsEmpty())
+                input = new ByteArrayInput(m_sourceString);
         }
 
 
@@ -264,7 +264,7 @@ void CryptoTransforms::_do_it()
         }
         else{
             // Dest is a string
-            output = new QByteArrayOutput(m_destString);
+            output = new StringOutput(m_destString);
         }
     }
     catch(const Exception<> &ex)
@@ -357,8 +357,8 @@ void CryptoTransforms::_worker_finished()
         else if(_is_file_output())
             QMessageBox::information(this, tr("Success"), tr("File operation successful"));
     }
-    m_sourceString.clear();
-    m_destString.clear();
+    m_sourceString.Empty();
+    m_destString.Empty();
 }
 
 void CryptoTransforms::_select_file_src()

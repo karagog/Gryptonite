@@ -1,3 +1,6 @@
+*.gdb
+tst_*
+
 release
 debug
 

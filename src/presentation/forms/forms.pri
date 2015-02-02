@@ -14,7 +14,8 @@ HEADERS += \
     forms/generatepassworddialog.h \
     forms/noteseditdialog.h \
     forms/cryptotransformswindow.h \
-    $$PWD/organizefavoritesdialog.h
+    $$PWD/organizefavoritesdialog.h \
+    $$PWD/aboutbase.h
 
 SOURCES += \
     forms/getpassworddialog.cpp \
@@ -23,4 +24,5 @@ SOURCES += \
     forms/generatepassworddialog.cpp \
     forms/noteseditdialog.cpp \
     forms/cryptotransformswindow.cpp \
-    $$PWD/organizefavoritesdialog.cpp
+    $$PWD/organizefavoritesdialog.cpp \
+    $$PWD/aboutbase.cpp

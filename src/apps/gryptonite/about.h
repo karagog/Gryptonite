@@ -12,15 +12,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#include <gutil/about.h>
+#include <grypto_aboutbase.h>
+#include <grypto_common.h>
 
-
-class About : public GUtil::Qt::About
+class About : public Grypt::AboutBase
 {
     Q_OBJECT
 public:
-    About(QWidget *p = 0);
+    About(QWidget *p = 0)
+        :Grypt::AboutBase(GRYPTO_APP_NAME, GRYPTO_VERSION_STRING, p)
+    {
+        _buildinfo.setText(QString("Built on %1").arg(__DATE__ " - " __TIME__));
 
-public slots:
-    void _donate();
+        QString txt = _text.toPlainText();
+        txt.prepend(GRYPTO_APP_NAME
+                    " is an application that stores your most secret and"
+                    " personal information in a securely encrypted database. The database"
+                    " is unlocked by a single master key, which can be a password and/or"
+                    " key file. The encryption algorithm uses AES with CCM for both confidentiality"
+                    " and authenticity.\n\n");
+        _text.setText(txt);
+    }
 };

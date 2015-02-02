@@ -41,7 +41,6 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     application.cpp \
-    about.cpp \
     preferences_edit.cpp \
     legacymanager.cpp
 

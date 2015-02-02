@@ -1,4 +1,4 @@
-/*Copyright 2010 George Karagoulis
+/*Copyright 2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,27 +12,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#include "about.h"
+#include "aboutbase.h"
 #include <grypto_common.h>
-#include <QPushButton>
 #include <QDesktopServices>
+#include <QIcon>
+#include <QPushButton>
+NAMESPACE_GRYPTO;
 
 
-About::About(QWidget *p)
+AboutBase::AboutBase(const QString &appname, const QString &version, QWidget *p)
     :GUtil::Qt::About(p, true, true, false)
 {
-    _dialog.resize(600, 360);
+    _dialog.resize(600, 375);
 
-    SetWindowTitle(QString(tr("About %1")).arg(GRYPTO_APP_NAME));
+    SetWindowTitle(QString(tr("About %1")).arg(appname));
     SetImage(":/grypto/icons/main.png");
-    _header.setText(QString(tr("%1 - v%2")).arg(GRYPTO_APP_NAME).arg(GRYPTO_VERSION_STRING));
-    _buildinfo.setText(QString("Built on %1").arg(__DATE__ " - " __TIME__));
-    _text.setText(tr(
-                      "Gryptonite is an application that stores your most secret and"
-                      " personal information in a securely encrypted database. The database"
-                      " is unlocked by a single master password (and/or keyfile)."
 
-                      "\n\nIt was developed by George Karagoulis using"
+    _header.setText(QString(tr("%1 - v%2"))
+                    .arg(appname)
+                    .arg(version));
+    _text.setText(tr( "This was developed by George Karagoulis using"
                       " the Qt framework and Crypto++ encryption libraries. It was created"
                       " as a personal quest for knowledge in my free time. Unfortunately that"
                       " also means there is no warrantee of any kind."
@@ -50,7 +49,10 @@ About::About(QWidget *p)
     btn_donate->setFocus();
 }
 
-void About::_donate()
+void AboutBase::_donate()
 {
     QDesktopServices::openUrl(QUrl(GRYPTO_DONATE_URL));
 }
+
+
+END_NAMESPACE_GRYPTO;

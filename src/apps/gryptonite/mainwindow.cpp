@@ -114,7 +114,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     ui->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     _update_time_format();
 
-    _update_trayIcon_menu();
     m_trayIcon.show();
 
     ui->statusbar->addPermanentWidget(&m_progressBar, 1);
@@ -1417,12 +1416,17 @@ void MainWindow::_progress_updated(int progress, bool cancellable, const QString
 void MainWindow::_organize_favorites()
 {
     GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(this);
+    QList<EntryId> favorites;
     DatabaseModel *dbm = _get_database_model();
-    OrganizeFavoritesDialog dlg(dbm->FindFavorites(), this);
-    if(QDialog::Accepted == dlg.exec()){
-        dbm->SetFavoriteEntries(dlg.GetFavorites());
+    {
+        modal_dialog_helper_t mh(this);
+        OrganizeFavoritesDialog dlg(dbm->FindFavorites(), this);
+        if(QDialog::Accepted == dlg.exec())
+            favorites = dlg.GetFavorites();
     }
+
+    if(!favorites.isEmpty())
+        dbm->SetFavoriteEntries(favorites);
 }
 
 void MainWindow::_update_time_format()

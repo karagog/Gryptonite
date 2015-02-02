@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(grypto_ui);
 
+    GUtil::Qt::Application a(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING);
+
     // Set up a global file logger, so the application can log errors somewhere
     SetGlobalLogger(new FileLogger(
                         String::Format("%s/" APPLICATION_LOG,
@@ -36,7 +38,6 @@ int main(int argc, char *argv[])
     int ret = 1;
     try
     {
-        GUtil::Qt::Application a(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING);
         a.setQuitOnLastWindowClosed(false);
 
         // Don't allow exceptions to crash us. You can read the log to find exception details.

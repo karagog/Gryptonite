@@ -16,6 +16,7 @@ limitations under the License.*/
 #define MAINWINDOW_H
 
 #include <gutil/qt_settings.h>
+#include <gutil/consoleiodevice.h>
 #include <QMainWindow>
 
 namespace Ui {
@@ -27,6 +28,11 @@ class MainWindow : public QMainWindow
     Q_OBJECT
     Ui::MainWindow *ui;
     GUtil::Qt::Settings *m_settings;
+
+    // This guy reads stdin for us on a background thread, so we
+    //  can respond asynchronously to certain commands
+    GUtil::Qt::ConsoleIODevice m_console;
+
 public:
     explicit MainWindow(GUtil::Qt::Settings *, QWidget *parent = 0);
     ~MainWindow();
@@ -36,6 +42,8 @@ protected:
 
 private slots:
     void _show_about();
+    void _new_msg_stdin();
+    void _about_to_quit();
 };
 
 #endif // MAINWINDOW_H

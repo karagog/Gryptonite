@@ -97,7 +97,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
       m_action_new_child(tr("New &Child"), this),
       m_btn_pop_out(tr("Pop Out")),
       m_isLocked(true),
-      m_cryptoTransformsVisible(false),
+      m_grypto_transforms_visible(false),
       m_minimize_msg_shown(false),
       m_canHide(true),
       m_progressBar(true)
@@ -251,6 +251,12 @@ void MainWindow::AboutToQuit()
     m_minimize_msg_shown = true;
     _hide();
 
+    // We'll tell the grypto-transforms window to quit, and wait for it after
+    //  we've finished cleaning ourselves up
+    m_grypto_transforms_visible = QProcess::Running == m_grypto_transforms.state();
+    if(m_grypto_transforms_visible)
+        m_grypto_transforms.write("quit\n");
+
     // Save the search settings before we close
     m_settings->SetValue(MAINWINDOW_SEARCH_SETTING, ui->searchWidget->GetFilter().ToXml());
 
@@ -268,6 +274,9 @@ void MainWindow::AboutToQuit()
     m_settings->CommitChanges();
 
     _close_database();
+
+    if(m_grypto_transforms_visible)
+        m_grypto_transforms.waitForFinished();
 }
 
 void MainWindow::_hide()
@@ -1249,10 +1258,10 @@ void MainWindow::_lock_unlock_interface(bool lock)
         m_isLocked = true;
 
         _hide();
-        m_cryptoTransformsVisible = false;
-        if(m_encryptDecryptWindow && m_encryptDecryptWindow->isVisible()){
-            m_encryptDecryptWindow->hide();
-            m_cryptoTransformsVisible = true;
+        m_grypto_transforms_visible = false;
+        if(QProcess::Running == m_grypto_transforms.state()){
+            m_grypto_transforms.write("hide\n");
+            m_grypto_transforms_visible = true;
         }
         m_trayIcon.setToolTip(tr(GRYPTO_APP_NAME " Locked"));
         m_trayIcon.showMessage(tr("Locked"),
@@ -1268,8 +1277,8 @@ void MainWindow::_lock_unlock_interface(bool lock)
         if(!IsLocked())
             return;
 
-        if(m_cryptoTransformsVisible)
-            m_encryptDecryptWindow->show();
+        if(m_grypto_transforms_visible)
+            m_grypto_transforms.write("show\n");
 
         restoreState(m_lockedState);
         m_lockedState.clear();
@@ -1355,12 +1364,17 @@ void MainWindow::_reset_lockout_timer()
 
 void MainWindow::_cryptographic_transformations()
 {
-    if(!m_encryptDecryptWindow){
-        m_encryptDecryptWindow = new CryptoTransformsWindow(m_settings);
-        m_encryptDecryptWindow->setAttribute(::Qt::WA_DeleteOnClose);
+    if(QProcess::Running == m_grypto_transforms.state()){
+        m_grypto_transforms.write("activate\n");
     }
-    m_encryptDecryptWindow->show();
-    m_encryptDecryptWindow->activateWindow();
+    else{
+        m_grypto_transforms.start(QApplication::applicationDirPath() + "/grypto_transforms");
+        if(!m_grypto_transforms.waitForStarted()){
+            QMessageBox::critical(this, tr("Error"),
+                                  QString(tr("Unable to start process: %1")
+                                          .arg(m_grypto_transforms.errorString())));
+        }
+    }
 }
 
 void MainWindow::_progress_updated(int progress, bool cancellable, const QString &task_name)

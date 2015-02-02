@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
     try
     {
         GUtil::Qt::Application a(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING);
+        a.setQuitOnLastWindowClosed(false);
 
         // Don't allow exceptions to crash us. You can read the log to find exception details.
         a.SetTrapExceptions(true);

@@ -25,6 +25,7 @@ limitations under the License.*/
 #include <QSystemTrayIcon>
 #include <QPointer>
 #include <QAction>
+#include <QProcess>
 #ifdef Q_OS_WIN
 #include <QWinTaskbarButton>
 #endif // Q_OS_WIN
@@ -159,8 +160,8 @@ private:
     bool m_isLocked;
     QByteArray m_lockedState;
     QByteArray m_savedState;
-    QPointer<QWidget> m_encryptDecryptWindow;
-    bool m_cryptoTransformsVisible;
+    QProcess m_grypto_transforms;
+    bool m_grypto_transforms_visible;
     QPointer<QWidget> m_entryView;
 
     bool m_minimize_msg_shown;

@@ -31,6 +31,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
     ui->setupUi(this);
     setWindowTitle(GRYPTO_TRANSFORMS_APP_NAME);
 
+    connect(&m_console, SIGNAL(ReadyRead()), this, SLOT(_new_msg_stdin()));
+
     if(m_settings->Contains(SETTING_LAST_STATE)){
         restoreGeometry(m_settings->Value(SETTING_LAST_GEOMETRY).toByteArray());
         restoreState(m_settings->Value(SETTING_LAST_STATE).toByteArray());
@@ -43,7 +45,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
     ui->menu_Help->insertAction(ui->action_About, QWhatsThis::createAction(this));
     ui->menu_Help->insertSeparator(ui->action_About);
 
-    connect(ui->action_Quit, SIGNAL(triggered()), this, SLOT(close()));
+    connect(ui->action_Quit, SIGNAL(triggered()), qApp, SLOT(quit()));
+    connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(_about_to_quit()));
     connect(ui->action_About, SIGNAL(triggered()), this, SLOT(_show_about()));
 }
 
@@ -54,13 +57,39 @@ MainWindow::~MainWindow()
 
 void MainWindow::closeEvent(QCloseEvent *ev)
 {
-    m_settings->SetValue(SETTING_LAST_STATE, saveState());
-    m_settings->SetValue(SETTING_LAST_GEOMETRY, saveGeometry());
-    m_settings->CommitChanges();
+    // We have to manually quit here, because the application is set so that
+    //  it doesn't quit when the last window closes (to allow us to hide and show)
+    qApp->quit();
+
     QMainWindow::closeEvent(ev);
 }
 
 void MainWindow::_show_about()
 {
-    (new About(this))->ShowAbout();
+    (new ::About(this))->ShowAbout();
+}
+
+void MainWindow::_new_msg_stdin()
+{
+    QString msg = m_console.ReadLine();
+
+    // We respond to certain commands on stdin
+    if(msg == "activate")
+        activateWindow();
+    else if(msg == "hide")
+        hide();
+    else if(msg == "show")
+        show();
+    else if(msg == "quit")
+        qApp->quit();
+    else{
+        // ignore...
+    }
+}
+
+void MainWindow::_about_to_quit()
+{
+    m_settings->SetValue(SETTING_LAST_STATE, saveState());
+    m_settings->SetValue(SETTING_LAST_GEOMETRY, saveGeometry());
+    m_settings->CommitChanges();
 }

@@ -53,6 +53,9 @@ public:
     explicit CryptoTransformsWindow(GUtil::Qt::Settings *, QWidget *parent = 0);
     ~CryptoTransformsWindow();
 
+
+protected:
+
     virtual void closeEvent(QCloseEvent *);
 
 

@@ -52,7 +52,7 @@ static void __init_default_settings(GUtil::Qt::Settings &settings)
 
 Application::Application(int &argc, char **argv)
     :GUtil::Qt::Application(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING),
-      settings(GRYPTO_SETTINGS_IDENTIFIER),
+      settings("main"),
       main_window(NULL)
 {
     // Log global messages to a group logger, which writes to all loggers in the group

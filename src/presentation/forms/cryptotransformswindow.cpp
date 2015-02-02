@@ -46,7 +46,7 @@ NAMESPACE_GRYPTO;
 
 
 CryptoTransformsWindow::CryptoTransformsWindow(GUtil::Qt::Settings *settings, QWidget *parent)
-    :QWidget(parent, ::Qt::Dialog),
+    :QWidget(parent, ::Qt::Widget),
       ui(new Ui::CryptoTransformsWindow),
       m_settings(settings),
       m_progressDialog(tr("Processing..."), tr("Cancel"), 0, 100, this),

@@ -21,4 +21,12 @@ LIBS += -L$$TOP_DIR/lib -L$$TOP_DIR/gutil/lib \
     -lGUtil \
     -lcryptopp
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    mainwindow.cpp
+
+FORMS += \
+    mainwindow.ui
+
+HEADERS += \
+    mainwindow.h \
+    about.h

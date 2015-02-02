@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#include <grypto_cryptotransformswindow.h>
+#include "mainwindow.h"
 #include <grypto_common.h>
 #include <gutil/application.h>
 #include <gutil/qt_settings.h>
@@ -26,25 +26,36 @@ USING_NAMESPACE_GRYPTO;
 
 int main(int argc, char *argv[])
 {
+    Q_INIT_RESOURCE(grypto_ui);
+
     // Set up a global file logger, so the application can log errors somewhere
     SetGlobalLogger(new FileLogger(
                         String::Format("%s/" APPLICATION_LOG,
                                        QStandardPaths::writableLocation(QStandardPaths::DataLocation).toUtf8().constData())));
 
-    GUtil::Qt::Application a(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING);
+    int ret = 1;
+    try
+    {
+        GUtil::Qt::Application a(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING);
 
-    // Don't allow exceptions to crash us. You can read the log to find exception details.
-    a.SetTrapExceptions(true);
+        // Don't allow exceptions to crash us. You can read the log to find exception details.
+        a.SetTrapExceptions(true);
 
-    // Initialize a settings object for persistent data
-    GUtil::Qt::Settings settings(GRYPTO_SETTINGS_IDENTIFIER);
+        // Initialize a settings object for persistent data
+        GUtil::Qt::Settings settings("transforms");
 
-    // Create and show the crypto transforms window
-    CryptoTransformsWindow w(&settings);
-    w.show();
+        // Create and show the main window
+        MainWindow mw(&settings);
+        mw.show();
 
-    // Execute the application event loop
-    int ret = a.exec();
+        // Execute the application event loop
+        ret = a.exec();
+    }
+    catch(const std::exception &ex)
+    {
+        GlobalLogger().LogException(ex);
+        ret = 2;
+    }
 
     // Clean up and return
     SetGlobalLogger(NULL);

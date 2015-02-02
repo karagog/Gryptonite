@@ -26,8 +26,6 @@ limitations under the License.*/
 
 #define GRYPTO_VERSION_STRING "3.0.2_beta"
 
-#define GRYPTO_SETTINGS_IDENTIFIER "main"
-
 #define GRYPTO_DONATE_URL "https://pledgie.com/campaigns/28056"
 
 

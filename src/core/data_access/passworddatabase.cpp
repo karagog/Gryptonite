@@ -2352,7 +2352,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
                 continue;
 
             // Decrypt it in memory
-            Vector<char> pt;
+            Vector<byte> pt;
             {
                 const QByteArray ct(q.record().value(0).toByteArray());
                 pt.ReserveExactly(ct.length() -

@@ -1100,14 +1100,14 @@ public:
 
 };
 
-void MainWindow::_nav_index_changed(int ind)
+void MainWindow::_nav_index_changed(int nav_index)
 {
-    ind -= 1;
+    nav_index -= 1;
     bool success = false;
-    if(ind >= 0){
+    if(nav_index >= 0){
         try{
             Entry e = _get_database_model()->FindEntryById(
-                static_cast<const navigation_command *>(m_navStack.command(ind))->CurEntryId);
+                static_cast<const navigation_command *>(m_navStack.command(nav_index))->CurEntryId);
 
             ui->view_entry->SetEntry(e);
 
@@ -1303,6 +1303,8 @@ void MainWindow::_lock_unlock_interface(bool lock)
         if(minutes > 0)
             m_lockoutTimer.StartLockoutTimer(minutes);
     }
+    
+    DatabaseModel *dbm = _get_database_model();
 
     bool b = !lock && IsFileOpen();
     ui->action_Save_As->setEnabled(b);
@@ -1312,8 +1314,8 @@ void MainWindow::_lock_unlock_interface(bool lock)
     ui->actionNew_Entry->setEnabled(b);
     ui->action_EditEntry->setEnabled(b);
     ui->action_DeleteEntry->setEnabled(b);
-    ui->action_Undo->setEnabled(b);
-    ui->action_Redo->setEnabled(b);
+    ui->action_Undo->setEnabled(dbm ? dbm->CanUndo() : false);
+    ui->action_Redo->setEnabled(dbm ? dbm->CanRedo() : false);
     ui->action_Favorites->setEnabled(b);
     ui->action_Search->setEnabled(b);
 

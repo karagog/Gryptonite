@@ -110,7 +110,11 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     m_action_new_child.setShortcut(::Qt::ControlModifier | ::Qt::ShiftModifier | ::Qt::Key_N);
 
     ui->treeView->setModel(new FilteredDatabaseModel(this));
-    ui->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->treeView->header()->setSectionResizeMode(QHeaderView::Interactive);
+    connect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
+            ::Qt::QueuedConnection);
+    connect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
+            ::Qt::QueuedConnection);
     _update_time_format();
 
     m_trayIcon.show();
@@ -435,8 +439,8 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
 
             QAction *action_expand = new QAction(tr("E&xpand All"), this);
             QAction *action_collapse = new QAction(tr("Co&llapse All"), this);
-            connect(action_expand, SIGNAL(triggered()), ui->treeView, SLOT(expandAll()));
-            connect(action_collapse, SIGNAL(triggered()), ui->treeView, SLOT(collapseAll()));
+            connect(action_expand, SIGNAL(triggered()), this, SLOT(_expand_all()));
+            connect(action_collapse, SIGNAL(triggered()), this, SLOT(_collapse_all()));
 
             menu->addAction(ui->actionNew_Entry);
             menu->addAction(&m_action_new_child);
@@ -1474,4 +1478,22 @@ void MainWindow::_tray_icon_activated(QSystemTrayIcon::ActivationReason ar)
     default:
         break;
     }
+}
+
+void MainWindow::_expand_all()
+{
+    disconnect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()));
+    ui->treeView->expandAll();    
+    connect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
+            ::Qt::QueuedConnection);
+    ui->treeView->ResizeColumnsToContents();
+}
+
+void MainWindow::_collapse_all()
+{
+    disconnect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()));
+    ui->treeView->collapseAll();
+    connect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
+            ::Qt::QueuedConnection);
+    ui->treeView->ResizeColumnsToContents();
 }

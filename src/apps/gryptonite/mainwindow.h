@@ -117,6 +117,8 @@ private slots:
 
     void _undo();
     void _redo();
+    void _expand_all();
+    void _collapse_all();
 
     void _update_trayIcon_menu();
     void _favorite_action_clicked(QAction *);

@@ -550,6 +550,7 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
 
     _get_proxy_model()->setSourceModel(dbm);
     _update_ui_file_opened(true);
+    ui->treeView->ResizeColumnsToContents();
 
     if(m_settings->Contains(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT)){
         int val = m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt();

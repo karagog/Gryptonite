@@ -895,11 +895,11 @@ void MainWindow::_update_ui_file_opened(bool b)
 //    ui->menu_Import->setEnabled(b);
 
     if(b){
-        ui->statusbar->showMessage(tr("Database Opened Successfully"));
+        ui->statusbar->showMessage(tr("Database Opened Successfully"), STATUSBAR_MSG_TIMEOUT);
     }
     else
     {
-        ui->statusbar->showMessage(tr("Closed"));
+        ui->statusbar->showMessage(tr("Closed"), STATUSBAR_MSG_TIMEOUT);
 
         if(_get_database_model())
             _get_database_model()->ClearUndoStack();

@@ -113,9 +113,6 @@ public:
     */
     static void ValidateDatabase(const char *filepath);
 
-    /** Causes the background thread to load all entries into the cache. */
-    void LoadAllEntries() const;
-
     /** Iteratively counts all entries in the database. This can be a slow operation,
      *  and it's used for calculating total progress.
     */
@@ -199,6 +196,9 @@ public:
      *  This works on a background thread.
     */
     void AddUpdateFile(const FileId &, const char *filename);
+    
+    /** This version adds a file by its contents, rather than file path. */
+    void AddUpdateFile(const FileId &, const QByteArray &contents);
 
     /** Removes the file from the database. */
     void DeleteFile(const FileId &);
@@ -207,9 +207,6 @@ public:
      *  that happens on the main thread. Use carefully.
     */
     QByteArray GetFile(const FileId &) const;
-
-    /** This version adds a file by its contents, rather than file path. */
-    void AddUpdateFile(const FileId &, const QByteArray &contents);
 
     /** Returns the complete list of file ids and associated file sizes.
      *  Note that some files may not be referenced by an entry id.

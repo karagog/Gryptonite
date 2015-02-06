@@ -81,9 +81,13 @@ struct entry_cache{
 // Cached parent information
 struct parent_cache{
     Vector<Grypt::EntryId> children;
-    bool children_loaded;
+};
 
-    parent_cache() :children_loaded(false) {}
+struct file_cache{
+    Grypt::FileId id;
+    uint length;
+
+    file_cache() :length(0) {}
 };
 
 namespace
@@ -117,6 +121,7 @@ struct d_t
     //  the background threads.
     unordered_map<Grypt::EntryId, entry_cache> index;
     unordered_map<Grypt::EntryId, parent_cache> parent_index;
+    unordered_map<Grypt::FileId, file_cache> file_index;
     QSet<Grypt::EntryId> deleted_entries;
     QList<Grypt::EntryId> favorite_index;
     mutex index_lock;
@@ -260,8 +265,6 @@ public:
         EditEntry,
         DeleteEntry,
         MoveEntry,
-        FetchEntriesByParentId,
-        FetchAllEntries,
         RefreshFavoriteEntries,
         SetFavoriteEntries,
         AddFavoriteEntry,
@@ -324,24 +327,6 @@ public:
     {}
     const EntryId ParentSource, ParentDest;
     quint32 RowFirst, RowLast, RowDest;
-};
-
-class cache_entries_by_parentid_command : public bg_worker_command
-{
-public:
-    cache_entries_by_parentid_command(const EntryId &id)
-        :bg_worker_command(FetchEntriesByParentId),
-          Id(id)
-    {}
-    const EntryId Id;
-};
-
-class cache_all_entries : public bg_worker_command
-{
-public:
-    cache_all_entries()
-        :bg_worker_command(FetchAllEntries)
-    {}
 };
 
 class refresh_favorite_entries_command : public bg_worker_command
@@ -486,12 +471,6 @@ static void __queue_entry_command(d_t *d, bg_worker_command *cmd)
     d->wc_entry_thread.notify_one();
 }
 
-// Tells the entry worker to cache the child entries of the given parent
-static void __command_cache_entries_by_parentid(d_t *d, const EntryId &id)
-{
-    __queue_entry_command(d, new cache_entries_by_parentid_command(id));
-}
-
 static void __check_version(const QString &dbstring)
 {
     QSqlQuery q(QSqlDatabase::database(dbstring));
@@ -574,6 +553,66 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
     }
 }
 
+static void __initialize_cache(d_t *d)
+{
+    QSqlQuery q(QSqlDatabase::database(d->dbString));
+
+    // First load all entries in bulk
+    q.prepare("SELECT * FROM Entry");
+    DatabaseUtils::ExecuteQuery(q);
+
+    d->parent_index.emplace(EntryId::Null(), parent_cache());
+
+    while(q.next()){
+        entry_cache ec = __convert_record_to_entry_cache(q.record());
+
+        // Add the entry to the cache
+        d->index.emplace(ec.id, ec);
+        d->parent_index.emplace(ec.id, parent_cache());
+
+        // We'll sort the favorites at the end
+        if(0 <= ec.favoriteindex)
+            d->favorite_index.append(ec.id);
+    }
+
+    // Append each entry to its parent's child list
+    for(const pair<EntryId, entry_cache> &ec : d->index){
+        auto piter = d->parent_index.find(ec.second.parentid);
+        if(piter != d->parent_index.end())
+            piter->second.children.PushBack(ec.first);
+    }
+
+    // Sort each parent's child list
+    for(auto tmp : d->parent_index){
+        d->parent_index[tmp.first].children.Sort(
+             [&](const EntryId &lhs, const EntryId &rhs) -> int{
+                 int lhs_v = d->index[lhs].row;
+                 int rhs_v = d->index[rhs].row;
+                 return lhs_v < rhs_v ? -1 : 1;
+             }
+        );
+    }
+
+    // Then cache the file ID's
+    q.prepare("SELECT ID,Length FROM File");
+    DatabaseUtils::ExecuteQuery(q);
+
+    while(q.next()){
+        file_cache fc;
+        fc.id = q.record().value("ID").toByteArray();
+        fc.length = q.record().value("Length").toInt();
+        d->file_index.emplace(fc.id, fc);
+    }
+
+    // Sort the favorite id's by their favorite index
+    stable_sort(d->favorite_index.begin(),
+                d->favorite_index.end(),
+                [&](const EntryId &lhs, const EntryId &rhs) -> bool{
+                    return d->index[lhs].favoriteindex < d->index[rhs].favoriteindex;
+                }
+    );
+}
+
 void PasswordDatabase::Open(const Credentials &creds)
 {
     if(IsOpen())
@@ -654,17 +693,15 @@ void PasswordDatabase::Open(const Credentials &creds)
     // Set the db string to denote that we've opened the file
     d->dbString = dbstring;
 
+    // Initialize the cache before starting the workers
+    __initialize_cache(d);
+
     // Start up the background threads
-    // The entry worker goes first, since he gets most of the action at the start
     d->entry_worker = std::thread(&PasswordDatabase::_entry_worker, this, new GUtil::CryptoPP::Cryptor(*d->cryptor));
     d->file_worker = std::thread(&PasswordDatabase::_file_worker, this, new GUtil::CryptoPP::Cryptor(*d->cryptor));
 
-    // Wait for the entry thread to startup and become idle before issuing commands
+    // We must wait for the background thread to idle to avoid a race condition
     WaitForEntryThreadIdle();
-
-    // Start by loading the root node and caching the favorites
-    RefreshFavorites();
-    __command_cache_entries_by_parentid(d, EntryId::Null());
 }
 
 bool PasswordDatabase::IsOpen() const
@@ -1001,7 +1038,6 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 {
     FailIfNotOpen();
     G_D;
-    __command_cache_entries_by_parentid(d, e.GetParentId());
 
     if(gen_id)
         e.SetId(EntryId::NewId());
@@ -1012,12 +1048,6 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
     {
-        // Wait here until the parent is loaded
-        d->wc_entry_thread.wait(lkr, [&]{
-            auto pi = d->parent_index.find(e.GetParentId());
-            return pi != d->parent_index.end() && pi->second.children_loaded;
-        });
-
         // Add to the appropriate parent
         auto pi = d->parent_index.find(e.GetParentId());
         Vector<EntryId> &child_ids = pi->second.children;
@@ -1059,17 +1089,12 @@ void PasswordDatabase::UpdateEntry(Entry &e)
 {
     FailIfNotOpen();
     G_D;
-    __command_cache_entries_by_parentid(d, e.GetParentId());
 
     // Update the index
     int old_favorite_index;
     QByteArray crypttext = __generate_crypttext(*d->cryptor, e);
     {
         unique_lock<mutex> lkr(d->index_lock);
-        d->wc_index.wait(lkr, [&]{
-            auto pi = d->parent_index.find(e.GetParentId());
-            return pi != d->parent_index.end() && pi->second.children_loaded;
-        });
 
         old_favorite_index = d->index[e.GetId()].favoriteindex;
 
@@ -1103,12 +1128,6 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
     unique_lock<mutex> lkr(d->index_lock);
     auto i = d->index.find(id);
     if(i != d->index.end()){
-        // Wait for the parent to be loaded
-        d->wc_index.wait(lkr, [&]{
-            auto pi = d->parent_index.find(i->second.parentid);
-            return pi != d->parent_index.end() && pi->second.children_loaded;
-        });
-
         auto pi = d->parent_index.find(i->second.parentid);
         pi->second.children.RemoveAt(i->second.row);
 
@@ -1147,18 +1166,8 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
             (same_parents && row_first <= row_dest && row_dest <= row_last))
         throw Exception<>("Invalid move parameters");
 
-    // Make sure the parents are added to the index (happens on background thread)
-    __command_cache_entries_by_parentid(d, parentId_src);
-    __command_cache_entries_by_parentid(d, parentId_dest);
-
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
-
-    // Wait for the parents to be added to the index
-    d->wc_index.wait(lkr, [&]{
-        return  d->parent_index.find(parentId_src) != d->parent_index.end() &&
-                d->parent_index.find(parentId_dest) != d->parent_index.end();
-    });
 
     Vector<EntryId> &src = d->parent_index.find(parentId_src)->second.children;
     Vector<EntryId> &dest = d->parent_index.find(parentId_dest)->second.children;
@@ -1209,14 +1218,6 @@ Entry PasswordDatabase::FindEntry(const EntryId &id) const
         if(d->deleted_entries.contains(id))
             exit_not_found();
 
-        __command_cache_entries_by_parentid(d, id);
-
-        // Wait 'til the entry is fully loaded
-        d->wc_index.wait(lkr, [&]{
-            auto i = d->index.find(id);
-            return i != d->index.end();
-        });
-
         auto i = d->index.find(id);
         if(i == d->index.end() || !i->second.exists)
             exit_not_found();
@@ -1231,34 +1232,21 @@ int PasswordDatabase::CountEntriesByParentId(const EntryId &id) const
     FailIfNotOpen();
     G_D;
     unique_lock<mutex> lkr(d->index_lock);
+    int ret = 0;
     auto pi = d->parent_index.find(id);
-    if(pi == d->parent_index.end() || !pi->second.children_loaded)
-        __command_cache_entries_by_parentid(d, id);
-
-    d->wc_index.wait(lkr, [&]{
-        return (pi = d->parent_index.find(id)) != d->parent_index.end() &&
-                pi->second.children_loaded;
-    });
-    return pi->second.children.Length();
+    if(pi != d->parent_index.end())
+        ret = pi->second.children.Length();
+    return ret;
 }
 
 QList<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
 {
     FailIfNotOpen();
     G_D;
-    // Let the cache know we are accessing this parent id, even if it's
-    //  already in the cache, so we can preload its grandchildren
-    __command_cache_entries_by_parentid(d, pid);
 
     QList<Entry> ret;
     {
         unique_lock<mutex> lkr(d->index_lock);
-
-        // Wait until the parent is fully loaded
-        d->wc_index.wait(lkr, [&]{
-            auto pi = d->parent_index.find(pid);
-            return pi != d->parent_index.end() && pi->second.children_loaded;
-        });
 
         foreach(const EntryId &child_id, d->parent_index[pid].children)
             ret.append(__convert_cache_to_entry(d->index[child_id], *d->cryptor));
@@ -1381,25 +1369,12 @@ void PasswordDatabase::DeleteOrphans()
     __queue_entry_command(d, new dispatch_orphans_command);
 }
 
-static bool __file_exists(QSqlQuery &q, const FileId &id)
-{
-    bool ret = false;
-    if(!q.prepare("SELECT COUNT(*) FROM File WHERE ID=:fid")){
-        GASSERT2(false, q.lastError().text().toUtf8().constData());
-    }
-    q.bindValue(":fid", (QByteArray)id);
-    DatabaseUtils::ExecuteQuery(q);
-    if(q.next())
-        ret = 0 < q.record().value(0).toInt();
-    return ret;
-}
-
 bool PasswordDatabase::FileExists(const FileId &id) const
 {
     FailIfNotOpen();
     G_D;
-    QSqlQuery q(QSqlDatabase::database(d->dbString));
-    return __file_exists(q, id);
+    unique_lock<mutex> lkr(d->index_lock);
+    return d->file_index.find(id) != d->file_index.end();
 }
 
 void PasswordDatabase::CancelFileTasks()
@@ -1473,7 +1448,6 @@ static void __add_referenced_file_ids(d_t *d, QSet<FileId> &s, const EntryId &id
 QSet<FileId> PasswordDatabase::GetReferencedFileIds() const
 {
     FailIfNotOpen();
-    LoadAllEntries();
     WaitForEntryThreadIdle();
     G_D;
 
@@ -1483,17 +1457,14 @@ QSet<FileId> PasswordDatabase::GetReferencedFileIds() const
     return ret;
 }
 
-void PasswordDatabase::LoadAllEntries() const
-{
-    FailIfNotOpen();
-    G_D;
-    __queue_entry_command(d, new cache_all_entries);
-}
-
 void PasswordDatabase::AddUpdateFile(const FileId &id, const char *filename)
 {
     FailIfNotOpen();
     G_D;
+    d->index_lock.lock();
+    d->file_index.erase(id);
+    d->index_lock.unlock();
+
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new update_file_command(id, filename));
     d->wc_file_thread.notify_one();
@@ -1503,6 +1474,10 @@ void PasswordDatabase::AddUpdateFile(const FileId &id, const QByteArray &content
 {
     FailIfNotOpen();
     G_D;
+    d->index_lock.lock();
+    d->file_index.erase(id);
+    d->index_lock.unlock();
+
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new update_file_command(id, contents));
     d->wc_file_thread.notify_one();
@@ -1512,6 +1487,10 @@ void PasswordDatabase::DeleteFile(const FileId &id)
 {
     FailIfNotOpen();
     G_D;
+    d->index_lock.lock();
+    d->file_index.erase(id);
+    d->index_lock.unlock();
+
     unique_lock<mutex> lkr(d->file_thread_lock);
     d->file_thread_commands.push(new delete_file_command(id));
     d->wc_file_thread.notify_one();
@@ -1658,102 +1637,6 @@ void PasswordDatabase::ImportFromDatabase(const PasswordDatabase &other)
     }
 
     RefreshFavorites();
-}
-
-static void  __cache_children(QSqlQuery &q, d_t *d,
-                              const EntryId &parent_id,
-                              int cur_lvl, int target_lvl)
-{
-    if(cur_lvl == target_lvl){
-        unique_lock<mutex> lkr(d->index_lock);
-        auto pi = d->parent_index.find(parent_id);
-        if(pi == d->parent_index.end() || !pi->second.children_loaded){
-            vector<entry_cache> child_rows = __fetch_entry_rows_by_parentid(q, parent_id);
-            parent_cache pc;
-            for(const entry_cache &er : child_rows)
-                pc.children.PushBack(er.id);
-
-            // Add the parent id with its children to the parent index, and add
-            //  all the children to the main index
-            for(const entry_cache &e : child_rows){
-                auto i = d->index.find(e.id);
-                if(i == d->index.end())
-                    d->index.emplace(e.id, e);
-            }
-            pc.children_loaded = true;
-            d->parent_index[parent_id] = pc;
-            d->wc_index.notify_all();
-        }
-    }
-    else if(cur_lvl < target_lvl){
-        d->index_lock.lock();
-        GASSERT(d->parent_index.find(parent_id) != d->parent_index.end());
-
-        Vector<EntryId> children = d->parent_index[parent_id].children;
-        d->index_lock.unlock();
-
-        // recurse one level deeper
-        for(const EntryId &eid : children)
-            __cache_children(q, d, eid, cur_lvl + 1, target_lvl);
-    }
-}
-
-void PasswordDatabase::_ew_cache_entries_by_parentid(const QString &conn_str,
-                                                     const EntryId &id)
-{
-    G_D;
-    QSqlQuery q(QSqlDatabase::database(conn_str));
-
-    // Make sure the parent id is in the index
-    d->index_lock.lock();
-    if(!id.IsNull() && d->index.find(id) == d->index.end()){
-        entry_cache ec = __fetch_entry_row_by_id(q, id);
-        if(ec.id == EntryId::Null())
-            ec.exists = false;
-        d->index.emplace(id, ec);
-        d->wc_index.notify_all();
-    }
-    d->index_lock.unlock();
-
-    // Cache the children of the given parent id
-    __cache_children(q, d, id, 0, 0);
-}
-
-// recursively appends only child nodes whose children have not been loaded yet
-static void __append_leaves(d_t *d, Vector<EntryId> &ret, const EntryId &cur_id)
-{
-    auto pi = d->parent_index.find(cur_id);
-    if(pi != d->parent_index.end()){
-        if(pi->second.children_loaded){
-            for(const EntryId &child_id : pi->second.children)
-                __append_leaves(d, ret, child_id);
-        }
-        else{
-            ret.PushBack(cur_id);
-        }
-    }
-}
-
-void PasswordDatabase::_ew_cache_all_entries(const QString &conn_str)
-{
-    G_D;
-
-    Vector<EntryId> leaves;
-
-    // Repeat until all entries are fetched
-    do{
-        leaves.Empty();
-
-        // Get a list of all the leaf nodes (whose children have not been loaded)
-        d->index_lock.lock();
-        __append_leaves(d, leaves, EntryId::Null());
-        d->index_lock.unlock();
-
-        // Load each leaf
-        for(const EntryId &leaf : leaves)
-            _ew_cache_entries_by_parentid(conn_str, leaf);
-    }
-    while(0 != leaves.Length());
 }
 
 void PasswordDatabase::_ew_refresh_favorites(const QString &conn_str)
@@ -2015,17 +1898,6 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
                                    mec->ParentDest, mec->RowDest);
                 }
                     break;
-                case bg_worker_command::FetchEntriesByParentId:
-                {
-                    cache_entries_by_parentid_command *fepc = static_cast<cache_entries_by_parentid_command *>(cmd.Data());
-                    _ew_cache_entries_by_parentid(conn_str, fepc->Id);
-                }
-                    break;
-                case bg_worker_command::FetchAllEntries:
-                {
-                    _ew_cache_all_entries(conn_str);
-                }
-                    break;
                 case bg_worker_command::RefreshFavoriteEntries:
                     _ew_refresh_favorites(conn_str);
                     break;
@@ -2154,6 +2026,19 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
     d->file_thread_idle = true;
 }
 
+static bool __file_exists(QSqlQuery &q, const FileId &id)
+{
+    bool ret = false;
+    if(!q.prepare("SELECT COUNT(*) FROM File WHERE ID=:fid")){
+        GASSERT2(false, q.lastError().text().toUtf8().constData());
+    }
+    q.bindValue(":fid", (QByteArray)id);
+    DatabaseUtils::ExecuteQuery(q);
+    if(q.next())
+        ret = 0 < q.record().value(0).toInt();
+    return ret;
+}
+
 void PasswordDatabase::_fw_add_file(const QString &conn_str,
                                     GUtil::CryptoPP::Cryptor &cryptor,
                                     const FileId &id,
@@ -2180,6 +2065,7 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
 
     // First upload and encrypt the file
     QByteArray encrypted_data;
+    uint plaintext_length;
     {
         QByteArrayOutput o(encrypted_data);
         SmartPointer<IInput> data_in;
@@ -2190,9 +2076,11 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
             File *f = new File(data);
             data_in = f;
             f->Open(File::OpenRead);
+            plaintext_length = f->Length();
         }
         else{
             data_in = new QByteArrayInput(data);
+            plaintext_length = data.length();
         }
 
         // Get a fresh nonce
@@ -2215,7 +2103,7 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
 
         // Insert a new file
         q.prepare("INSERT INTO File (Length, Data, ID) VALUES (?,?,?)");
-        q.addBindValue(encrypted_data.length());
+        q.addBindValue(plaintext_length);
         q.addBindValue(encrypted_data, QSql::In | QSql::Binary);
         q.addBindValue((QByteArray)id, QSql::In | QSql::Binary);
         DatabaseUtils::ExecuteQuery(q);
@@ -2229,6 +2117,14 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
         throw;
     }
     db.commit();
+
+    // Add the file to the index and notify
+    unique_lock<mutex> lkr(d->index_lock);
+    file_cache fc;
+    fc.id = id;
+    fc.length = plaintext_length;
+    d->file_index.emplace(fc.id, fc);
+    d->wc_index.notify_all();
 }
 
 void PasswordDatabase::_fw_exp_file(const QString &conn_str,

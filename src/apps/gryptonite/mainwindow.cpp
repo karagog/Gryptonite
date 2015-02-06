@@ -915,18 +915,21 @@ static QMenu *__create_menu(DatabaseModel *dbm, QActionGroup &ag, const QModelIn
 {
     Entry const *e = dbm->GetEntryFromIndex(ind);
     GASSERT(e);
+    SmartPointer<QMenu> ret;
 
-    SmartPointer<QMenu> ret(new QMenu(e->GetName(), parent));
-    for(int i = 0; i < dbm->rowCount(ind); ++i){
-        QModelIndex child_index = dbm->index(i, 0, ind);
-        if(0 < dbm->rowCount(child_index)){
-            // Continue recursing as long as we find children
-            ret->addMenu(__create_menu(dbm, ag, child_index, parent));
-        }
-        else{
-            QAction *a = ag.addAction(dbm->data(child_index, ::Qt::DisplayRole).toString());
-            a->setData(dbm->data(child_index, DatabaseModel::EntryIdRole));
-            ret->addAction(a);
+    if(e){
+        ret = new QMenu(e->GetName(), parent);
+        for(int i = 0; i < dbm->rowCount(ind); ++i){
+            QModelIndex child_index = dbm->index(i, 0, ind);
+            if(0 < dbm->rowCount(child_index)){
+                // Continue recursing as long as we find children
+                ret->addMenu(__create_menu(dbm, ag, child_index, parent));
+            }
+            else{
+                QAction *a = ag.addAction(dbm->data(child_index, ::Qt::DisplayRole).toString());
+                a->setData(dbm->data(child_index, DatabaseModel::EntryIdRole));
+                ret->addAction(a);
+            }
         }
     }
     return ret.Relinquish();
@@ -1308,7 +1311,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
         if(minutes > 0)
             m_lockoutTimer.StartLockoutTimer(minutes);
     }
-    
+
     DatabaseModel *dbm = _get_database_model();
 
     bool b = !lock && IsFileOpen();
@@ -1484,7 +1487,7 @@ void MainWindow::_tray_icon_activated(QSystemTrayIcon::ActivationReason ar)
 void MainWindow::_expand_all()
 {
     disconnect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()));
-    ui->treeView->expandAll();    
+    ui->treeView->expandAll();
     connect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
             ::Qt::QueuedConnection);
     ui->treeView->ResizeColumnsToContents();

@@ -581,13 +581,12 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
 
 void MainWindow::_new_open_database(const QString &path)
 {
-    modal_dialog_helper_t mh(this);
     Credentials creds;
     QString open_path = path;
     SmartPointer<DatabaseModel> dbm;
     ui->statusbar->showMessage(QString(tr("Opening %1...")).arg(path));
-
     {
+        modal_dialog_helper_t mh(this);
         finally([&]{ ui->statusbar->clearMessage(); });
 
         bool existed = QFile::exists(path);

@@ -573,6 +573,8 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
     // Add this to the recent files list
     _update_recent_files(dbm->FilePath());
 
+    _update_available_actions();
+
     // Wire up the progress bar control
     connect(&m_progressBar, SIGNAL(Clicked()), dbm, SLOT(CancelAllBackgroundOperations()));
     connect(dbm, SIGNAL(NotifyProgressUpdated(int, bool, QString)),

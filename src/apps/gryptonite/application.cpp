@@ -109,8 +109,7 @@ Application::Application(int &argc, char **argv)
     connect(&updater, SIGNAL(UpdateInfoReceived(QString,QUrl)),
             this, SLOT(_update_info_received(QString,QUrl)));
 
-    if(!settings.Contains(GRYPTONITE_SETTING_CHECK_FOR_UPDATES) ||
-            settings.Value(GRYPTONITE_SETTING_CHECK_FOR_UPDATES).toBool())
+    if(settings.Value(GRYPTONITE_SETTING_CHECK_FOR_UPDATES).toBool())
     {
         // This works asynchronously; no hanging here!
         CheckForUpdates(true);

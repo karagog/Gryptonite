@@ -16,7 +16,7 @@ limitations under the License.*/
 #include "mainwindow.h"
 #include "about.h"
 #include "settings.h"
-#include <grypto_common.h>
+#include <grypto_notifyupdatedialog.h>
 #include <gutil/globallogger.h>
 #include <gutil/grouplogger.h>
 #include <gutil/filelogger.h>
@@ -30,8 +30,6 @@ USING_NAMESPACE_GUTIL;
 using namespace std;
 
 #define APPLICATION_LOG     GRYPTO_APP_NAME ".log"
-
-#define LATEST_VERSION_URL  "https://raw.github.com/karagog/Gryptonite/master/installers/latest_release"
 
 // The global RNG should be a good one (from Crypto++)
 static GUtil::CryptoPP::RNG __cryptopp_rng;
@@ -147,7 +145,7 @@ void Application::show_about(QWidget *)
 void Application::CheckForUpdates(bool silent)
 {
     m_silent = silent;
-    updater.CheckForUpdates(QUrl(LATEST_VERSION_URL));
+    updater.CheckForUpdates(QUrl(GRYPTO_LATEST_VERSION_URL));
 }
 
 void Application::_update_info_received(const QString &latest_version_string,
@@ -155,24 +153,7 @@ void Application::_update_info_received(const QString &latest_version_string,
 {
     Version latest_version(latest_version_string.toUtf8().constData());
     if(updater.GetCurrentVersion() < latest_version){
-        QMessageBox mb(main_window);
-        mb.setIcon(QMessageBox::Information);
-        mb.addButton(QMessageBox::Ok);
-        mb.setTextFormat(::Qt::RichText);
-        mb.setWindowTitle(tr("Update Available!"));
-        mb.setText(QString(tr("There is a new version of %1 available: %2"
-                              "<br/>"
-                              "<a href='%3'>Go get it!</a>"))
-                   .arg(GRYPTO_APP_NAME)
-                   .arg(latest_version_string)
-                   .arg(download_url.toString()));
-
-        QPushButton *btn_disable_update =
-                mb.addButton(tr("Never again..."), QMessageBox::ActionRole);
-        btn_disable_update->setToolTip(tr("You can change this in preferences"));
-        connect(btn_disable_update, SIGNAL(clicked()), this, SLOT(_disable_auto_update()));
-
-        mb.exec();
+        Grypt::NotifyUpdateDialog::Show(main_window, latest_version_string, download_url);
     }
     else if(!m_silent){
         QMessageBox::information(main_window,

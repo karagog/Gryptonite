@@ -552,8 +552,8 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
     connect(dbm, SIGNAL(NotifyUndoStackChanged()),
             this, SLOT(_update_undo_text()));
 
-    // Until I have time to resolve issues with pre-loading grandchildren before
-    //  their ancestors, I will just load all entries up front
+    // The model supports lazy-loading, but the data backend loads everything
+    //  up front anyways
     dbm->FetchAllEntries();
 
     _get_proxy_model()->setSourceModel(dbm);

@@ -27,6 +27,7 @@ cp $QT_DIR/lib/libQt5Gui.so.5                   $REPO_DIR
 cp $QT_DIR/lib/libQt5Widgets.so.5               $REPO_DIR
 cp $QT_DIR/lib/libQt5Sql.so.5                   $REPO_DIR
 cp $QT_DIR/lib/libQt5Xml.so.5                   $REPO_DIR
+cp $QT_DIR/lib/libQt5Network.so.5               $REPO_DIR
 cp $QT_DIR/lib/libQt5DBus.so.5                  $REPO_DIR
 cp $QT_DIR/lib/libicui18n.so.53                 $REPO_DIR
 cp $QT_DIR/lib/libicuuc.so.53                   $REPO_DIR

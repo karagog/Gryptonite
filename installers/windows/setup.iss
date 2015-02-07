@@ -47,14 +47,14 @@ Source: "{#TopDir}\installers\LICENSE_QT"; DestDir: "{app}"; Flags: ignoreversio
 Source: "{#TopDir}\bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_transforms.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_legacy_plugin.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#TopDir}\lib\grypto_core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#TopDir}\lib\grypto_ui.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\grypto_core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\grypto_ui.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 ; GUtil shared libraries
-Source: "{#TopDir}\gutil\lib\GUtil.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#TopDir}\gutil\lib\GUtilAboutPlugin.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#TopDir}\gutil\lib\GUtilCryptoPP.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#TopDir}\gutil\lib\GUtilQt.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\GUtil.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\GUtilAboutPlugin.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\GUtilCryptoPP.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\GUtilQt.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Qt shared libraries
 Source: "{#TopDir}\bin\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -63,6 +63,7 @@ Source: "{#TopDir}\bin\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5Sql.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5Svg.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5Xml.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\Qt5Network.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5WinExtras.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion

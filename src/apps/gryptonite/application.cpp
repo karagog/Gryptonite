@@ -131,6 +131,10 @@ void Application::handle_exception(std::exception &ex)
         QMessageBox::information(main_window, "Cancelled", "The operation has been cancelled");
     }
     else{
+        if(0 != dynamic_cast<GUtil::ReadOnlyException<> *>(&ex)){
+            // Put the application into readonly mode
+            main_window->DropToReadOnly();
+        }
         GUtil::Qt::Application::handle_exception(ex);
     }
 }

@@ -196,7 +196,7 @@ public:
      *  This works on a background thread.
     */
     void AddUpdateFile(const FileId &, const char *filename);
-    
+
     /** This version adds a file by its contents, rather than file path. */
     void AddUpdateFile(const FileId &, const QByteArray &contents);
 
@@ -277,6 +277,9 @@ private:
     // Worker thread bodies
     void _file_worker(GUtil::CryptoPP::Cryptor *);
     void _entry_worker(GUtil::CryptoPP::Cryptor *);
+
+    // Utility functions
+    void _convert_to_readonly_exception_and_notify(const GUtil::Exception<> &);
 
     // File worker methods and members
     void _fw_add_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const QByteArray &, bool);

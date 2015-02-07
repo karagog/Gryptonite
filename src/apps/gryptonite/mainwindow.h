@@ -71,6 +71,13 @@ public:
 
     bool IsLocked() const{ return m_isLocked; }
 
+    /** Puts the interface irrevocably into read only mode. This is used in case of
+     *  emergencies, like if the data access layer is failing to write the database.
+    */
+    void DropToReadOnly();
+
+    bool IsReadOnly() const{ return m_readonly; }
+
     /** For proper behavior this must be called before any application cleanup code. */
     void AboutToQuit();
 
@@ -168,6 +175,7 @@ private:
 
     bool m_minimize_msg_shown;
     bool m_canHide;
+    bool m_readonly;
 
     GUtil::Qt::ProgressBarControl m_progressBar;
 #ifdef Q_OS_WIN
@@ -177,6 +185,7 @@ private:
     void _new_open_database(const QString &);
     void _install_new_database_model(Grypt::DatabaseModel *dbm);
     void _update_ui_file_opened(bool);
+    void _update_available_actions();
     void _lock_unlock_interface(bool);
     void _update_time_format();
     Grypt::FilteredDatabaseModel *_get_proxy_model() const;

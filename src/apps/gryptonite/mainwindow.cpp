@@ -99,6 +99,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
       m_grypto_transforms_visible(false),
       m_minimize_msg_shown(false),
       m_canHide(true),
+      m_readonly(false),
       m_progressBar(true)
 #ifdef Q_OS_WIN
       ,m_taskbarButton(this)
@@ -340,29 +341,8 @@ bool MainWindow::_handle_key_pressed(QKeyEvent *ev)
         // Each one triggers an action, and the action keeps track
         //  of whether or not the action is available in the current
         //  application state (locked, file closed, etc...)
-        if(ev->key() == ::Qt::Key_Z)
-        {
-            ui->action_Undo->trigger();
-            ret = true;
-        }
-        else if(ev->key() == ::Qt::Key_Y)
-        {
-            ui->action_Redo->trigger();
-            ret = true;
-        }
-        else if(ev->key() == ::Qt::Key_F){
+        if(ev->key() == ::Qt::Key_F){
             ui->action_Search->trigger();
-            ret = true;
-        }
-        else if(ev->key() == ::Qt::Key_N){
-            if(ev->modifiers().testFlag(::Qt::ShiftModifier))
-                m_action_new_child.trigger();
-            else
-                ui->actionNew_Entry->trigger();
-            ret = true;
-        }
-        else if(ev->key() == ::Qt::Key_E){
-            ui->action_EditEntry->trigger();
             ret = true;
         }
         else if(ev->key() == ::Qt::Key_O){
@@ -383,6 +363,30 @@ bool MainWindow::_handle_key_pressed(QKeyEvent *ev)
         else if(ev->modifiers().testFlag(::Qt::ShiftModifier) && ev->key() == ::Qt::Key_S){
             ui->action_Save_As->trigger();
             ret = true;
+        }
+        else if(!IsReadOnly()){
+            // Put all writing actions in this block to disable during readonly mode
+            if(ev->key() == ::Qt::Key_Z)
+            {
+                ui->action_Undo->trigger();
+                ret = true;
+            }
+            else if(ev->key() == ::Qt::Key_Y)
+            {
+                ui->action_Redo->trigger();
+                ret = true;
+            }
+            else if(ev->key() == ::Qt::Key_N){
+                if(ev->modifiers().testFlag(::Qt::ShiftModifier))
+                    m_action_new_child.trigger();
+                else
+                    ui->actionNew_Entry->trigger();
+                ret = true;
+            }
+            else if(ev->key() == ::Qt::Key_E){
+                ui->action_EditEntry->trigger();
+                ret = true;
+            }
         }
     }
     return ret;
@@ -416,15 +420,19 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
                     _treeview_doubleclicked(ui->treeView->currentIndex());
                     ret = true;
                 }
-                else if(kev->key() == ::Qt::Key_Delete){
-                    _delete_entry();
-                    ret = true;
-                }
                 else if(kev->key() == ::Qt::Key_Escape){
                     // The escape key nulls out the selection, clears the views and search filter
                     ui->searchWidget->Clear();
                     ui->treeView->setCurrentIndex(QModelIndex());
                     ui->treeView->collapseAll();
+                }
+                else if(!IsReadOnly()){
+                    // Put all write actions in here, so they're safely disabled
+                    //  while in readonly mode
+                    if(kev->key() == ::Qt::Key_Delete){
+                        _delete_entry();
+                        ret = true;
+                    }
                 }
             }
         }
@@ -725,6 +733,8 @@ void MainWindow::_close_database(bool delete_model)
         if(delete_model)
             delete old_model;
 
+        m_readonly = false;
+        setWindowTitle(GRYPTO_APP_NAME);
         _lock_unlock_interface(false);
         _update_ui_file_opened(false);
     }
@@ -1066,10 +1076,10 @@ void MainWindow::_treeview_doubleclicked(const QModelIndex &ind)
 void MainWindow::_treeview_currentindex_changed(const QModelIndex &ind)
 {
     Entry const *e = _get_database_model()->GetEntryFromIndex(_get_proxy_model()->mapToSource(ind));
-    ui->action_EditEntry->setEnabled(e);
-    ui->action_DeleteEntry->setEnabled(e);
+    ui->action_EditEntry->setEnabled(!IsReadOnly() && e);
+    ui->action_DeleteEntry->setEnabled(!IsReadOnly() && e);
     m_btn_pop_out.setEnabled(e);
-    m_action_new_child.setEnabled(e);
+    m_action_new_child.setEnabled(!IsReadOnly() && e);
     if(e)
         _select_entry(e->GetId());
     else
@@ -1326,22 +1336,31 @@ void MainWindow::_lock_unlock_interface(bool lock)
             m_lockoutTimer.StartLockoutTimer(minutes);
     }
 
+    _update_available_actions();
+}
+
+void MainWindow::_update_available_actions()
+{
     DatabaseModel *dbm = _get_database_model();
 
-    bool b = !lock && IsFileOpen();
-    ui->action_Save_As->setEnabled(b);
-//    ui->menu_Export->setEnabled(b);
-//    ui->menu_Import->setEnabled(b);
-    m_action_new_child.setEnabled(b);
-    ui->actionNew_Entry->setEnabled(b);
-    ui->action_EditEntry->setEnabled(b);
-    ui->action_DeleteEntry->setEnabled(b);
-    ui->action_Undo->setEnabled(dbm ? dbm->CanUndo() : false);
-    ui->action_Redo->setEnabled(dbm ? dbm->CanRedo() : false);
-    ui->action_Favorites->setEnabled(b);
-    ui->action_Search->setEnabled(b);
+    bool enable_if_unlocked = !IsLocked() && IsFileOpen();
+    bool enable_if_writable = enable_if_unlocked && !IsReadOnly();
+    ui->action_Save_As->setEnabled(enable_if_unlocked);
+//    ui->menu_Export->setEnabled(enable_if_unlocked);
+//    ui->menu_Import->setEnabled(enable_if_writable);
+    m_action_new_child.setEnabled(enable_if_writable);
+    ui->actionNew_Entry->setEnabled(enable_if_writable);
+    ui->action_EditEntry->setEnabled(enable_if_writable);
+    ui->action_DeleteEntry->setEnabled(enable_if_writable);
+    ui->action_Undo->setEnabled(dbm ? enable_if_writable && dbm->CanUndo() : false);
+    ui->action_Redo->setEnabled(dbm ? enable_if_writable && dbm->CanRedo() : false);
+    ui->action_Favorites->setEnabled(enable_if_writable);
+    ui->action_Search->setEnabled(enable_if_unlocked);
+    m_add_remove_favorites.setEnabled(enable_if_writable);
+    m_action_new_child.setEnabled(enable_if_writable);
 
-    ui->action_grypto_transforms->setEnabled(!lock);
+    ui->action_grypto_transforms->setEnabled(!IsLocked());
+    ui->treeView->setDragEnabled(enable_if_writable);
 
     _update_trayIcon_menu();
 }
@@ -1514,4 +1533,16 @@ void MainWindow::_collapse_all()
     connect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
             ::Qt::QueuedConnection);
     ui->treeView->ResizeColumnsToContents();
+}
+
+void MainWindow::DropToReadOnly()
+{
+    if(!IsReadOnly()){
+        setWindowTitle(tr(GRYPTO_APP_NAME " (Read Only)"));
+        ui->statusbar->showMessage(tr("Now in Read-Only mode for your protection"));
+        m_fileLabel->setText(m_fileLabel->text().append(" (Read Only)"));
+
+        m_readonly = true;
+        _update_available_actions();
+    }
 }

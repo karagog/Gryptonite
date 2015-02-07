@@ -22,7 +22,6 @@ limitations under the License.*/
 #include <gutil/qtsourcesandsinks.h>
 #include <gutil/smartpointer.h>
 #include <gutil/file.h>
-#include <gutil/thread.h>
 #include <queue>
 #include <unordered_map>
 #include <thread>
@@ -755,12 +754,7 @@ bool PasswordDatabase::CheckCredentials(const Credentials &creds) const
 
 static void __commit_transaction(QSqlDatabase &db)
 {
-    int try_count = 0;
-    while(try_count < MAX_TRY_COUNT && !db.commit()){
-        try_count++;
-        Thread::sleep(1);
-    }
-    if(MAX_TRY_COUNT == try_count)
+    if(!db.commit())
         throw Exception<>(db.lastError().text().toUtf8().constData());
 }
 
@@ -1954,9 +1948,8 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
 //                                                 {"Oh", "Yeah"}
 //                                             });
             }
-            catch(const GUtil::Exception<> &ex)
-            {
-                emit NotifyExceptionOnBackgroundThread(shared_ptr<Exception<>>((Exception<> *)ex.Clone()));
+            catch(const GUtil::Exception<> &ex){
+                _convert_to_readonly_exception_and_notify(ex);
             }
             catch(...) {}
             lkr.lock();
@@ -2035,8 +2028,8 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
                     break;
                 }
             }
-            catch(const GUtil::Exception<> &ex){
-                emit NotifyExceptionOnBackgroundThread(shared_ptr<Exception<>>((Exception<> *)ex.Clone()));
+            catch(const Exception<> &ex){
+                _convert_to_readonly_exception_and_notify(ex);
             }
             catch(...) { /* Don't let any exception crash us */ }
             lkr.lock();
@@ -2046,21 +2039,24 @@ void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
     d->file_thread_idle = true;
 }
 
+void PasswordDatabase::_convert_to_readonly_exception_and_notify(const GUtil::Exception<> &ex)
+{
+    ReadOnlyException<> *ro_ex;
+    Exception<true> const *extended_ex = dynamic_cast<Exception<true> const *>(&ex);
+    if(NULL == extended_ex){
+        // Exceptions on the background thread put us into read only mode
+        ro_ex = new ReadOnlyException<false>(ex);
+    }
+    else{
+        ro_ex = new ReadOnlyException<true>(*extended_ex);
+    }
+    emit NotifyExceptionOnBackgroundThread(shared_ptr<Exception<>>((Exception<> *)ro_ex));
+}
+
 static bool __file_exists(QSqlQuery &q, const FileId &id)
 {
     bool ret = false;
-
-    // Sometimes the database is busy when we want to access it, so
-    //  just wait here
-    int try_cnt = 0;
-    while(try_cnt < MAX_TRY_COUNT &&
-          !q.prepare("SELECT COUNT(*) FROM File WHERE ID=:fid"))
-    {
-        try_cnt++;
-        Thread::sleep(1);
-    }
-
-    if(try_cnt == MAX_TRY_COUNT)
+    if(!q.prepare("SELECT COUNT(*) FROM File WHERE ID=:fid"))
         throw Exception<>(q.lastError().text().toUtf8().constData());
 
     q.bindValue(":fid", (QByteArray)id);

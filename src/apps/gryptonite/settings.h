@@ -35,6 +35,8 @@ limitations under the License.*/
 
 #define GRYPTONITE_SETTING_CLIPBOARD_TIMEOUT        "gryptonite_clipboard_timeout"
 
+#define GRYPTONITE_SETTING_CHECK_FOR_UPDATES        "gryptonite_check_updates"
+
 
 #endif // GRYPTONITE_SETTINGS_H
 

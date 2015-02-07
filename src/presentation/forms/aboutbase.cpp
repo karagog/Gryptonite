@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "aboutbase.h"
+#include <gutil/application.h>
 #include <grypto_common.h>
 #include <QDesktopServices>
 #include <QIcon>
@@ -23,7 +24,7 @@ NAMESPACE_GRYPTO;
 AboutBase::AboutBase(const QString &appname, const QString &version, QWidget *p)
     :GUtil::Qt::About(p, true, true, false)
 {
-    _dialog.resize(600, 375);
+    _dialog.resize(700, 375);
 
     SetWindowTitle(QString(tr("About %1")).arg(appname));
     SetImage(":/grypto/icons/main.png");
@@ -41,12 +42,24 @@ AboutBase::AboutBase(const QString &appname, const QString &version, QWidget *p)
                       " your appreciation for this developer's hard work ;)"
                       ));
 
+    btn_update = new QPushButton(tr("Check for Updates"),
+                                 &_dialog);
+
     QPushButton *btn_donate = new QPushButton(QIcon(":/grypto/icons/star.png"),
                                               tr("Donate"),
                                               &_dialog);
+
+    connect(btn_update, SIGNAL(pressed()), this, SLOT(_check_updates()));
     connect(btn_donate, SIGNAL(pressed()), this, SLOT(_donate()));
+    AddPushButton(btn_update);
     AddPushButton(btn_donate);
     btn_donate->setFocus();
+}
+
+void AboutBase::_check_updates()
+{
+    btn_update->setEnabled(false);
+    gApp->CheckForUpdates(false);
 }
 
 void AboutBase::_donate()

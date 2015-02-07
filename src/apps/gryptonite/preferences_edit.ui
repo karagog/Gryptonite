@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>302</width>
-    <height>393</height>
+    <width>326</width>
+    <height>452</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -42,7 +42,7 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="6" column="1">
        <widget class="QSpinBox" name="spn_fileHistory">
         <property name="toolTip">
          <string>How many files to keep in the recent file history</string>
@@ -100,7 +100,7 @@ p, li { white-space: pre-wrap; }
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
+      <item row="6" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
          <string>Recent File History:</string>
@@ -117,6 +117,16 @@ p, li { white-space: pre-wrap; }
         </property>
         <property name="text">
          <string>Open last file on startup</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QCheckBox" name="checkUpdates">
+        <property name="text">
+         <string>Check for updates on startup</string>
         </property>
         <property name="checked">
          <bool>true</bool>
@@ -256,8 +266,8 @@ p, li { white-space: pre-wrap; }
    <slot>_lockout_slider_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>196</x>
-     <y>206</y>
+     <x>222</x>
+     <y>276</y>
     </hint>
     <hint type="destinationlabel">
      <x>105</x>
@@ -272,8 +282,8 @@ p, li { white-space: pre-wrap; }
    <slot>_clipboard_slider_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>142</x>
-     <y>307</y>
+     <x>168</x>
+     <y>375</y>
     </hint>
     <hint type="destinationlabel">
      <x>89</x>
@@ -288,8 +298,8 @@ p, li { white-space: pre-wrap; }
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>91</x>
-     <y>364</y>
+     <x>100</x>
+     <y>442</y>
     </hint>
     <hint type="destinationlabel">
      <x>160</x>
@@ -304,8 +314,8 @@ p, li { white-space: pre-wrap; }
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>203</x>
-     <y>376</y>
+     <x>212</x>
+     <y>442</y>
     </hint>
     <hint type="destinationlabel">
      <x>258</x>
@@ -320,8 +330,8 @@ p, li { white-space: pre-wrap; }
    <slot>_recent_file_history_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>215</x>
-     <y>131</y>
+     <x>307</x>
+     <y>200</y>
     </hint>
     <hint type="destinationlabel">
      <x>254</x>

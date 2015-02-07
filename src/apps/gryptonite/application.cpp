@@ -31,28 +31,39 @@ using namespace std;
 
 #define APPLICATION_LOG     GRYPTO_APP_NAME ".log"
 
+#define LATEST_VERSION_URL  "https://raw.github.com/karagog/Gryptonite/master/installers/latest_release"
+
 // The global RNG should be a good one (from Crypto++)
 static GUtil::CryptoPP::RNG __cryptopp_rng;
 static GUtil::RNG_Initializer __rng_init(&__cryptopp_rng);
 
-
 static void __init_default_settings(GUtil::Qt::Settings &settings)
 {
-    if(!settings.Contains(GRYPTONITE_SETTING_AUTOLAUNCH_URLS)){
-        settings.SetValue(GRYPTONITE_SETTING_AUTOLAUNCH_URLS, true);
-        settings.SetValue(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE, true);
-        settings.SetValue(GRYPTONITE_SETTING_RECENT_FILES_LENGTH, 10);
-        settings.SetValue(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY, true);
-        settings.SetValue(GRYPTONITE_SETTING_TIME_FORMAT_24HR, true);
-        settings.SetValue(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT, 15);
-        settings.SetValue(GRYPTONITE_SETTING_CLIPBOARD_TIMEOUT, 30);
+    bool anything_changed = false;
+    auto init_setting = [&](const char *key, const QVariant &value){
+        if(!settings.Contains(key)){
+            settings.SetValue(key, value);
+            anything_changed = true;
+        }
+    };
+
+    init_setting(GRYPTONITE_SETTING_AUTOLAUNCH_URLS, true);
+    init_setting(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE, true);
+    init_setting(GRYPTONITE_SETTING_RECENT_FILES_LENGTH, 10);
+    init_setting(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY, true);
+    init_setting(GRYPTONITE_SETTING_TIME_FORMAT_24HR, true);
+    init_setting(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT, 15);
+    init_setting(GRYPTONITE_SETTING_CLIPBOARD_TIMEOUT, 30);
+    init_setting(GRYPTONITE_SETTING_CHECK_FOR_UPDATES, true);
+
+    if(anything_changed)
         settings.CommitChanges();
-    }
 }
 
 Application::Application(int &argc, char **argv)
     :GUtil::Qt::Application(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING),
       settings("main"),
+      updater(GUtil::Version(GRYPTO_VERSION_STRING), this),
       main_window(NULL)
 {
     GUtil::Qt::MessageBoxLogger *mbl = new GUtil::Qt::MessageBoxLogger;
@@ -95,6 +106,15 @@ Application::Application(int &argc, char **argv)
     }
 
     mbl->SetParentWidget(main_window);
+    connect(&updater, SIGNAL(UpdateInfoReceived(QString,QUrl)),
+            this, SLOT(_update_info_received(QString,QUrl)));
+
+    if(!settings.Contains(GRYPTONITE_SETTING_CHECK_FOR_UPDATES) ||
+            settings.Value(GRYPTONITE_SETTING_CHECK_FOR_UPDATES).toBool())
+    {
+        // This works asynchronously; no hanging here!
+        CheckForUpdates(true);
+    }
 }
 
 void Application::about_to_quit()
@@ -119,4 +139,47 @@ void Application::handle_exception(std::exception &ex)
 void Application::show_about(QWidget *)
 {
     (new ::About(main_window))->ShowAbout();
+}
+
+void Application::CheckForUpdates(bool silent)
+{
+    m_silent = silent;
+    updater.CheckForUpdates(QUrl(LATEST_VERSION_URL));
+}
+
+void Application::_update_info_received(const QString &latest_version_string,
+                                        const QUrl &download_url)
+{
+    Version latest_version(latest_version_string.toUtf8().constData());
+    if(updater.GetCurrentVersion() < latest_version){
+        QMessageBox mb(main_window);
+        mb.setIcon(QMessageBox::Information);
+        mb.addButton(QMessageBox::Ok);
+        mb.setTextFormat(::Qt::RichText);
+        mb.setWindowTitle(tr("Update Available!"));
+        mb.setText(QString(tr("There is a new version of %1 available: %2"
+                              "<br/>"
+                              "<a href='%3'>Go get it!</a>"))
+                   .arg(GRYPTO_APP_NAME)
+                   .arg(latest_version_string)
+                   .arg(download_url.toString()));
+
+        QPushButton *btn_disable_update =
+                mb.addButton(tr("Never again..."), QMessageBox::ActionRole);
+        btn_disable_update->setToolTip(tr("You can change this in preferences"));
+        connect(btn_disable_update, SIGNAL(clicked()), this, SLOT(_disable_auto_update()));
+
+        mb.exec();
+    }
+    else if(!m_silent){
+        QMessageBox::information(main_window,
+                                 tr("Up to date"),
+                                 tr("Your software is up to date"));
+    }
+}
+
+void Application::_disable_auto_update()
+{
+    settings.SetValue(GRYPTONITE_SETTING_CHECK_FOR_UPDATES, false);
+    settings.CommitChanges();
 }

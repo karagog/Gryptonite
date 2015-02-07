@@ -17,6 +17,8 @@ limitations under the License.*/
 
 #include <gutil/about.h>
 
+class QPushButton;
+
 namespace Grypt{
 
 
@@ -26,11 +28,13 @@ namespace Grypt{
 class AboutBase : public GUtil::Qt::About
 {
     Q_OBJECT
+    QPushButton *btn_update;
 public:
     AboutBase(const QString &appname, const QString &version, QWidget *parent = 0);
 
 private slots:
     void _donate();
+    void _check_updates();
 };
 
 

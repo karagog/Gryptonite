@@ -24,7 +24,7 @@ limitations under the License.*/
 
 #define GRYPTO_APP_NAME "Gryptonite"
 
-#define GRYPTO_VERSION_STRING "3.0.3_beta"
+#define GRYPTO_VERSION_STRING "3.0.4_beta"
 
 #define GRYPTO_DONATE_URL "https://pledgie.com/campaigns/28056"
 

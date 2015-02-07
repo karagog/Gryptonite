@@ -1,6 +1,6 @@
 #! /bin/bash
 
-VERSION=3.0.3_beta
+VERSION=3.0.4_beta
 
 TOP_DIR=../..
 QT_DIR=/opt/Qt/5.4/gcc

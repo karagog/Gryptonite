@@ -85,6 +85,23 @@ public:
     }
 };
 
+// Use this class to disable column auto-size when items are expanded/collapsed
+class disable_column_auroresize_t
+{
+    GUtil::Qt::TreeView *m_treeView;
+public:
+    disable_column_auroresize_t(GUtil::Qt::TreeView *tv) :m_treeView(tv){
+        QObject::disconnect(m_treeView, SIGNAL(expanded(QModelIndex)), m_treeView, SLOT(ResizeColumnsToContents()));
+        QObject::disconnect(m_treeView, SIGNAL(collapsed(QModelIndex)), m_treeView, SLOT(ResizeColumnsToContents()));
+    }
+    ~disable_column_auroresize_t(){
+        QObject::connect(m_treeView, SIGNAL(expanded(QModelIndex)), m_treeView, SLOT(ResizeColumnsToContents()),
+                         ::Qt::QueuedConnection);
+        QObject::connect(m_treeView, SIGNAL(collapsed(QModelIndex)), m_treeView, SLOT(ResizeColumnsToContents()),
+                         ::Qt::QueuedConnection);
+    }
+};
+
 
 MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *parent)
     :QMainWindow(parent),
@@ -1239,13 +1256,16 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
     // Highlight any matching rows
     if(fi.IsValid)
     {
+        disable_column_auroresize_t d(ui->treeView);
         QItemSelection is;
         foreach(QModelIndex ind, fm->GetUnfilteredRows())
         {
             ui->treeView->ExpandToIndex(ind);
-            is.append(QItemSelectionRange(ind, fm->index(ind.row(), fm->columnCount() - 1, ind.parent())));
+            is.append(QItemSelectionRange(ind, fm->index(ind.row(), fm->columnCount() - 1,
+                                                         ind.parent())));
         }
         ui->treeView->selectionModel()->select(is, QItemSelectionModel::ClearAndSelect);
+        ui->treeView->ResizeColumnsToContents();
 
         if(fi.FilterResults)
             title.append(tr(" (filter applied)"));
@@ -1520,19 +1540,15 @@ void MainWindow::_tray_icon_activated(QSystemTrayIcon::ActivationReason ar)
 
 void MainWindow::_expand_all()
 {
-    disconnect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()));
+    disable_column_auroresize_t d(ui->treeView);
     ui->treeView->expandAll();
-    connect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
-            ::Qt::QueuedConnection);
     ui->treeView->ResizeColumnsToContents();
 }
 
 void MainWindow::_collapse_all()
 {
-    disconnect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()));
+    disable_column_auroresize_t d(ui->treeView);
     ui->treeView->collapseAll();
-    connect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
-            ::Qt::QueuedConnection);
     ui->treeView->ResizeColumnsToContents();
 }
 

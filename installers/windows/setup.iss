@@ -65,6 +65,8 @@ Source: "{#TopDir}\bin\Qt5Svg.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5Xml.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5Network.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5WinExtras.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\ssleay32.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\libeay32.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion

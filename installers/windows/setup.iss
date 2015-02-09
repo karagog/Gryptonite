@@ -27,6 +27,7 @@ OutputDir=.
 OutputBaseFilename={#MyAppName}_{#MyAppVersion}_setup
 Compression=lzma
 SolidCompression=yes
+LicenseFile={#TopDir}\LICENSE
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

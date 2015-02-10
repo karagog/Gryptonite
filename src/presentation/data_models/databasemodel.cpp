@@ -879,7 +879,7 @@ Qt::DropActions DatabaseModel::supportedDropActions() const
 
 void DatabaseModel::WaitForBackgroundThreadIdle()
 {
-    m_db.WaitForEntryThreadIdle();
+    m_db.WaitForThreadIdle();
 }
 
 void DatabaseModel::DeleteOrphans()

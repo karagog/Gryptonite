@@ -49,10 +49,10 @@ void EntryView::SetEntry(const Entry &e)
     ui->lbl_name->setText(e.GetName());
     ui->lbl_description->setText(e.GetDescription());
 
-    ui->btn_exportFile->setEnabled(!e.GetFileId().IsNull());
-    ui->lbl_file->setEnabled(!e.GetFileId().IsNull());
-    ui->lbl_fileStatus->setEnabled(!e.GetFileId().IsNull());
-    ui->lbl_fileName->setEnabled(!e.GetFileId().IsNull());
+    ui->btn_exportFile->setVisible(!e.GetFileId().IsNull());
+    ui->lbl_file->setVisible(!e.GetFileId().IsNull());
+    ui->lbl_fileStatus->setVisible(!e.GetFileId().IsNull());
+    ui->lbl_fileName->setVisible(!e.GetFileId().IsNull());
 
     if(e.GetFileId().IsNull() || NULL == m_dbModel){
         ui->lbl_fileStatus->clear();

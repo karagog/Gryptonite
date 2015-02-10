@@ -406,6 +406,16 @@ bool MainWindow::_handle_key_pressed(QKeyEvent *ev)
             }
         }
     }
+    else if(!ev->modifiers())
+    {
+        // No keyboard modifiers
+        if(ev->key() == ::Qt::Key_Escape){
+            // The escape key nulls out the selection, clears the views and search filter
+            ui->searchWidget->Clear();
+            ui->treeView->setCurrentIndex(QModelIndex());
+            ui->treeView->collapseAll();
+        }
+    }
     return ret;
 }
 
@@ -436,12 +446,6 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
                 if(kev->key() == ::Qt::Key_Enter || kev->key() == ::Qt::Key_Return){
                     _treeview_doubleclicked(ui->treeView->currentIndex());
                     ret = true;
-                }
-                else if(kev->key() == ::Qt::Key_Escape){
-                    // The escape key nulls out the selection, clears the views and search filter
-                    ui->searchWidget->Clear();
-                    ui->treeView->setCurrentIndex(QModelIndex());
-                    ui->treeView->collapseAll();
                 }
                 else if(!IsReadOnly()){
                     // Put all write actions in here, so they're safely disabled

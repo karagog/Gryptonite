@@ -195,10 +195,10 @@ public:
     /** Adds a new file to the database, or updates an existing one.
      *  This works on a background thread.
     */
-    void AddUpdateFile(const FileId &, const char *filename);
+    void AddFile(const FileId &, const char *filename);
 
     /** This version adds a file by its contents, rather than file path. */
-    void AddUpdateFile(const FileId &, const QByteArray &contents);
+    void AddFile(const FileId &, const QByteArray &contents);
 
     /** Removes the file from the database. */
     void DeleteFile(const FileId &);

@@ -113,8 +113,8 @@ public:
     inline void ClearUndoStack(){ m_undostack.Clear(); }
 
 
-    /** Adds or updates the file. */
-    void UpdateFile(const FileId &, const char *filepath);
+    /** Adds the file. */
+    void AddFile(const FileId &, const char *filepath);
 
     /** Removes the file from the database. */
     void DeleteFile(const FileId &);

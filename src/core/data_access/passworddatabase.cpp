@@ -151,7 +151,7 @@ typedef pair<FileId, quint32> fileid_length_pair;
 static void __add_new_files(PasswordDatabase *pdb, const Entry &e)
 {
     if(!e.GetFileId().IsNull() && !e.GetFilePath().isEmpty()){
-        pdb->AddUpdateFile(e.GetFileId(), e.GetFilePath().toUtf8().constData());
+        pdb->AddFile(e.GetFileId(), e.GetFilePath().toUtf8().constData());
     }
 }
 
@@ -266,7 +266,7 @@ public:
         RemoveFavoriteEntry,
 
         // File commands
-        UpdateFile,
+        AddFile,
         DeleteFile,
         ExportFile,
         ExportToPS,
@@ -369,16 +369,16 @@ public:
     {}
 };
 
-class update_file_command : public bg_worker_command
+class add_file_command : public bg_worker_command
 {
 public:
-    update_file_command(const FileId &id, const char *path)
-        :bg_worker_command(UpdateFile),
+    add_file_command(const FileId &id, const char *path)
+        :bg_worker_command(AddFile),
           ID(id),
           FilePath(path)
     {}
-    update_file_command(const FileId &id, const QByteArray &contents)
-        :bg_worker_command(UpdateFile),
+    add_file_command(const FileId &id, const QByteArray &contents)
+        :bg_worker_command(AddFile),
           ID(id),
           FileContents(contents)
     {}
@@ -1459,29 +1459,21 @@ QSet<FileId> PasswordDatabase::GetReferencedFileIds() const
     return ret;
 }
 
-void PasswordDatabase::AddUpdateFile(const FileId &id, const char *filename)
+void PasswordDatabase::AddFile(const FileId &id, const char *filename)
 {
     FailIfNotOpen();
     G_D;
-    d->index_lock.lock();
-    d->file_index.erase(id);
-    d->index_lock.unlock();
-
     unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new update_file_command(id, filename));
+    d->thread_commands.push(new add_file_command(id, filename));
     d->wc_thread.notify_one();
 }
 
-void PasswordDatabase::AddUpdateFile(const FileId &id, const QByteArray &contents)
+void PasswordDatabase::AddFile(const FileId &id, const QByteArray &contents)
 {
     FailIfNotOpen();
     G_D;
-    d->index_lock.lock();
-    d->file_index.erase(id);
-    d->index_lock.unlock();
-
     unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new update_file_command(id, contents));
+    d->thread_commands.push(new add_file_command(id, contents));
     d->wc_thread.notify_one();
 }
 
@@ -1634,7 +1626,7 @@ void PasswordDatabase::ImportFromDatabase(const PasswordDatabase &other)
     int file_count = file_list.length();
     for(int i = 0; i < file_count; ++i){
         QByteArray cur_file = other.GetFile(file_list[i].first);
-        AddUpdateFile(file_list[i].second, cur_file);
+        AddFile(file_list[i].second, cur_file);
         emit NotifyProgressUpdated((float)i/file_count*100, false, progress_label);
     }
 
@@ -1933,9 +1925,9 @@ void PasswordDatabase::_background_worker(GUtil::CryptoPP::Cryptor *c)
                     _bw_dispatch_orphans(conn_str);
                 }
                     break;
-                case bg_worker_command::UpdateFile:
+                case bg_worker_command::AddFile:
                 {
-                    update_file_command *afc = static_cast<update_file_command *>(cmd.Data());
+                    add_file_command *afc = static_cast<add_file_command *>(cmd.Data());
                     _bw_add_file(conn_str, *bgCryptor, afc->ID,
                                  afc->FilePath.isEmpty() ? afc->FileContents : afc->FilePath,
                                  !afc->FilePath.isEmpty());
@@ -2005,19 +1997,6 @@ void PasswordDatabase::_convert_to_readonly_exception_and_notify(const GUtil::Ex
     emit NotifyExceptionOnBackgroundThread(shared_ptr<Exception<>>((Exception<> *)ex));
 }
 
-static bool __file_exists(QSqlQuery &q, const FileId &id)
-{
-    bool ret = false;
-    if(!q.prepare("SELECT COUNT(*) FROM File WHERE ID=:fid"))
-        throw Exception<>(q.lastError().text().toUtf8().constData());
-
-    q.bindValue(":fid", (QByteArray)id);
-    DatabaseUtils::ExecuteQuery(q);
-    if(q.next())
-        ret = 0 < q.record().value(0).toInt();
-    return ret;
-}
-
 void PasswordDatabase::_bw_add_file(const QString &conn_str,
                                     GUtil::CryptoPP::Cryptor &cryptor,
                                     const FileId &id,
@@ -2046,15 +2025,6 @@ void PasswordDatabase::_bw_add_file(const QString &conn_str,
                 emit NotifyProgressUpdated(100, false, "Adding file");
             });
         });
-
-        // First remove the existing file, if there is one. We do this right away
-        //  because we want this to happen even if the user cancels.
-        bool exists = __file_exists(q, id);
-        if(exists){
-            q.prepare("DELETE FROM File WHERE ID=?");
-            q.addBindValue((QByteArray)id);
-            DatabaseUtils::ExecuteQuery(q);
-        }
 
         // First upload and encrypt the file
         QByteArray encrypted_data;

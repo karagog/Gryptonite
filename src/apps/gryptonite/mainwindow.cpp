@@ -1248,6 +1248,9 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
     if(fm == NULL)
         return;
 
+    disconnect(ui->treeView->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+               this, SLOT(_treeview_currentindex_changed(QModelIndex)));
+
     // Apply the filter
     fm->SetFilter(fi);
 
@@ -1275,6 +1278,9 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
     }
     ui->treeView->ResizeColumnsToContents();
     ui->dw_treeView->setWindowTitle(title);
+
+    connect(ui->treeView->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+            this, SLOT(_treeview_currentindex_changed(QModelIndex)));
 }
 
 void MainWindow::_search()

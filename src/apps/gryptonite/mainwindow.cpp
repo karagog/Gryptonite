@@ -803,10 +803,11 @@ void MainWindow::_save_as()
     // Close the old database and install the new one on the main window
     DatabaseModel *old_model = _get_database_model();
     _close_database(false);     // Don't delete the old database model!
-    _install_new_database_model(dbm);
 
     // Copy the old database to the new one
     dbm->ImportFromDatabase(*old_model);
+
+    _install_new_database_model(dbm);
 
     dbm.Relinquish();
     delete old_model;

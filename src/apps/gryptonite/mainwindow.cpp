@@ -1253,7 +1253,7 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
 
     QString title = tr("Password Database");
 
-    // Highlight any matching rows
+    // Highlight and expand to show all matching rows
     if(fi.IsValid)
     {
         disable_column_auroresize_t d(ui->treeView);
@@ -1265,7 +1265,6 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
                                                          ind.parent())));
         }
         ui->treeView->selectionModel()->select(is, QItemSelectionModel::ClearAndSelect);
-        ui->treeView->ResizeColumnsToContents();
 
         if(fi.FilterResults)
             title.append(tr(" (filter applied)"));
@@ -1274,6 +1273,7 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
     {
         ui->treeView->selectionModel()->clearSelection();
     }
+    ui->treeView->ResizeColumnsToContents();
     ui->dw_treeView->setWindowTitle(title);
 }
 

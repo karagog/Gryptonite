@@ -51,6 +51,7 @@ protected:
 private slots:
 
     void _select_keyfile();
+    void _generate_keyfile();
     void _combobox_indexchanged(int);
 
 };

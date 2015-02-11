@@ -876,6 +876,7 @@ void MainWindow::_new_entry()
         }
         model->AddEntry(dlg.GetEntry());
         _select_entry(dlg.GetEntry().GetId());
+        ui->treeView->ResizeColumnsToContents();
     }
 }
 
@@ -1059,6 +1060,7 @@ void MainWindow::_delete_entry()
                     QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel))
         {
             model->RemoveEntry(*e);
+            ui->treeView->ResizeColumnsToContents();
         }
     }
 }
@@ -1085,6 +1087,7 @@ void MainWindow::_edit_entry(const Entry &e)
     {
         _get_database_model()->UpdateEntry(dlg.GetEntry());
         _nav_index_changed(m_navStack.index());
+        ui->treeView->ResizeColumnsToContents();
     }
 }
 

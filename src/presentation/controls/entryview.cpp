@@ -100,7 +100,11 @@ bool EntryView::eventFilter(QObject *, QEvent *ev)
             ret = true;
         }
         else if(kev->key() == ::Qt::Key_Escape){
-            _get_proxy_model()->sort(-1);
+            // If the model is sorted, restore the original order, or let someone else handle this event
+            if(-1 != _get_proxy_model()->sortColumn()){
+                _get_proxy_model()->sort(-1);
+                ret = true;
+            }
         }
     }
     return ret;

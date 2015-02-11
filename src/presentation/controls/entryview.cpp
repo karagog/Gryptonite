@@ -64,8 +64,10 @@ void EntryView::SetEntry(const Entry &e)
     else
     {
         ui->lbl_fileName->setText(e.GetFileName());
-        if(m_dbModel->FileExists(e.GetFileId()))
+        if(m_dbModel->FileExists(e.GetFileId())){
             ui->lbl_fileStatus->setText(tr("(Uploaded)"));
+            ui->btn_exportFile->setEnabled(true);
+        }
         else{
             ui->lbl_fileStatus->setText(tr("(Missing)"));
             ui->btn_exportFile->setEnabled(false);

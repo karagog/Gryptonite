@@ -137,10 +137,6 @@ void LegacyUtils::UpdateFileToCurrentVersion(
     if(0 == strcmp(file_path, new_path))
         throw Exception<>("Refusing to update if source and dest are the same");
 
-    // Remove the target path if it exists
-    if(QFile::exists(new_path))
-        QFile::remove(new_path);
-
     QString progress_msg = QObject::tr("Parsing legacy database...");
     progress_cb(0, progress_msg);
     finally([&]{ progress_cb(100, QObject::tr("Updating database")); });
@@ -208,6 +204,12 @@ void LegacyUtils::UpdateFileToCurrentVersion(
 
     progress_msg = QObject::tr("Populating new database...");
     progress_cb(10, progress_msg);
+    
+    // Remove the target path if it exists
+    if(QFile::exists(new_path))
+        QFile::remove(new_path);
+    
+    progress_cb(15, progress_msg);
 
     // Create the updated database
     PasswordDatabase pdb(new_path);
@@ -219,7 +221,7 @@ void LegacyUtils::UpdateFileToCurrentVersion(
             progress_msg = QString(QObject::tr("Populating new database (entry %1 of %2)..."))
                     .arg(entry_ctr)
                     .arg(entry_cnt);
-            progress_cb(10 + 90.0 * ((float)entry_ctr / entry_cnt), progress_msg);
+            progress_cb(15 + 85.0 * ((float)entry_ctr / entry_cnt), progress_msg);
     });
 }
 

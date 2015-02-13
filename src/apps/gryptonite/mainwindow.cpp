@@ -1097,7 +1097,12 @@ void MainWindow::_treeview_doubleclicked(const QModelIndex &ind)
 {
     if(ind.isValid())
     {
-        PopOutCurrentEntry();
+        if(QApplication::keyboardModifiers().testFlag(::Qt::ShiftModifier)){
+            _edit_entry();
+        }
+        else{
+            PopOutCurrentEntry();
+        }
     }
 }
 

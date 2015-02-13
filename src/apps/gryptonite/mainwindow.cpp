@@ -133,6 +133,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
             ::Qt::QueuedConnection);
     connect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
             ::Qt::QueuedConnection);
+    connect(ui->treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(_treeview_doubleclicked(QModelIndex)),
+            ::Qt::QueuedConnection);
     _update_time_format();
 
     m_trayIcon.show();

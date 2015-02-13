@@ -626,11 +626,23 @@ void MainWindow::_new_open_database(const QString &path)
             {
                 // If validation failed, try to upgrade the file
                 // Call on the legacy manager to upgrade the database
-                open_path = LegacyManager().UpgradeDatabase(path, creds, m_settings,
-                                                            [=](int p, const QString &ps){
-                    this->_progress_updated(p, false, ps);
-                },
-                this);
+                try{
+                    open_path = LegacyManager().UpgradeDatabase(path, creds, m_settings,
+                                                                [=](int p, const QString &ps){
+                        this->_progress_updated(p, false, ps);
+                    },
+                    this);
+                }
+                catch(const AuthenticationException<> &ex){
+                    QMessageBox::critical(this, tr("Authentication Failed"),
+                                          QString(tr("Unable to upgrade legacy database because decryption failed"
+                                                     " using the credentials you gave. Most likely you gave"
+                                                     " the wrong password/keyfile, but it could be that the file"
+                                                     " is invalid or corrupted.\n\n"
+                                                     "Message from Crypto++:\n%1"))
+                                                 .arg(ex.Message().data()));
+                    return;
+                }
 
                 if(open_path.isNull())
                     return;

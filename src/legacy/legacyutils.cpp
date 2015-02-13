@@ -143,6 +143,7 @@ void LegacyUtils::UpdateFileToCurrentVersion(
 
     QString progress_msg = QObject::tr("Parsing legacy database...");
     progress_cb(0, progress_msg);
+    finally([&]{ progress_cb(100, QObject::tr("Updating database")); });
 
     // First make sure we can parse the input file
     std::string xml;
@@ -182,7 +183,7 @@ void LegacyUtils::UpdateFileToCurrentVersion(
             ba = f.read(len);
             file_data = string(ba.constData(), ba.length());
             if(file_data.length() != len)
-                throw Exception<>("Error while reading file");
+                throw Exception<>("Error while reading legacy file");
             xml = V3::Encryption::DecryptString(file_data, old_creds.Password);
         }
             break;
@@ -192,7 +193,7 @@ void LegacyUtils::UpdateFileToCurrentVersion(
         }
     }
     catch(const ::CryptoPP::Exception &ex){
-        throw Exception<>(ex.what());
+        throw AuthenticationException<>(ex.what());
     }
 
     progress_cb(7, progress_msg);
@@ -220,9 +221,6 @@ void LegacyUtils::UpdateFileToCurrentVersion(
                     .arg(entry_cnt);
             progress_cb(10 + 90.0 * ((float)entry_ctr / entry_cnt), progress_msg);
     });
-
-    progress_msg = QObject::tr("Updating database");
-    progress_cb(100, progress_msg);
 }
 
 

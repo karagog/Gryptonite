@@ -543,6 +543,11 @@ void MainWindow::_update_recent_files(const QString &latest_path)
         m_settings->CommitChanges();
     }
 
+    _create_recent_files_menu(paths);
+}
+
+void MainWindow::_create_recent_files_menu(const QStringList &paths)
+{
     // Refresh the menu
     if(m_recentFilesGroup)
         m_recentFilesGroup.Clear();
@@ -745,8 +750,16 @@ void MainWindow::_open_recent_database(QAction *a)
     QString path = a->data().toString();
     if(QFile::exists(path))
         _new_open_database(path);
-    else
+    else{
+        // Remove the path from the recent files list, because it doesn't exist
+        QStringList paths = m_settings->Value(SETTING_RECENT_FILES).toStringList();
+        paths.removeOne(path);
+        _create_recent_files_menu(paths);
+        m_settings->SetValue(SETTING_RECENT_FILES, paths);
+        m_settings->CommitChanges();
+        
         QMessageBox::warning(this, tr("File not found"), QString("The file does not exist: %1").arg(path));
+    }
 }
 
 bool MainWindow::IsFileOpen() const

@@ -31,21 +31,53 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <h3>
-<a id="the-cross-platform-encrypted-password-database" class="anchor" href="#the-cross-platform-encrypted-password-database" aria-hidden="true"><span class="octicon octicon-link"></span></a>The Cross-Platform Encrypted Password Database</h3>
+        <h1>
+<a id="gryptonite-formerly-gpassword-manager" class="anchor" href="#gryptonite-formerly-gpassword-manager" aria-hidden="true"><span class="octicon octicon-link"></span></a>Gryptonite (formerly GPassword Manager)</h1>
 
-<p>Gryptonite is a very secure and flexible password storage application. It provides an easy to use interface to access and search those passwords when you need them. It runs on any platform because it was developed using Qt.</p>
+<p>Secure, cross-platform application for managing secrets such as passwords, credit card
+numbers, PIN numbers and files. It can pretty much hold any data you want to keep
+secret, and protects it with a single master password and/or keyfile.</p>
 
-<h3>
-<a id="features" class="anchor" href="#features" aria-hidden="true"><span class="octicon octicon-link"></span></a>Features</h3>
+<p>Features include (but not limited to):</p>
 
 <ul>
-<li>Secure your secrets with a single master password and/or keyfile</li>
-<li>Conveniently search and access your secrets directly from the tray icon</li>
-<li>Encrypt and store whole files</li>
-<li>Generate random passwords easily</li>
-<li>Bonus utilities include a hash calculator with all major hashes</li>
+ <li>One of the most secure encryption algorithms around - AES with CCM</li>
+ <li>Favorite entries are made available directly in the tray icon</li>
+ <li>Hash calculator with all major hash functions</li>
+ <li>Crypttext generator and interpreter - Encrypt/Decrypt any strings or files you want</li>
+ <li>Random password generator with customizable character set</li>
 </ul>
+
+<h3>
+<a id="a-note-from-the-developer" class="anchor" href="#a-note-from-the-developer" aria-hidden="true"><span class="octicon octicon-link"></span></a>A note from the developer</h3>
+
+<p>This has been my brainchild since I started it in 2009. I am a computer engineer, and
+when I graduated from college I could write embedded code but had no idea how to
+implement a GUI. Originally called GPassword Manager, I used this application as a
+starter project for me to learn GUI development in C++. I released a couple versions
+and then took a long break from the project to work on other things. One day while
+revisiting the code for nostalgia purposes I realized just how bad the code was -
+despite the application being nice and easy to use. It wasn't just bad coding 
+practices (like having no distinguishable layers, or storing pointers in integers...)
+but I also noticed the encryption was haphazard and unsecure. I spent the next couple
+years completely rearchitecting everything - I practically threw everything out and
+started from scratch.</p>
+
+<p>The new application - Gryptonite - is a vast improvement over GPassword Manager in
+every aspect. The encryption is MUCH more secure, the database backend is multithreaded
+for optimal responsiveness and I fully implemented storing files in the database,
+which was not possible in the old database format. I really hope you enjoy the new
+version, as this application has been a big part of my life since 2009, both as a
+developer and a user.
+<br>
+<br>
+<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=QW8CL5QNL6EBL&amp;lc=US&amp;item_name=Gryptonite&amp;currency_code=USD&amp;bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted">
+    <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif">
+</a>
+<br>
+<br>
+<img src="http://s1.softpedia-static.com/_img/sp100free.png">
+<br></p>
       </section>
     </div>
 

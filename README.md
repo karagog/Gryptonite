@@ -34,11 +34,14 @@ for optimal responsiveness and I fully implemented storing files in the database
 which was not possible in the old database format. I really hope you enjoy the new
 version, as this application has been a big part of my life since 2009, both as a
 developer and a user.
-
+<br/>
+<br/>
+<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=QW8CL5QNL6EBL&lc=US&item_name=Gryptonite&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted">
+    <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif"/>
+</a>
+<br/>
 <br/>
 <img src="http://s1.softpedia-static.com/_img/sp100free.png"/>
 <br/>
 
-<a href='https://pledgie.com/campaigns/28056' >
-    <img alt='Click here to lend your support to: Gryptonite Encrypted Database and make a donation at pledgie.com !' src='https://pledgie.com/campaigns/28056.png?skin_name=chrome' border='0' >
-</a>
+

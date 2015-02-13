@@ -247,6 +247,12 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     // Set up the recent files list and open the most recent
     _update_recent_files();
 
+    // The window must be shown before setting up the taskbar button
+    show();
+#ifdef Q_OS_WIN
+    m_taskbarButton.setWindow(this->windowHandle());
+#endif // Q_OS_WIN
+    
     if(open_file){
         _new_open_database(open_file);
     }
@@ -255,12 +261,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
         if(al.length() > 0 && QFile::exists(al[0]->data().toString()))
             al[0]->trigger();
     }
-
-    // The window must be shown before setting up the taskbar button
-    show();
-#ifdef Q_OS_WIN
-    m_taskbarButton.setWindow(this->windowHandle());
-#endif // Q_OS_WIN
 }
 
 MainWindow::~MainWindow()

@@ -15,10 +15,15 @@ limitations under the License.*/
 #include "newpassworddialog.h"
 #include "ui_newpassworddialog.h"
 #include "grypto_common.h"
+#include <gutil/file.h>
 #include <QMessageBox>
 #include <QKeyEvent>
 #include <QFileDialog>
 USING_NAMESPACE_GUTIL1(Qt);
+
+// It doesn't make sense for this to be any larger than
+//  the encryption key size for AES
+#define KEYFILE_SIZE 32
 
 #define SETTING_LAST_CB_INDEX "np_dlg_last_cb_index"
 
@@ -162,6 +167,37 @@ void NewPasswordDialog::_select_keyfile()
     QString fn = QFileDialog::getOpenFileName(this, tr("Select Keyfile"));
     if(fn.isEmpty())
         return;
+
+    ui->le_filePath->setText(fn);
+}
+
+void NewPasswordDialog::_generate_keyfile()
+{
+    QString fn;
+    auto get_keyfile_loc = [&]{
+        return QFileDialog::getSaveFileName(this, tr("New Keyfile Location"),
+                                            QString(), QString(), NULL,
+                                            QFileDialog::DontConfirmOverwrite);
+    };
+
+    fn = get_keyfile_loc();
+    while(QFile::exists(fn)){
+        QMessageBox::warning(this, tr("File Exists"),
+                             tr("For your protection, I cannot overwrite an existing file.\n"
+                                "Please try again."));
+        fn = get_keyfile_loc();
+    }
+
+    if(fn.isEmpty())
+        return;
+
+    fn = QFileInfo(fn).absoluteFilePath();
+
+    byte data[KEYFILE_SIZE];
+    GUtil::GlobalRNG()->Fill(data, KEYFILE_SIZE);
+    GUtil::File f(fn.toUtf8().constData());
+    f.Open(f.OpenWrite);
+    f.Write(data, KEYFILE_SIZE);
 
     ui->le_filePath->setText(fn);
 }

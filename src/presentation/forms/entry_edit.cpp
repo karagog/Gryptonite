@@ -217,8 +217,9 @@ void EntryEdit::_select_file()
 
     QFileInfo fi(fn);
     m_entry.SetFilePath(fi.absoluteFilePath());
-    if(m_entry.GetFileId().IsNull())
-        m_entry.SetFileId(FileId::NewId());
+    
+    // Always give a new file id, so it doesn't overwrite the old file
+    m_entry.SetFileId(FileId::NewId());
 
     ui->le_filename->setText(fi.fileName());
     ui->lbl_fileStatus->setText(tr("(Upload pending)"));

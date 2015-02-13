@@ -85,6 +85,23 @@ public:
     }
 };
 
+// Use this class to disable column auto-size when items are expanded/collapsed
+class disable_column_auroresize_t
+{
+    GUtil::Qt::TreeView *m_treeView;
+public:
+    disable_column_auroresize_t(GUtil::Qt::TreeView *tv) :m_treeView(tv){
+        QObject::disconnect(m_treeView, SIGNAL(expanded(QModelIndex)), m_treeView, SLOT(ResizeColumnsToContents()));
+        QObject::disconnect(m_treeView, SIGNAL(collapsed(QModelIndex)), m_treeView, SLOT(ResizeColumnsToContents()));
+    }
+    ~disable_column_auroresize_t(){
+        QObject::connect(m_treeView, SIGNAL(expanded(QModelIndex)), m_treeView, SLOT(ResizeColumnsToContents()),
+                         ::Qt::QueuedConnection);
+        QObject::connect(m_treeView, SIGNAL(collapsed(QModelIndex)), m_treeView, SLOT(ResizeColumnsToContents()),
+                         ::Qt::QueuedConnection);
+    }
+};
+
 
 MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *parent)
     :QMainWindow(parent),
@@ -115,6 +132,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     connect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
             ::Qt::QueuedConnection);
     connect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
+            ::Qt::QueuedConnection);
+    connect(ui->treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(_treeview_doubleclicked(QModelIndex)),
             ::Qt::QueuedConnection);
     _update_time_format();
 
@@ -389,6 +408,16 @@ bool MainWindow::_handle_key_pressed(QKeyEvent *ev)
             }
         }
     }
+    else if(!ev->modifiers())
+    {
+        // No keyboard modifiers
+        if(ev->key() == ::Qt::Key_Escape){
+            // The escape key nulls out the selection, clears the views and search filter
+            ui->searchWidget->Clear();
+            ui->treeView->setCurrentIndex(QModelIndex());
+            ui->treeView->collapseAll();
+        }
+    }
     return ret;
 }
 
@@ -419,12 +448,6 @@ bool MainWindow::eventFilter(QObject *o, QEvent *ev)
                 if(kev->key() == ::Qt::Key_Enter || kev->key() == ::Qt::Key_Return){
                     _treeview_doubleclicked(ui->treeView->currentIndex());
                     ret = true;
-                }
-                else if(kev->key() == ::Qt::Key_Escape){
-                    // The escape key nulls out the selection, clears the views and search filter
-                    ui->searchWidget->Clear();
-                    ui->treeView->setCurrentIndex(QModelIndex());
-                    ui->treeView->collapseAll();
                 }
                 else if(!IsReadOnly()){
                     // Put all write actions in here, so they're safely disabled
@@ -786,10 +809,11 @@ void MainWindow::_save_as()
     // Close the old database and install the new one on the main window
     DatabaseModel *old_model = _get_database_model();
     _close_database(false);     // Don't delete the old database model!
-    _install_new_database_model(dbm);
 
     // Copy the old database to the new one
     dbm->ImportFromDatabase(*old_model);
+
+    _install_new_database_model(dbm);
 
     dbm.Relinquish();
     delete old_model;
@@ -854,6 +878,7 @@ void MainWindow::_new_entry()
         }
         model->AddEntry(dlg.GetEntry());
         _select_entry(dlg.GetEntry().GetId());
+        ui->treeView->ResizeColumnsToContents();
     }
 }
 
@@ -1037,6 +1062,7 @@ void MainWindow::_delete_entry()
                     QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel))
         {
             model->RemoveEntry(*e);
+            ui->treeView->ResizeColumnsToContents();
         }
     }
 }
@@ -1063,6 +1089,7 @@ void MainWindow::_edit_entry(const Entry &e)
     {
         _get_database_model()->UpdateEntry(dlg.GetEntry());
         _nav_index_changed(m_navStack.index());
+        ui->treeView->ResizeColumnsToContents();
     }
 }
 
@@ -1070,7 +1097,12 @@ void MainWindow::_treeview_doubleclicked(const QModelIndex &ind)
 {
     if(ind.isValid())
     {
-        PopOutCurrentEntry();
+        if(QApplication::keyboardModifiers().testFlag(::Qt::ShiftModifier)){
+            _edit_entry();
+        }
+        else{
+            PopOutCurrentEntry();
+        }
     }
 }
 
@@ -1231,19 +1263,24 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
     if(fm == NULL)
         return;
 
+    disconnect(ui->treeView->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+               this, SLOT(_treeview_currentindex_changed(QModelIndex)));
+
     // Apply the filter
     fm->SetFilter(fi);
 
     QString title = tr("Password Database");
 
-    // Highlight any matching rows
+    // Highlight and expand to show all matching rows
     if(fi.IsValid)
     {
+        disable_column_auroresize_t d(ui->treeView);
         QItemSelection is;
         foreach(QModelIndex ind, fm->GetUnfilteredRows())
         {
             ui->treeView->ExpandToIndex(ind);
-            is.append(QItemSelectionRange(ind, fm->index(ind.row(), fm->columnCount() - 1, ind.parent())));
+            is.append(QItemSelectionRange(ind, fm->index(ind.row(), fm->columnCount() - 1,
+                                                         ind.parent())));
         }
         ui->treeView->selectionModel()->select(is, QItemSelectionModel::ClearAndSelect);
 
@@ -1254,7 +1291,11 @@ void MainWindow::_filter_updated(const FilterInfo_t &fi)
     {
         ui->treeView->selectionModel()->clearSelection();
     }
+    ui->treeView->ResizeColumnsToContents();
     ui->dw_treeView->setWindowTitle(title);
+
+    connect(ui->treeView->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+            this, SLOT(_treeview_currentindex_changed(QModelIndex)));
 }
 
 void MainWindow::_search()
@@ -1520,19 +1561,15 @@ void MainWindow::_tray_icon_activated(QSystemTrayIcon::ActivationReason ar)
 
 void MainWindow::_expand_all()
 {
-    disconnect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()));
+    disable_column_auroresize_t d(ui->treeView);
     ui->treeView->expandAll();
-    connect(ui->treeView, SIGNAL(expanded(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
-            ::Qt::QueuedConnection);
     ui->treeView->ResizeColumnsToContents();
 }
 
 void MainWindow::_collapse_all()
 {
-    disconnect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()));
+    disable_column_auroresize_t d(ui->treeView);
     ui->treeView->collapseAll();
-    connect(ui->treeView, SIGNAL(collapsed(QModelIndex)), ui->treeView, SLOT(ResizeColumnsToContents()),
-            ::Qt::QueuedConnection);
     ui->treeView->ResizeColumnsToContents();
 }
 

@@ -96,7 +96,7 @@
      <x>0</x>
      <y>0</y>
      <width>795</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -154,7 +154,7 @@
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dw_treeView">
    <property name="whatsThis">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;View the entries you have stored in the encrypted database. You can organize them into a hierarchy by dragging and dropping them. If you add an entry to favorites, it will appear in the tray icon context menu when you right-click. Use the search window to filter and search the entries.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Entries are stored securely in the encrypted database, and only decrypted when you open it with this application. Entries may contain a file, which is also encrypted securely in the database.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;View the entries you have stored in the encrypted database. You can organize them into a hierarchy by dragging and dropping them. If you add an entry to favorites, it will appear in the tray icon context menu when you right-click. Use the search window to filter and search the entries.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Entries are stored securely in the encrypted database, and only decrypted when you open it with this application. Entries may contain a file, which is also encrypted securely in the database.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Hint: Hold shift while double-clicking to edit an entry.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="features">
     <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
@@ -451,22 +451,6 @@
   <include location="../../presentation/grypto_ui.qrc"/>
  </resources>
  <connections>
-  <connection>
-   <sender>treeView</sender>
-   <signal>doubleClicked(QModelIndex)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>_treeview_doubleclicked(QModelIndex)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>186</x>
-     <y>331</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>276</x>
-     <y>370</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>searchWidget</sender>
    <signal>FilterChanged(Grypt::FilterInfo_t)</signal>

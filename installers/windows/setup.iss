@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Gryptonite"
-#define MyAppVersion "3.0.4_beta"
+#define MyAppVersion "3.0.5_beta"
 #define MyAppPublisher "Rapstallion"
 #define MyAppURL "https://github.com/karagog/Gryptonite"
 #define MyAppExeName "gryptonite.exe"
@@ -27,6 +27,7 @@ OutputDir=.
 OutputBaseFilename={#MyAppName}_{#MyAppVersion}_setup
 Compression=lzma
 SolidCompression=yes
+LicenseFile={#TopDir}\LICENSE
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -65,6 +66,8 @@ Source: "{#TopDir}\bin\Qt5Svg.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5Xml.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5Network.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\Qt5WinExtras.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\ssleay32.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\libeay32.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\libgcc_s_dw2-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\libstdc++-6.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion

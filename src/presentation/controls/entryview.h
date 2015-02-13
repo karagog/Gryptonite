@@ -22,6 +22,8 @@ namespace Ui {
 class EntryView;
 }
 
+class QSortFilterProxyModel;
+
 namespace Grypt{
 class EntryModel;
 class DatabaseModel;
@@ -65,6 +67,7 @@ private:
     DatabaseModel *m_dbModel;
 
     EntryModel *_get_entry_model() const;
+    QSortFilterProxyModel *_get_proxy_model() const;
 };
 
 

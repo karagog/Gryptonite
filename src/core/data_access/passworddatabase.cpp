@@ -100,22 +100,16 @@ struct d_t
     QString dbString;
     GUtil::SmartPointer<GUtil::CryptoPP::Cryptor> cryptor;
 
-    // Background threads
-    thread file_worker;
-    thread entry_worker;
+    // Background thread
+    thread worker;
 
     // Variables for the background threads
-    mutex file_thread_lock;
-    condition_variable wc_file_thread;
-    queue<Grypt::bg_worker_command *> file_thread_commands;
-    bool cancel_file_thread;
-    bool file_thread_idle;
-    bool file_thread_cancellable;
-
-    mutex entry_thread_lock;
-    condition_variable wc_entry_thread;
-    queue<Grypt::bg_worker_command *> entry_thread_commands;
-    bool entry_thread_idle;
+    mutex thread_lock;
+    condition_variable wc_thread;
+    queue<Grypt::bg_worker_command *> thread_commands;
+    bool cancel_thread;
+    bool thread_cancellable;
+    bool thread_idle;
 
     bool closing;
 
@@ -130,10 +124,9 @@ struct d_t
     condition_variable wc_index;
 
     d_t()
-        :cancel_file_thread(false),
-          file_thread_idle(true),
-          file_thread_cancellable(false),
-          entry_thread_idle(false),
+        :cancel_thread(false),
+          thread_cancellable(false),
+          thread_idle(false),
           closing(false)
     {}
 };
@@ -158,7 +151,7 @@ typedef pair<FileId, quint32> fileid_length_pair;
 static void __add_new_files(PasswordDatabase *pdb, const Entry &e)
 {
     if(!e.GetFileId().IsNull() && !e.GetFilePath().isEmpty()){
-        pdb->AddUpdateFile(e.GetFileId(), e.GetFilePath().toUtf8().constData());
+        pdb->AddFile(e.GetFileId(), e.GetFilePath().toUtf8().constData());
     }
 }
 
@@ -273,7 +266,7 @@ public:
         RemoveFavoriteEntry,
 
         // File commands
-        UpdateFile,
+        AddFile,
         DeleteFile,
         ExportFile,
         ExportToPS,
@@ -376,16 +369,16 @@ public:
     {}
 };
 
-class update_file_command : public bg_worker_command
+class add_file_command : public bg_worker_command
 {
 public:
-    update_file_command(const FileId &id, const char *path)
-        :bg_worker_command(UpdateFile),
+    add_file_command(const FileId &id, const char *path)
+        :bg_worker_command(AddFile),
           ID(id),
           FilePath(path)
     {}
-    update_file_command(const FileId &id, const QByteArray &contents)
-        :bg_worker_command(UpdateFile),
+    add_file_command(const FileId &id, const QByteArray &contents)
+        :bg_worker_command(AddFile),
           ID(id),
           FileContents(contents)
     {}
@@ -467,10 +460,10 @@ void PasswordDatabase::_init_cryptor(const Credentials &creds, const byte *s, GU
 
 static void __queue_entry_command(d_t *d, bg_worker_command *cmd)
 {
-    unique_lock<mutex> lkr(d->entry_thread_lock);
-    d->entry_thread_commands.push(cmd);
-    d->entry_thread_idle = false;
-    d->wc_entry_thread.notify_one();
+    unique_lock<mutex> lkr(d->thread_lock);
+    d->thread_commands.push(cmd);
+    d->thread_idle = false;
+    d->wc_thread.notify_one();
 }
 
 static void __check_version(const QString &dbstring)
@@ -699,11 +692,10 @@ void PasswordDatabase::Open(const Credentials &creds)
     __initialize_cache(d);
 
     // Start up the background threads
-    d->entry_worker = std::thread(&PasswordDatabase::_entry_worker, this, new GUtil::CryptoPP::Cryptor(*d->cryptor));
-    d->file_worker = std::thread(&PasswordDatabase::_file_worker, this, new GUtil::CryptoPP::Cryptor(*d->cryptor));
+    d->worker = std::thread(&PasswordDatabase::_background_worker, this, new GUtil::CryptoPP::Cryptor(*d->cryptor));
 
     // We must wait for the background thread to idle to avoid a race condition
-    WaitForEntryThreadIdle();
+    WaitForThreadIdle();
 }
 
 bool PasswordDatabase::IsOpen() const
@@ -719,16 +711,12 @@ PasswordDatabase::~PasswordDatabase()
         // Let's clean up any orphaned entries/files
         DeleteOrphans();
 
-        d->file_thread_lock.lock();
-        d->entry_thread_lock.lock();
+        d->thread_lock.lock();
         d->closing = true;
-        d->wc_file_thread.notify_one();
-        d->wc_entry_thread.notify_one();
-        d->entry_thread_lock.unlock();
-        d->file_thread_lock.unlock();
+        d->wc_thread.notify_one();
+        d->thread_lock.unlock();
 
-        d->entry_worker.join();
-        d->file_worker.join();
+        d->worker.join();
 
         QSqlDatabase::removeDatabase(d->dbString);
     }
@@ -758,7 +746,7 @@ static void __commit_transaction(QSqlDatabase &db)
         throw Exception<>(db.lastError().text().toUtf8().constData());
 }
 
-void PasswordDatabase::_ew_add_entry(const QString &conn_str, const Entry &e)
+void PasswordDatabase::_bw_add_entry(const QString &conn_str, const Entry &e)
 {
     G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
@@ -834,7 +822,7 @@ void PasswordDatabase::_ew_add_entry(const QString &conn_str, const Entry &e)
     __add_new_files(this, e);
 }
 
-void PasswordDatabase::_ew_update_entry(const QString &conn_str, const Entry &e)
+void PasswordDatabase::_bw_update_entry(const QString &conn_str, const Entry &e)
 {
     G_D;
     QSqlDatabase db = QSqlDatabase::database(conn_str);
@@ -873,7 +861,7 @@ void PasswordDatabase::_ew_update_entry(const QString &conn_str, const Entry &e)
     __add_new_files(this, e);
 }
 
-void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
+void PasswordDatabase::_bw_delete_entry(const QString &conn_str,
                                         const EntryId &id)
 {
     QSqlDatabase db = QSqlDatabase::database(conn_str);
@@ -944,7 +932,7 @@ void PasswordDatabase::_ew_delete_entry(const QString &conn_str,
         emit NotifyFavoritesUpdated();
 }
 
-void PasswordDatabase::_ew_move_entry(const QString &conn_str,
+void PasswordDatabase::_bw_move_entry(const QString &conn_str,
                                       const EntryId &src_parent, quint32 row_first, quint32 row_last,
                                       const EntryId &dest_parent, quint32 row_dest)
 {
@@ -1395,18 +1383,18 @@ void PasswordDatabase::CancelFileTasks()
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->file_thread_lock);
-    d->cancel_file_thread = true;
+    unique_lock<mutex> lkr(d->thread_lock);
+    d->cancel_thread = true;
 
     // Remove all pending commands
-    while(!d->file_thread_commands.empty()){
-        delete d->file_thread_commands.front();
-        d->file_thread_commands.pop();
+    while(!d->thread_commands.empty()){
+        delete d->thread_commands.front();
+        d->thread_commands.pop();
     }
 
     // Wake the thread in case he's sleeping, we want him to lower
     //  the cancel flag immediately so it doesn't cancel the next operation
-    d->wc_file_thread.notify_one();
+    d->wc_thread.notify_one();
 }
 
 QHash<FileId, PasswordDatabase::FileInfo_t> PasswordDatabase::GetFileSummary() const
@@ -1462,7 +1450,7 @@ static void __add_referenced_file_ids(d_t *d, QSet<FileId> &s, const EntryId &id
 QSet<FileId> PasswordDatabase::GetReferencedFileIds() const
 {
     FailIfNotOpen();
-    WaitForEntryThreadIdle();
+    WaitForThreadIdle();
     G_D;
 
     QSet<FileId> ret;
@@ -1471,30 +1459,22 @@ QSet<FileId> PasswordDatabase::GetReferencedFileIds() const
     return ret;
 }
 
-void PasswordDatabase::AddUpdateFile(const FileId &id, const char *filename)
+void PasswordDatabase::AddFile(const FileId &id, const char *filename)
 {
     FailIfNotOpen();
     G_D;
-    d->index_lock.lock();
-    d->file_index.erase(id);
-    d->index_lock.unlock();
-
-    unique_lock<mutex> lkr(d->file_thread_lock);
-    d->file_thread_commands.push(new update_file_command(id, filename));
-    d->wc_file_thread.notify_one();
+    unique_lock<mutex> lkr(d->thread_lock);
+    d->thread_commands.push(new add_file_command(id, filename));
+    d->wc_thread.notify_one();
 }
 
-void PasswordDatabase::AddUpdateFile(const FileId &id, const QByteArray &contents)
+void PasswordDatabase::AddFile(const FileId &id, const QByteArray &contents)
 {
     FailIfNotOpen();
     G_D;
-    d->index_lock.lock();
-    d->file_index.erase(id);
-    d->index_lock.unlock();
-
-    unique_lock<mutex> lkr(d->file_thread_lock);
-    d->file_thread_commands.push(new update_file_command(id, contents));
-    d->wc_file_thread.notify_one();
+    unique_lock<mutex> lkr(d->thread_lock);
+    d->thread_commands.push(new add_file_command(id, contents));
+    d->wc_thread.notify_one();
 }
 
 void PasswordDatabase::DeleteFile(const FileId &id)
@@ -1505,18 +1485,18 @@ void PasswordDatabase::DeleteFile(const FileId &id)
     d->file_index.erase(id);
     d->index_lock.unlock();
 
-    unique_lock<mutex> lkr(d->file_thread_lock);
-    d->file_thread_commands.push(new delete_file_command(id));
-    d->wc_file_thread.notify_one();
+    unique_lock<mutex> lkr(d->thread_lock);
+    d->thread_commands.push(new delete_file_command(id));
+    d->wc_thread.notify_one();
 }
 
 void PasswordDatabase::ExportFile(const FileId &id, const char *export_path) const
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->file_thread_lock);
-    d->file_thread_commands.push(new export_file_command(id, export_path));
-    d->wc_file_thread.notify_one();
+    unique_lock<mutex> lkr(d->thread_lock);
+    d->thread_commands.push(new export_file_command(id, export_path));
+    d->wc_thread.notify_one();
 }
 
 QByteArray PasswordDatabase::GetFile(const FileId &id) const
@@ -1542,9 +1522,9 @@ void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->file_thread_lock);
-    d->file_thread_commands.push(new export_to_ps_command(export_filename, creds));
-    d->wc_file_thread.notify_one();
+    unique_lock<mutex> lkr(d->thread_lock);
+    d->thread_commands.push(new export_to_ps_command(export_filename, creds));
+    d->wc_thread.notify_one();
 }
 
 void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
@@ -1552,9 +1532,9 @@ void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->file_thread_lock);
-    d->file_thread_commands.push(new import_from_ps_command(import_filename, creds));
-    d->wc_file_thread.notify_one();
+    unique_lock<mutex> lkr(d->thread_lock);
+    d->thread_commands.push(new import_from_ps_command(import_filename, creds));
+    d->wc_thread.notify_one();
 }
 
 static void __count_child_entries(QSqlDatabase &db, int &count, const EntryId &parent_id)
@@ -1646,14 +1626,14 @@ void PasswordDatabase::ImportFromDatabase(const PasswordDatabase &other)
     int file_count = file_list.length();
     for(int i = 0; i < file_count; ++i){
         QByteArray cur_file = other.GetFile(file_list[i].first);
-        AddUpdateFile(file_list[i].second, cur_file);
+        AddFile(file_list[i].second, cur_file);
         emit NotifyProgressUpdated((float)i/file_count*100, false, progress_label);
     }
 
     RefreshFavorites();
 }
 
-void PasswordDatabase::_ew_refresh_favorites(const QString &conn_str)
+void PasswordDatabase::_bw_refresh_favorites(const QString &conn_str)
 {
     G_D;
     QSqlQuery q("SELECT * FROM Entry WHERE Favorite >= 0 ORDER BY Favorite ASC",
@@ -1676,7 +1656,7 @@ void PasswordDatabase::_ew_refresh_favorites(const QString &conn_str)
     emit NotifyFavoritesUpdated();
 }
 
-void PasswordDatabase::_ew_set_favorites(const QString &conn_str, const QList<EntryId> &favs)
+void PasswordDatabase::_bw_set_favorites(const QString &conn_str, const QList<EntryId> &favs)
 {
     QString task_string = tr("Setting favorites");
     emit NotifyProgressUpdated(0, false, task_string);
@@ -1704,7 +1684,7 @@ void PasswordDatabase::_ew_set_favorites(const QString &conn_str, const QList<En
     __commit_transaction(db);
 }
 
-void PasswordDatabase::_ew_add_favorite(const QString &conn_str, const EntryId &id)
+void PasswordDatabase::_bw_add_favorite(const QString &conn_str, const EntryId &id)
 {
     QString task_string = tr("Adding favorite");
     emit NotifyProgressUpdated(0, false, task_string);
@@ -1726,7 +1706,7 @@ void PasswordDatabase::_ew_add_favorite(const QString &conn_str, const EntryId &
     }
 }
 
-void PasswordDatabase::_ew_remove_favorite(const QString &conn_str, const EntryId &id)
+void PasswordDatabase::_bw_remove_favorite(const QString &conn_str, const EntryId &id)
 {
     QString task_string = tr("Removing favorite");
     emit NotifyProgressUpdated(0, false, task_string);
@@ -1771,7 +1751,7 @@ void PasswordDatabase::_ew_remove_favorite(const QString &conn_str, const EntryI
     __commit_transaction(db);
 }
 
-void PasswordDatabase::_ew_dispatch_orphans(const QString &conn_str)
+void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
 {
     G_D;
     QSqlDatabase db(QSqlDatabase::database(conn_str));
@@ -1800,7 +1780,7 @@ void PasswordDatabase::_ew_dispatch_orphans(const QString &conn_str)
             const tuple<EntryId, EntryId, FileId> &t = ids[i];
             if(!get<1>(t).IsNull() && entry_ids.find(get<1>(t)) == entry_ids.end()){
                 delete_list_e.push_back(get<0>(t));
-                _ew_delete_entry(conn_str, get<0>(t));
+                _bw_delete_entry(conn_str, get<0>(t));
 
                 // Every time we remove an id, we need to recheck the list
                 //  because that id could have been someone's parent
@@ -1844,7 +1824,7 @@ void PasswordDatabase::_ew_dispatch_orphans(const QString &conn_str)
         }
 
         for(FileId const &fid : delete_list_f)
-            _fw_del_file(conn_str, fid);
+            _bw_del_file(conn_str, fid);
 
         if(0 < delete_list_f.size()){
             qDebug("Removed %d orphaned files...", (int)delete_list_f.size());
@@ -1853,33 +1833,39 @@ void PasswordDatabase::_ew_dispatch_orphans(const QString &conn_str)
 }
 
 
-void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
+void PasswordDatabase::_background_worker(GUtil::CryptoPP::Cryptor *c)
 {
     G_D;
     // We will delete the cryptor
     SmartPointer<GUtil::CryptoPP::Cryptor> bgCryptor(c);
     const QString conn_str = __create_connection(m_filepath);
 
-    unique_lock<mutex> lkr(d->entry_thread_lock);
+    unique_lock<mutex> lkr(d->thread_lock);
     while(!d->closing)
     {
         // Tell everyone who's waiting that we're going idle
-        d->entry_thread_idle = true;
-        d->wc_entry_thread.notify_all();
+        d->thread_idle = true;
+        d->wc_thread.notify_all();
 
         // Wait for something to do
-        d->wc_entry_thread.wait(lkr, [&]{
-            return d->closing || !d->entry_thread_commands.empty();
+        d->wc_thread.wait(lkr, [&]{
+            d->cancel_thread = false;
+            return d->closing || !d->thread_commands.empty();
         });
 
         // Empty the command queue, even if closing
-        while(!d->entry_thread_commands.empty())
+        while(!d->thread_commands.empty())
         {
             // This needs to be set by the one assigning us work
-            GASSERT(!d->entry_thread_idle);
+            GASSERT(!d->thread_idle);
 
-            SmartPointer<bg_worker_command> cmd(d->entry_thread_commands.front());
-            d->entry_thread_commands.pop();
+            SmartPointer<bg_worker_command> cmd(d->thread_commands.front());
+            d->thread_commands.pop();
+
+            // We flush the queue if the user cancelled
+            if(d->cancel_thread)
+                continue;
+
             lkr.unlock();
             try
             {
@@ -1889,54 +1875,86 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
                 case bg_worker_command::AddEntry:
                 {
                     add_entry_command *aec = static_cast<add_entry_command *>(cmd.Data());
-                    _ew_add_entry(conn_str, aec->entry);
+                    _bw_add_entry(conn_str, aec->entry);
                 }
                     break;
                 case bg_worker_command::EditEntry:
                 {
                     update_entry_command *uec = static_cast<update_entry_command *>(cmd.Data());
-                    _ew_update_entry(conn_str, uec->entry);
+                    _bw_update_entry(conn_str, uec->entry);
                 }
                     break;
                 case bg_worker_command::DeleteEntry:
                 {
                     delete_entry_command *dec = static_cast<delete_entry_command *>(cmd.Data());
-                    _ew_delete_entry(conn_str, dec->Id);
+                    _bw_delete_entry(conn_str, dec->Id);
                 }
                     break;
                 case bg_worker_command::MoveEntry:
                 {
                     move_entry_command *mec = static_cast<move_entry_command *>(cmd.Data());
-                    _ew_move_entry(conn_str,
+                    _bw_move_entry(conn_str,
                                    mec->ParentSource, mec->RowFirst, mec->RowLast,
                                    mec->ParentDest, mec->RowDest);
                 }
                     break;
                 case bg_worker_command::RefreshFavoriteEntries:
-                    _ew_refresh_favorites(conn_str);
+                    _bw_refresh_favorites(conn_str);
                     break;
                 case bg_worker_command::SetFavoriteEntries:
                 {
                     set_favorite_entries_command *sfe = static_cast<set_favorite_entries_command *>(cmd.Data());
-                    _ew_set_favorites(conn_str, sfe->Favorites);
+                    _bw_set_favorites(conn_str, sfe->Favorites);
                 }
                     break;
                 case bg_worker_command::AddFavoriteEntry:
                 {
                     add_favorite_entry *afe = static_cast<add_favorite_entry *>(cmd.Data());
-                    _ew_add_favorite(conn_str, afe->ID);
+                    _bw_add_favorite(conn_str, afe->ID);
                 }
                     break;
                 case bg_worker_command::RemoveFavoriteEntry:
                 {
                     remove_favorite_entry *rfe = static_cast<remove_favorite_entry *>(cmd.Data());
-                    _ew_remove_favorite(conn_str, rfe->ID);
+                    _bw_remove_favorite(conn_str, rfe->ID);
                 }
                     break;
                 case bg_worker_command::DispatchOrphans:
                 {
                     //dispatch_orphans_command *doc = static_cast<dispatch_orphans_command*>(cmd.Data());
-                    _ew_dispatch_orphans(conn_str);
+                    _bw_dispatch_orphans(conn_str);
+                }
+                    break;
+                case bg_worker_command::AddFile:
+                {
+                    add_file_command *afc = static_cast<add_file_command *>(cmd.Data());
+                    _bw_add_file(conn_str, *bgCryptor, afc->ID,
+                                 afc->FilePath.isEmpty() ? afc->FileContents : afc->FilePath,
+                                 !afc->FilePath.isEmpty());
+                }
+                    break;
+                case bg_worker_command::ExportFile:
+                {
+                    export_file_command *efc = static_cast<export_file_command *>(cmd.Data());
+                    _bw_exp_file(conn_str, *bgCryptor, efc->ID, efc->FilePath);
+                }
+                    break;
+                case bg_worker_command::DeleteFile:
+                {
+                    delete_file_command *afc = static_cast<delete_file_command *>(cmd.Data());
+                    _bw_del_file(conn_str, afc->ID);
+                }
+                    break;
+                case bg_worker_command::ExportToPS:
+                {
+                    export_to_ps_command *e2ps = static_cast<export_to_ps_command *>(cmd.Data());
+                    _bw_export_to_gps(conn_str, *bgCryptor, e2ps->FilePath, e2ps->Creds);
+                }
+                    break;
+                case bg_worker_command::ImportFromPS:
+                {
+                    import_from_ps_command *ifps = static_cast<import_from_ps_command *>(cmd.Data());
+                    _bw_import_from_gps(conn_str, *bgCryptor, ifps->FilePath, ifps->Creds);
                 }
                     break;
                 default:
@@ -1956,117 +1974,30 @@ void PasswordDatabase::_entry_worker(GUtil::CryptoPP::Cryptor *c)
         }
     }
     QSqlDatabase::removeDatabase(conn_str);
-    d->entry_thread_idle = true;
+    d->thread_idle = true;
 }
 
-void PasswordDatabase::_file_worker(GUtil::CryptoPP::Cryptor *c)
+void PasswordDatabase::_convert_to_readonly_exception_and_notify(const GUtil::Exception<> &ex_rx)
 {
-    G_D;
-    // We will delete the cryptor
-    SmartPointer<GUtil::CryptoPP::Cryptor> bgCryptor(c);
-    const QString conn_str = __create_connection(m_filepath);
-
-    // Begin the thread loop
-    unique_lock<mutex> lkr(d->file_thread_lock);
-    while(!d->closing)
+    Exception<> *ex;
+    if(NULL == dynamic_cast<CancelledOperationException<false>const*>(&ex_rx))
     {
-        // Tell everyone who's waiting that we're going idle
-        d->file_thread_idle = true;
-        d->wc_file_thread.notify_all();
-
-        // Wait for something to do
-        d->wc_file_thread.wait(lkr, [&]{
-            d->cancel_file_thread = false;
-            return d->closing || !d->file_thread_commands.empty();
-        });
-        d->file_thread_idle = false;
-
-        // Empty the command queue, even if closing
-        while(!d->file_thread_commands.empty())
-        {
-            SmartPointer<bg_worker_command> cmd(d->file_thread_commands.front());
-            d->file_thread_commands.pop();
-            lkr.unlock();
-            try
-            {
-                // Process the command (long task)
-                switch(cmd->CommandType)
-                {
-                case bg_worker_command::UpdateFile:
-                {
-                    update_file_command *afc = static_cast<update_file_command *>(cmd.Data());
-                    _fw_add_file(conn_str, *bgCryptor, afc->ID,
-                                 afc->FilePath.isEmpty() ? afc->FileContents : afc->FilePath,
-                                 !afc->FilePath.isEmpty());
-                }
-                    break;
-                case bg_worker_command::ExportFile:
-                {
-                    export_file_command *efc = static_cast<export_file_command *>(cmd.Data());
-                    _fw_exp_file(conn_str, *bgCryptor, efc->ID, efc->FilePath);
-                }
-                    break;
-                case bg_worker_command::DeleteFile:
-                {
-                    delete_file_command *afc = static_cast<delete_file_command *>(cmd.Data());
-                    _fw_del_file(conn_str, afc->ID);
-                }
-                    break;
-                case bg_worker_command::ExportToPS:
-                {
-                    export_to_ps_command *e2ps = static_cast<export_to_ps_command *>(cmd.Data());
-                    _fw_export_to_gps(conn_str, *bgCryptor, e2ps->FilePath, e2ps->Creds);
-                }
-                    break;
-                case bg_worker_command::ImportFromPS:
-                {
-                    import_from_ps_command *ifps = static_cast<import_from_ps_command *>(cmd.Data());
-                    _fw_import_from_gps(conn_str, *bgCryptor, ifps->FilePath, ifps->Creds);
-                }
-                    break;
-                default:
-                    break;
-                }
-            }
-            catch(const Exception<> &ex){
-                _convert_to_readonly_exception_and_notify(ex);
-            }
-            catch(...) { /* Don't let any exception crash us */ }
-            lkr.lock();
+        Exception<true> const *extended_ex = dynamic_cast<Exception<true> const *>(&ex_rx);
+        if(NULL == extended_ex){
+            // Exceptions on the background thread put us into read only mode
+            ex = new ReadOnlyException<false>(ex_rx);
+        }
+        else{
+            ex = new ReadOnlyException<true>(*extended_ex);
         }
     }
-    QSqlDatabase::removeDatabase(conn_str);
-    d->file_thread_idle = true;
-}
-
-void PasswordDatabase::_convert_to_readonly_exception_and_notify(const GUtil::Exception<> &ex)
-{
-    ReadOnlyException<> *ro_ex;
-    Exception<true> const *extended_ex = dynamic_cast<Exception<true> const *>(&ex);
-    if(NULL == extended_ex){
-        // Exceptions on the background thread put us into read only mode
-        ro_ex = new ReadOnlyException<false>(ex);
-    }
     else{
-        ro_ex = new ReadOnlyException<true>(*extended_ex);
+        ex = (Exception<>*)ex_rx.Clone();
     }
-    emit NotifyExceptionOnBackgroundThread(shared_ptr<Exception<>>((Exception<> *)ro_ex));
+    emit NotifyExceptionOnBackgroundThread(shared_ptr<Exception<>>((Exception<> *)ex));
 }
 
-static bool __file_exists(QSqlQuery &q, const FileId &id)
-{
-    bool ret = false;
-    if(!q.prepare("SELECT COUNT(*) FROM File WHERE ID=:fid"))
-        throw Exception<>(q.lastError().text().toUtf8().constData());
-
-    q.bindValue(":fid", (QByteArray)id);
-    DatabaseUtils::ExecuteQuery(q);
-    if(q.next())
-        ret = 0 < q.record().value(0).toInt();
-    return ret;
-}
-
-void PasswordDatabase::_fw_add_file(const QString &conn_str,
+void PasswordDatabase::_bw_add_file(const QString &conn_str,
                                     GUtil::CryptoPP::Cryptor &cryptor,
                                     const FileId &id,
                                     const QByteArray &data,
@@ -2095,15 +2026,6 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
             });
         });
 
-        // First remove the existing file, if there is one. We do this right away
-        //  because we want this to happen even if the user cancels.
-        bool exists = __file_exists(q, id);
-        if(exists){
-            q.prepare("DELETE FROM File WHERE ID=?");
-            q.addBindValue((QByteArray)id);
-            DatabaseUtils::ExecuteQuery(q);
-        }
-
         // First upload and encrypt the file
         QByteArray encrypted_data;
         {
@@ -2129,15 +2051,15 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
 
             m_progressMin = 0, m_progressMax = 75;
             m_curTaskString = QString("Download and encrypt file");
-            d->file_thread_cancellable = true;
+            d->thread_cancellable = true;
             cryptor.EncryptData(&o, data_in, NULL, nonce, DEFAULT_CHUNK_SIZE, this);
         }
 
-        _fw_fail_if_cancelled();
+        _bw_fail_if_cancelled();
         m_curTaskString = QString("Adding file");
         emit NotifyProgressUpdated(m_progressMax, true, m_curTaskString);
 
-        _fw_fail_if_cancelled();
+        _bw_fail_if_cancelled();
 
         // Insert a new file
         q.prepare("INSERT INTO File (Length, Data, ID) VALUES (?,?,?)");
@@ -2148,7 +2070,7 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
 
         // One last chance before we commit
         emit NotifyProgressUpdated(m_progressMax + 10, true, m_curTaskString);
-        _fw_fail_if_cancelled();
+        _bw_fail_if_cancelled();
 
         success = true;
     }
@@ -2162,7 +2084,7 @@ void PasswordDatabase::_fw_add_file(const QString &conn_str,
     d->wc_index.notify_all();
 }
 
-void PasswordDatabase::_fw_exp_file(const QString &conn_str,
+void PasswordDatabase::_bw_exp_file(const QString &conn_str,
                                      GUtil::CryptoPP::Cryptor &cryptor,
                                      const FileId &id,
                                      const char *filepath)
@@ -2186,7 +2108,7 @@ void PasswordDatabase::_fw_exp_file(const QString &conn_str,
 
     if(!q.next())
         throw Exception<>("File ID not found");
-    _fw_fail_if_cancelled();
+    _bw_fail_if_cancelled();
     emit NotifyProgressUpdated(25, true, m_curTaskString);
 
     const QByteArray encrypted_data(q.record().value(0).toByteArray());
@@ -2195,16 +2117,16 @@ void PasswordDatabase::_fw_exp_file(const QString &conn_str,
         File f(filepath);
         f.Open(File::OpenReadWriteTruncate);
 
-        _fw_fail_if_cancelled();
+        _bw_fail_if_cancelled();
         emit NotifyProgressUpdated(35, true, m_curTaskString);
 
         m_progressMin = 35, m_progressMax = 100;
-        d->file_thread_cancellable = true;
+        d->thread_cancellable = true;
         cryptor.DecryptData(&f, &i, NULL, DEFAULT_CHUNK_SIZE, this);
     }
 }
 
-void PasswordDatabase::_fw_del_file(const QString &conn_str, const FileId &id)
+void PasswordDatabase::_bw_del_file(const QString &conn_str, const FileId &id)
 {
     __delete_file_by_id(conn_str, id);
 }
@@ -2222,7 +2144,7 @@ static void __append_children_to_xml(QDomDocument &xdoc, QDomNode &n,
     }
 }
 
-void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
+void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
                                          GUtil::CryptoPP::Cryptor &my_cryptor,
                                          const char *ps_filepath,
                                          const Credentials &creds)
@@ -2251,12 +2173,12 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
         __append_children_to_xml(xdoc, root, q, my_cryptor, EntryId::Null());
 
         emit NotifyProgressUpdated(progress_counter+=15, true, m_curTaskString);
-        _fw_fail_if_cancelled();
+        _bw_fail_if_cancelled();
 
         // Open the target file
         GPSFile_Export gps_file(ps_filepath, creds);
         emit NotifyProgressUpdated(progress_counter+=5, true, m_curTaskString);
-        _fw_fail_if_cancelled();
+        _bw_fail_if_cancelled();
 
         // Compress the entry data and write it as the main payload
         {
@@ -2265,7 +2187,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
                                    xml_compressed.length());
         }
         emit NotifyProgressUpdated(progress_counter+=10, true, m_curTaskString);
-        _fw_fail_if_cancelled();
+        _bw_fail_if_cancelled();
 
         // Now let's export all the files as attachments
         int file_cnt = 0;
@@ -2277,7 +2199,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
             q.prepare("SELECT Data FROM File WHERE ID=?");
             q.addBindValue((QByteArray)k);
             DatabaseUtils::ExecuteQuery(q);
-            _fw_fail_if_cancelled();
+            _bw_fail_if_cancelled();
 
             if(!q.next())
                 continue;
@@ -2293,7 +2215,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
                 VectorByteArrayOutput o(pt);
                 my_cryptor.DecryptData(&o, &i);
             }
-            _fw_fail_if_cancelled();
+            _bw_fail_if_cancelled();
 
             // Write it to the GPS, with the file ID in the metadata
             gps_file.AppendPayload((byte const *)pt.ConstData(), pt.Length(),
@@ -2304,7 +2226,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
                         progress_counter + (remaining_progress*((float)file_cnt/files.size())),
                         true,
                         m_curTaskString);
-            _fw_fail_if_cancelled();
+            _bw_fail_if_cancelled();
         }
     }
     catch(...){
@@ -2314,7 +2236,7 @@ void PasswordDatabase::_fw_export_to_gps(const QString &conn_str,
     __commit_transaction(db);    // Nothing should have changed, is a rollback better here?
 }
 
-void PasswordDatabase::_fw_import_from_gps(const QString &,
+void PasswordDatabase::_bw_import_from_gps(const QString &,
                                            GUtil::CryptoPP::Cryptor &,
                                            const char *,
                                            const Credentials &)
@@ -2332,20 +2254,20 @@ void PasswordDatabase::ProgressUpdated(int prg)
     // prg is between 0 and 100, so scale it to m_progressMax-m_progressMin
     G_D;
     emit NotifyProgressUpdated(m_progressMin + ((float)prg*(m_progressMax-m_progressMin))/100,
-                               d->file_thread_cancellable,
+                               d->thread_cancellable,
                                m_curTaskString);
 }
 
 bool PasswordDatabase::ShouldOperationCancel()
 {
     G_D;
-    d->file_thread_lock.lock();
-    bool ret = d->cancel_file_thread;
-    d->file_thread_lock.unlock();
+    d->thread_lock.lock();
+    bool ret = d->cancel_thread;
+    d->thread_lock.unlock();
     return ret;
 }
 
-void PasswordDatabase::_fw_fail_if_cancelled()
+void PasswordDatabase::_bw_fail_if_cancelled()
 {
     if(ShouldOperationCancel())
         throw CancelledOperationException<>();
@@ -2358,13 +2280,13 @@ GUtil::CryptoPP::Cryptor const &PasswordDatabase::Cryptor() const
     return *d->cryptor;
 }
 
-void PasswordDatabase::WaitForEntryThreadIdle() const
+void PasswordDatabase::WaitForThreadIdle() const
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->entry_thread_lock);
-    d->wc_entry_thread.wait(lkr, [&]{
-        return d->entry_thread_idle;
+    unique_lock<mutex> lkr(d->thread_lock);
+    d->wc_thread.wait(lkr, [&]{
+        return d->thread_idle;
     });
 }
 

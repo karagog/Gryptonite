@@ -705,9 +705,9 @@ bool DatabaseModel::CheckCredentials(const Credentials &creds) const
     return m_db.CheckCredentials(creds);
 }
 
-void DatabaseModel::UpdateFile(const FileId &id, const char *filepath)
+void DatabaseModel::AddFile(const FileId &id, const char *filepath)
 {
-    m_db.AddUpdateFile(id, filepath);
+    m_db.AddFile(id, filepath);
 }
 
 void DatabaseModel::DeleteFile(const FileId &id)
@@ -879,7 +879,7 @@ Qt::DropActions DatabaseModel::supportedDropActions() const
 
 void DatabaseModel::WaitForBackgroundThreadIdle()
 {
-    m_db.WaitForEntryThreadIdle();
+    m_db.WaitForThreadIdle();
 }
 
 void DatabaseModel::DeleteOrphans()

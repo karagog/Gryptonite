@@ -109,7 +109,7 @@ void __add_children_to_database(V3::File_Entry *fe,
 
         // We want to show true progress, which means waiting
         //  after each item until the background thread is done adding it
-        pdb.WaitForEntryThreadIdle();
+        pdb.WaitForThreadIdle();
 
         if(V3::File_Entry::directory == cur->getType())
             __add_children_to_database(cur, pdb, e.GetId(), entry_ctr, progress_cb);

@@ -16,16 +16,13 @@ limitations under the License.*/
 #define LEGACYMANAGER_H
 
 #include <grypto_ilegacy.h>
-class QPluginLoader;
+
 
 /** Manages legacy functions like updating old database formats. */
 class LegacyManager :
         public Grypt::ILegacy
 {
-    GUtil::SmartPointer<QPluginLoader> m_pl;
 public:
-    LegacyManager();
-    ~LegacyManager();
     virtual QString UpgradeDatabase(const QString &path,
                                     Grypt::Credentials &new_creds,
                                     GUtil::Qt::Settings *settings,

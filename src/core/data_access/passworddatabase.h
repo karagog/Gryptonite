@@ -121,7 +121,7 @@ public:
     /** This function allows you to synchronize with the background entry thread.
      *  Call this to wait until the background thread is done working.
     */
-    void WaitForEntryThreadIdle() const;
+    void WaitForThreadIdle() const;
 
 
     /** \name Entry Access
@@ -195,10 +195,10 @@ public:
     /** Adds a new file to the database, or updates an existing one.
      *  This works on a background thread.
     */
-    void AddUpdateFile(const FileId &, const char *filename);
+    void AddFile(const FileId &, const char *filename);
 
     /** This version adds a file by its contents, rather than file path. */
-    void AddUpdateFile(const FileId &, const QByteArray &contents);
+    void AddFile(const FileId &, const QByteArray &contents);
 
     /** Removes the file from the database. */
     void DeleteFile(const FileId &);
@@ -275,34 +275,32 @@ private:
     void _init_cryptor(const Credentials &, const byte *salt, GUINT32 salt_len);
 
     // Worker thread bodies
-    void _file_worker(GUtil::CryptoPP::Cryptor *);
-    void _entry_worker(GUtil::CryptoPP::Cryptor *);
+    void _background_worker(GUtil::CryptoPP::Cryptor *);
 
     // Utility functions
     void _convert_to_readonly_exception_and_notify(const GUtil::Exception<> &);
 
-    // File worker methods and members
-    void _fw_add_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const QByteArray &, bool);
-    void _fw_exp_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
-    void _fw_del_file(const QString &, const FileId &);
-    void _fw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
-    void _fw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
-    void _fw_fail_if_cancelled();
+    // Background worker methods
+    void _bw_add_entry(const QString &, const Entry &);
+    void _bw_update_entry(const QString &, const Entry &);
+    void _bw_delete_entry(const QString &, const EntryId &);
+    void _bw_move_entry(const QString &, const EntryId &, quint32, quint32, const EntryId &, quint32);
+    void _bw_cache_entries_by_parentid(const QString &, const EntryId &);
+    void _bw_cache_all_entries(const QString &);
+    void _bw_refresh_favorites(const QString &);
+    void _bw_set_favorites(const QString &, const QList<EntryId> &sorted_favorites);
+    void _bw_add_favorite(const QString &, const EntryId &);
+    void _bw_remove_favorite(const QString &, const EntryId &);
+    void _bw_dispatch_orphans(const QString &);
+
+    void _bw_add_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const QByteArray &, bool);
+    void _bw_exp_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
+    void _bw_del_file(const QString &, const FileId &);
+    void _bw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
+    void _bw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
+    void _bw_fail_if_cancelled();
     int m_progressMin, m_progressMax;
     QString m_curTaskString;
-
-    // Entry worker methods
-    void _ew_add_entry(const QString &, const Entry &);
-    void _ew_update_entry(const QString &, const Entry &);
-    void _ew_delete_entry(const QString &, const EntryId &);
-    void _ew_move_entry(const QString &, const EntryId &, quint32, quint32, const EntryId &, quint32);
-    void _ew_cache_entries_by_parentid(const QString &, const EntryId &);
-    void _ew_cache_all_entries(const QString &);
-    void _ew_refresh_favorites(const QString &);
-    void _ew_set_favorites(const QString &, const QList<EntryId> &sorted_favorites);
-    void _ew_add_favorite(const QString &, const EntryId &);
-    void _ew_remove_favorite(const QString &, const EntryId &);
-    void _ew_dispatch_orphans(const QString &);
 
 };
 

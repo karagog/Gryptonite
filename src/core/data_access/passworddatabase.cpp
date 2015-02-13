@@ -729,15 +729,7 @@ bool PasswordDatabase::CheckCredentials(const Credentials &creds) const
 {
     G_D;
     FailIfNotOpen();
-    bool ret = false;
-
-    // Fetch the salt from the version row
-    QSqlQuery q("SELECT Salt FROM Version", QSqlDatabase::database(d->dbString));
-    if(q.next()){
-        QByteArray salt = q.record().value(0).toByteArray();
-        ret = d->cryptor->CheckCredentials(creds);
-    }
-    return ret;
+    return d->cryptor->CheckCredentials(creds);
 }
 
 static void __commit_transaction(QSqlDatabase &db)

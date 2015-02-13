@@ -1188,11 +1188,13 @@ void MainWindow::_nav_index_changed(int nav_index)
         } catch(...) {}
     }
 
-    if(!success)
+    if(!success){
         ui->view_entry->SetEntry(Entry());
+    }
 
     btn_navBack->setEnabled(m_navStack.canUndo());
     btn_navForward->setEnabled(m_navStack.canRedo());
+    m_btn_pop_out.setEnabled(success);
 }
 
 void MainWindow::_select_entry(const EntryId &id)

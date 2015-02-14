@@ -12,6 +12,9 @@ INSTALL_DIR_BIN="$INSTALL_BASE_DIR/bin"
 START_LOC="$INSTALL_DIR_BIN/gryptonite"
 START_LOC_TRANSFORMS="$INSTALL_DIR_BIN/grypto_transforms"
 
+LAUNCHER=Gryptonite.desktop
+DESKTOP_LAUNCHER=~/Desktop/$LAUNCHER
+
 # This is a fancy expression that gets the install script's current directory
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd $SCRIPT_DIR
@@ -27,6 +30,7 @@ fi
 
 # Create an uninstall script
 echo "#! /bin/bash"                 > uninstall.bash
+echo "if [ -f $DESKTOP_LAUNCHER ]; then rm $DESKTOP_LAUNCHER; fi;" >> uninstall.bash
 echo "rm $START_LOC"                >> uninstall.bash
 echo "rm $START_LOC_TRANSFORMS"     >> uninstall.bash
 echo "rm -rf $INSTALL_DIR_LIBS"     >> uninstall.bash
@@ -48,9 +52,16 @@ if [ -d "$INSTALL_DIR_LIBS" ]; then
     chmod 755 -R "$INSTALL_DIR_LIBS"
 fi
 
+# Create the desktop launcher
+cp $LAUNCHER $DESKTOP_LAUNCHER
+chmod +x $DESKTOP_LAUNCHER
+rm $INSTALL_DIR_LIBS/$LAUNCHER
+echo Exec=$START_LOC >> $DESKTOP_LAUNCHER
+echo Icon="$INSTALL_DIR_LIBS/main.png" >> $DESKTOP_LAUNCHER
 
 # Show confirmation message
 if [ -f "$START_LOC" ]; then
     echo "Gryptonite libraries installed to $INSTALL_DIR_LIBS"
     echo "Start application with:  $START_LOC"
+    echo "A shortcut has been placed on your desktop"
 fi

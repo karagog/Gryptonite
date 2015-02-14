@@ -1,8 +1,9 @@
 #! /bin/bash
 
-VERSION=3.0.5_beta
+VERSION=3.0.6_beta
 
 TOP_DIR=../..
+ICONS_DIR=$TOP_DIR/src/presentation/icons
 QT_DIR=/opt/Qt/5.4/gcc
 REPO_DIR=gryptonite_v$VERSION
 
@@ -11,6 +12,13 @@ mkdir $REPO_DIR
 # Copy gryptonite binaries
 cp $TOP_DIR/bin/*                               $REPO_DIR
 cp $TOP_DIR/lib/*.so.3                          $REPO_DIR
+
+# Copy any icons we need
+cp $ICONS_DIR/main.png                          $REPO_DIR
+
+# Copy the desktop launcher
+LAUNCHER=Gryptonite.desktop
+cp $LAUNCHER                                    $REPO_DIR
 
 # Copy GUtil libs
 cp $TOP_DIR/gutil/lib/libGUtil.so.0             $REPO_DIR

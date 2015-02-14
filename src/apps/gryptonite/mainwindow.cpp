@@ -247,6 +247,12 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     // Set up the recent files list and open the most recent
     _update_recent_files();
 
+    // The window must be shown before setting up the taskbar button
+    show();
+#ifdef Q_OS_WIN
+    m_taskbarButton.setWindow(this->windowHandle());
+#endif // Q_OS_WIN
+    
     if(open_file){
         _new_open_database(open_file);
     }
@@ -255,12 +261,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
         if(al.length() > 0 && QFile::exists(al[0]->data().toString()))
             al[0]->trigger();
     }
-
-    // The window must be shown before setting up the taskbar button
-    show();
-#ifdef Q_OS_WIN
-    m_taskbarButton.setWindow(this->windowHandle());
-#endif // Q_OS_WIN
 }
 
 MainWindow::~MainWindow()
@@ -543,6 +543,11 @@ void MainWindow::_update_recent_files(const QString &latest_path)
         m_settings->CommitChanges();
     }
 
+    _create_recent_files_menu(paths);
+}
+
+void MainWindow::_create_recent_files_menu(const QStringList &paths)
+{
     // Refresh the menu
     if(m_recentFilesGroup)
         m_recentFilesGroup.Clear();
@@ -626,11 +631,23 @@ void MainWindow::_new_open_database(const QString &path)
             {
                 // If validation failed, try to upgrade the file
                 // Call on the legacy manager to upgrade the database
-                open_path = LegacyManager().UpgradeDatabase(path, creds, m_settings,
-                                                            [=](int p, const QString &ps){
-                    this->_progress_updated(p, false, ps);
-                },
-                this);
+                try{
+                    open_path = LegacyManager().UpgradeDatabase(path, creds, m_settings,
+                                                                [=](int p, const QString &ps){
+                        this->_progress_updated(p, false, ps);
+                    },
+                    this);
+                }
+                catch(const AuthenticationException<> &ex){
+                    QMessageBox::critical(this, tr("Authentication Failed"),
+                                          QString(tr("Unable to upgrade legacy database because decryption failed"
+                                                     " using the credentials you gave. Most likely you gave"
+                                                     " the wrong password/keyfile, but it could be that the file"
+                                                     " is invalid or corrupted.\n\n"
+                                                     "Message from Crypto++:\n%1"))
+                                                 .arg(ex.Message().data()));
+                    return;
+                }
 
                 if(open_path.isNull())
                     return;
@@ -733,8 +750,16 @@ void MainWindow::_open_recent_database(QAction *a)
     QString path = a->data().toString();
     if(QFile::exists(path))
         _new_open_database(path);
-    else
+    else{
+        // Remove the path from the recent files list, because it doesn't exist
+        QStringList paths = m_settings->Value(SETTING_RECENT_FILES).toStringList();
+        paths.removeOne(path);
+        _create_recent_files_menu(paths);
+        m_settings->SetValue(SETTING_RECENT_FILES, paths);
+        m_settings->CommitChanges();
+        
         QMessageBox::warning(this, tr("File not found"), QString("The file does not exist: %1").arg(path));
+    }
 }
 
 bool MainWindow::IsFileOpen() const
@@ -1188,11 +1213,13 @@ void MainWindow::_nav_index_changed(int nav_index)
         } catch(...) {}
     }
 
-    if(!success)
+    if(!success){
         ui->view_entry->SetEntry(Entry());
+    }
 
     btn_navBack->setEnabled(m_navStack.canUndo());
     btn_navForward->setEnabled(m_navStack.canRedo());
+    m_btn_pop_out.setEnabled(success);
 }
 
 void MainWindow::_select_entry(const EntryId &id)

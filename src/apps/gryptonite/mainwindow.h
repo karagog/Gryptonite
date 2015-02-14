@@ -133,6 +133,7 @@ private slots:
     void _nav_index_changed(int);
     void _update_undo_text();
     void _update_recent_files(const QString & = QString::null);
+    void _create_recent_files_menu(const QStringList &paths);
 
     void _filter_updated(const Grypt::FilterInfo_t &);
 

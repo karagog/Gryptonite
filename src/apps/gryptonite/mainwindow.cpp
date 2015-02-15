@@ -252,7 +252,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
 #ifdef Q_OS_WIN
     m_taskbarButton.setWindow(this->windowHandle());
 #endif // Q_OS_WIN
-    
+
     if(open_file){
         _new_open_database(open_file);
     }
@@ -757,7 +757,7 @@ void MainWindow::_open_recent_database(QAction *a)
         _create_recent_files_menu(paths);
         m_settings->SetValue(SETTING_RECENT_FILES, paths);
         m_settings->CommitChanges();
-        
+
         QMessageBox::warning(this, tr("File not found"), QString("The file does not exist: %1").arg(path));
     }
 }
@@ -791,7 +791,9 @@ void MainWindow::_close_database(bool delete_model)
 
 void MainWindow::_save_as()
 {
-    GASSERT(IsFileOpen());
+    if(!IsFileOpen())
+        return;
+
     modal_dialog_helper_t mh(this);
     {
         GetPasswordDialog dlg(m_settings,
@@ -868,7 +870,9 @@ void MainWindow::_export_to_portable_safe()
 
 void MainWindow::_import_from_portable_safe()
 {
-    GASSERT(IsFileOpen());
+    if(!IsFileOpen())
+        return;
+
     QString fn = QFileDialog::getOpenFileName(this, tr("Import from Portable Safe"),
                                               QString(),
                                               "GUtil Portable Safe (*.gps)"
@@ -888,7 +892,9 @@ void MainWindow::_import_from_portable_safe()
 
 void MainWindow::_new_entry()
 {
-    GASSERT(IsFileOpen());
+    if(!IsFileOpen())
+        return;
+
     modal_dialog_helper_t mh(this);
 
     DatabaseModel *model = _get_database_model();
@@ -909,7 +915,9 @@ void MainWindow::_new_entry()
 
 void MainWindow::_new_child_entry()
 {
-    GASSERT(IsFileOpen());
+    if(!IsFileOpen())
+        return;
+
     modal_dialog_helper_t mh(this);
 
     DatabaseModel *model = _get_database_model();
@@ -1077,6 +1085,9 @@ void MainWindow::_edit_entry()
 
 void MainWindow::_delete_entry()
 {
+    if(!IsFileOpen())
+        return;
+
     QModelIndex ind = ui->treeView->currentIndex();
     if(ind.isValid()){
         DatabaseModel *model = _get_database_model();
@@ -1530,7 +1541,9 @@ void MainWindow::_progress_updated(int progress, bool cancellable, const QString
 
 void MainWindow::_organize_favorites()
 {
-    GASSERT(IsFileOpen());
+    if(!IsFileOpen())
+        return;
+
     QList<EntryId> favorites;
     DatabaseModel *dbm = _get_database_model();
     {

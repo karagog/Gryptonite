@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Gryptonite"
-#define MyAppVersion "3.0.6_beta"
+#define MyAppVersion "3.0.7"
 #define MyAppPublisher "Rapstallion"
 #define MyAppURL "https://github.com/karagog/Gryptonite"
 #define MyAppExeName "gryptonite.exe"

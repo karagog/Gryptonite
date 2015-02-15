@@ -130,35 +130,35 @@ public:
 
 class MoveEntryCommand : public IUndoableAction {
     DatabaseModel *m_model;
-    const QPersistentModelIndex m_sourcePind;
-    const QPersistentModelIndex m_targetPind;
+    EntryId m_sourcePid;
+    EntryId m_targetPid;
     int m_sourceRowFirst, m_sourceRowLast;
     int m_targetRow;
     String m_text;
 public:
-    MoveEntryCommand(const QModelIndex &source_parentid, int first, int last,
-                     const QModelIndex &target_parentid, int target_row,
+    MoveEntryCommand(const EntryId &source_parentid, int first, int last,
+                     const EntryId &target_parentid, int target_row,
                      DatabaseModel *m)
-        :m_model(m), m_sourcePind(source_parentid), m_targetPind(target_parentid),
+        :m_model(m), m_sourcePid(source_parentid), m_targetPid(target_parentid),
           m_sourceRowFirst(first), m_sourceRowLast(last), m_targetRow(target_row),
-          m_text(String::Format("Move: %s", m_model->index(m_sourceRowFirst, 0, m_sourcePind).data().toString().toUtf8().constData()))
+          m_text(String::Format("Move: %s", m_model->index(m_sourceRowFirst, 0, m->FindIndexById(m_sourcePid)).data().toString().toUtf8().constData()))
     {}
     void Do(){
-        m_model->_mov_entries(m_sourcePind, m_sourceRowFirst, m_sourceRowLast,
-                              m_targetPind, m_targetRow);
+        m_model->_mov_entries(m_sourcePid, m_sourceRowFirst, m_sourceRowLast,
+                              m_targetPid, m_targetRow);
     }
     void Undo(){
         int cnt = m_sourceRowLast - m_sourceRowFirst + 1;
         int source = m_targetRow;
         int dest = m_sourceRowFirst;
-        if(m_targetPind == m_sourcePind){
+        if(m_targetPid == m_sourcePid){
             if(m_targetRow > m_sourceRowFirst)
                 source -= cnt;
             else
                 dest += cnt;
         }
-        m_model->_mov_entries(m_targetPind, source, source + cnt - 1,
-                              m_sourcePind, dest);
+        m_model->_mov_entries(m_targetPid, source, source + cnt - 1,
+                              m_sourcePid, dest);
     }
     String Text() const{ return m_text; }
 };
@@ -634,46 +634,45 @@ void DatabaseModel::_del_fav(const EntryId &id)
     _emit_row_changed(FindIndexById(id));
 }
 
-void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_last,
-                                 const QModelIndex &targ_pind, int &r_dest)
+void DatabaseModel::_mov_entries(const EntryId &pid, int r_first, int r_last,
+                                 const EntryId &targ_pid, int &r_dest)
 {
     int move_cnt = r_last - r_first + 1;
-    GASSERT(0 <= r_first && r_first < rowCount(pind));
-    GASSERT(0 <= r_last && r_last < rowCount(pind));
+    QModelIndex parent_index = FindIndexById(pid);
+    QModelIndex targ_parent_index = FindIndexById(targ_pid);
+    GASSERT(0 <= r_first && r_first < rowCount(parent_index));
+    GASSERT(0 <= r_last && r_last < rowCount(parent_index));
     GASSERT(move_cnt > 0);
-    GASSERT(rowCount(targ_pind) >= r_dest);
+    GASSERT(rowCount(targ_parent_index) >= r_dest);
 
-    EntryContainer *ec = _get_container_from_index(pind);
-    EntryContainer *ec_targ = _get_container_from_index(targ_pind);
-
-    const EntryId pid = pind.isValid() ? ec->entry.GetId() : EntryId::Null();
-    const EntryId pid_targ = targ_pind.isValid() ? ec_targ->entry.GetId() : EntryId::Null();
-    QList<EntryContainer *> &cl_targ = _get_child_list(targ_pind);
+    EntryContainer *ec = _get_container_from_index(parent_index);
+    EntryContainer *ec_targ = _get_container_from_index(targ_parent_index);
+    QList<EntryContainer *> &cl_targ = _get_child_list(targ_parent_index);
 
     // Dropping onto an item appends to its children
     if(r_dest < 0)
         r_dest = cl_targ.length();
 
-    if(pid == pid_targ)
+    if(pid == targ_pid)
     {
         // Don't proceed if the source is the same as the destination
         if(r_dest >= r_first && r_dest <= r_last)
             return;
     }
 
-    beginMoveRows(pind, r_first, r_last, targ_pind, r_dest);
+    beginMoveRows(parent_index, r_first, r_last, targ_parent_index, r_dest);
 
     // Move the entries in the database
     m_db.MoveEntries(pid, r_first, r_last,
-                      pid_targ, r_dest);
+                      targ_pid, r_dest);
 
 
     // Now move them in the model
     int r_dest_cpy = r_dest;
-    if(pind == targ_pind && r_dest > r_last)
+    if(parent_index == targ_parent_index && r_dest > r_last)
         r_dest_cpy -= move_cnt;
 
-    QList<EntryContainer *> &cl = _get_child_list(pind);
+    QList<EntryContainer *> &cl = _get_child_list(parent_index);
     Vector<EntryContainer *> to_move((EntryContainer *)NULL, move_cnt, true);
     for(int i = r_last; i >= r_first; --i){
         to_move[i - r_first] = cl[i];
@@ -688,7 +687,7 @@ void DatabaseModel::_mov_entries(const QModelIndex &pind, int r_first, int r_las
     for(int i = r_dest_cpy; i < cl_targ.length(); ++i){
         EntryContainer *cur = cl_targ[i];
         cur->entry.SetRow(i);
-        cur->entry.SetParentId(pid_targ);
+        cur->entry.SetParentId(targ_pid);
     }
     if(ec) ec->child_count -= move_cnt;
     if(ec_targ) ec_targ->child_count += move_cnt;
@@ -847,8 +846,8 @@ bool DatabaseModel::dropMimeData(const QMimeData *data,
 void DatabaseModel::MoveEntries(const QModelIndex &src_parent, int src_first, int src_last,
                                 const QModelIndex &dest_parent, int dest_row)
 {
-    m_undostack.Do(new MoveEntryCommand(src_parent, src_first, src_last,
-                                        dest_parent, dest_row, this));
+    m_undostack.Do(new MoveEntryCommand(src_parent.data(EntryIdRole).value<EntryId>(), src_first, src_last,
+                                        dest_parent.data(EntryIdRole).value<EntryId>(), dest_row, this));
 }
 
 void DatabaseModel::AddEntryToFavorites(const EntryId &id)

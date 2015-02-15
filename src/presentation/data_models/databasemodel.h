@@ -61,7 +61,7 @@ public:
 
     /** Returns a reference to the cryptor used by the database object. */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
-    
+
     /** Changes the time format shown in views */
     void SetTimeFormat24Hours(bool = true);
 
@@ -222,8 +222,8 @@ private:
     void _add_entry(Entry &, bool);
     void _del_entry(const EntryId &);
     void _edt_entry(Entry &);
-    void _mov_entries(const QModelIndex &pind, int r_first, int r_last,
-                      const QModelIndex &target_pind, int &r_dest);
+    void _mov_entries(const EntryId &pid, int r_first, int r_last,
+                      const EntryId &target_pid, int &r_dest);
     void _set_favs(const QList<EntryId> &);
     void _add_fav(const EntryId &);
     void _del_fav(const EntryId &);

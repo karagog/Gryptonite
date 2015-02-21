@@ -1269,14 +1269,18 @@ void MainWindow::PopOutCurrentEntry()
 
     // Open any URL fields with QDesktopServices
     bool autolaunch = m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool();
+    bool suppress_popup = false;
 
     // The ctrl key does the opposite
     if(QApplication::keyboardModifiers() == ::Qt::ControlModifier)
         autolaunch = !autolaunch;
 
     if(autolaunch){
+        // Open all URL fields using the OS-registered URL handler
+        int url_cnt = 0;
         for(const SecretValue &sv : e.Values()){
             if(sv.GetName().toLower() == "url"){
+                url_cnt++;
                 if(!QDesktopServices::openUrl(QUrl(sv.GetValue()))){
                     QMessageBox::warning(this, tr("Opening URL Failed"),
                                          QString(tr("Could not open URL: %1"))
@@ -1284,14 +1288,21 @@ void MainWindow::PopOutCurrentEntry()
                 }
             }
         }
+
+        // If every value is a URL, then don't show the popup. This allows you to use
+        //  the app as a simple URL launcher without using the popup
+        if(url_cnt == e.Values().length())
+            suppress_popup = true;
     }
 
-    EntryPopup *ep = new EntryPopup(e, _get_database_model(), m_settings, this);
-    connect(ep, SIGNAL(CedeControl()), this, SLOT(_show()));
+    if(!suppress_popup){
+        EntryPopup *ep = new EntryPopup(e, _get_database_model(), m_settings, this);
+        connect(ep, SIGNAL(CedeControl()), this, SLOT(_show()));
 
-    if(m_entryView)
-        m_entryView->deleteLater();
-    (m_entryView = ep)->show();
+        if(m_entryView)
+            m_entryView->deleteLater();
+        (m_entryView = ep)->show();
+    }
     _hide();
 }
 

@@ -960,8 +960,8 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->action_Save_As->setEnabled(b);
     ui->action_Close->setEnabled(b);
 
-//    ui->menu_Export->setEnabled(b);
-//    ui->menu_Import->setEnabled(b);
+    ui->menu_Export->setEnabled(b);
+    ui->menu_Import->setEnabled(b);
 
     if(b){
         ui->statusbar->showMessage(tr("Database Opened Successfully"), STATUSBAR_MSG_TIMEOUT);
@@ -1448,8 +1448,8 @@ void MainWindow::_update_available_actions()
     bool enable_if_unlocked = !IsLocked() && IsFileOpen();
     bool enable_if_writable = enable_if_unlocked && !IsReadOnly();
     ui->action_Save_As->setEnabled(enable_if_unlocked);
-//    ui->menu_Export->setEnabled(enable_if_unlocked);
-//    ui->menu_Import->setEnabled(enable_if_writable);
+    ui->menu_Export->setEnabled(enable_if_unlocked);
+    ui->menu_Import->setEnabled(enable_if_writable);
     m_action_new_child.setEnabled(enable_if_writable);
     ui->actionNew_Entry->setEnabled(enable_if_writable);
     ui->action_EditEntry->setEnabled(enable_if_writable);

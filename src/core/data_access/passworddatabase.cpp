@@ -451,14 +451,25 @@ static QString __create_connection(const char *file_path, const QString &force_c
     return conn_str;
 }
 
+static void __init_cryptor(d_t *d, GUtil::CryptoPP::Cryptor *ctor)
+{
+    GASSERT(NULL == d->cryptor);
+    d->cryptor = ctor;
+}
+
 void PasswordDatabase::_init_cryptor(const Credentials &creds, const byte *s, GUINT32 s_l)
 {
     G_D;
-    GASSERT(!d->cryptor);
-    d->cryptor = new GUtil::CryptoPP::Cryptor(creds, NONCE_LENGTH, new Cryptor::DefaultKeyDerivation(s, s_l));
+    __init_cryptor(d, new GUtil::CryptoPP::Cryptor(creds, NONCE_LENGTH, new Cryptor::DefaultKeyDerivation(s, s_l)));
 }
 
-static void __queue_entry_command(d_t *d, bg_worker_command *cmd)
+void PasswordDatabase::_init_cryptor(const Cryptor &cryptor)
+{
+    G_D;
+    __init_cryptor(d, new GUtil::CryptoPP::Cryptor(cryptor));
+}
+
+static void __queue_command(d_t *d, bg_worker_command *cmd)
 {
     unique_lock<mutex> lkr(d->thread_lock);
     d->thread_commands.push(cmd);
@@ -610,6 +621,16 @@ static void __initialize_cache(d_t *d)
 
 void PasswordDatabase::Open(const Credentials &creds)
 {
+    _open([&]{
+        // Prepare some salt and create the cryptor
+        byte salt[SALT_LENGTH];
+        GUtil::CryptoPP::RNG().Fill(salt, SALT_LENGTH);
+        _init_cryptor(creds, salt, SALT_LENGTH);
+    });
+}
+
+void PasswordDatabase::_open(function<void()> init_cryptor)
+{
     if(IsOpen())
         throw Exception<>("Database already opened");
 
@@ -634,10 +655,7 @@ void PasswordDatabase::Open(const Credentials &creds)
                 sql = QByteArray((const char *)rs.data(), rs.size());
             DatabaseUtils::ExecuteScript(db, sql);
 
-            // Prepare some salt and create the cryptor
-            byte salt[SALT_LENGTH];
-            GUtil::CryptoPP::RNG().Fill(salt, SALT_LENGTH);
-            _init_cryptor(creds, salt, SALT_LENGTH);
+            init_cryptor();
 
             // Prepare the keycheck data
             QByteArray keycheck_ct;
@@ -1073,7 +1091,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     d->wc_index.notify_all();
 
     // Tell the worker thread to add it to the database
-    __queue_entry_command(d, new add_entry_command(e));
+    __queue_command(d, new add_entry_command(e));
 
     // Clear the file path so we don't add the same file twice
     e.SetFilePath(QString::null);
@@ -1102,7 +1120,7 @@ void PasswordDatabase::UpdateEntry(Entry &e)
         }
     }
 
-    __queue_entry_command(d, new update_entry_command(e));
+    __queue_command(d, new update_entry_command(e));
 
     // Clear the file path so we don't add the same file twice
     e.SetFilePath(QString::null);
@@ -1145,7 +1163,7 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
     d->wc_index.notify_all();
 
     // Remove it from the database
-    __queue_entry_command(d, new delete_entry_command(id));
+    __queue_command(d, new delete_entry_command(id));
 }
 
 void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_first, quint32 row_last,
@@ -1197,7 +1215,7 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     lkr.unlock();
 
     // Update the database
-    __queue_entry_command(d, new move_entry_command(parentId_src, row_first, row_last, parentId_dest, row_dest_orig));
+    __queue_command(d, new move_entry_command(parentId_src, row_first, row_last, parentId_dest, row_dest_orig));
 }
 
 Entry PasswordDatabase::FindEntry(const EntryId &id) const
@@ -1252,14 +1270,14 @@ void PasswordDatabase::RefreshFavorites()
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new refresh_favorite_entries_command);
+    __queue_command(d, new refresh_favorite_entries_command);
 }
 
 void PasswordDatabase::SetFavoriteEntries(const QList<EntryId> &favs)
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new set_favorite_entries_command(favs));
+    __queue_command(d, new set_favorite_entries_command(favs));
 
     d->index_lock.lock();
     {
@@ -1290,7 +1308,7 @@ void PasswordDatabase::AddFavoriteEntry(const EntryId &id)
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new add_favorite_entry(id));
+    __queue_command(d, new add_favorite_entry(id));
 
     d->index_lock.lock();
     {
@@ -1309,7 +1327,7 @@ void PasswordDatabase::RemoveFavoriteEntry(const EntryId &id)
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new remove_favorite_entry(id));
+    __queue_command(d, new remove_favorite_entry(id));
 
     unique_lock<mutex> lkr(d->index_lock);
     {
@@ -1360,7 +1378,7 @@ void PasswordDatabase::DeleteOrphans()
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new dispatch_orphans_command);
+    __queue_command(d, new dispatch_orphans_command);
 }
 
 bool PasswordDatabase::FileExists(const FileId &id) const
@@ -1389,7 +1407,7 @@ void PasswordDatabase::CancelFileTasks()
     d->wc_thread.notify_one();
 }
 
-QHash<FileId, PasswordDatabase::FileInfo_t> PasswordDatabase::GetFileSummary() const
+QHash<FileId, PasswordDatabase::FileInfo_t> PasswordDatabase::QueryFileSummary() const
 {
     FailIfNotOpen();
     G_D;
@@ -1404,20 +1422,6 @@ QHash<FileId, PasswordDatabase::FileInfo_t> PasswordDatabase::GetFileSummary() c
             FileInfo_t finfo(q.record().value("Length").toInt());
             ret.insert(fid, finfo);
         }
-    }
-    return ret;
-}
-
-QHash<FileId, PasswordDatabase::FileInfo_t> PasswordDatabase::GetOrphanedFiles() const
-{
-    FailIfNotOpen();
-    const QSet<FileId> referenced_fids( GetReferencedFileIds() );
-    const QHash<FileId, FileInfo_t> files( GetFileSummary() );
-    QHash<FileId, FileInfo_t> ret;
-
-    for(auto k : files.keys()){
-        if(referenced_fids.contains(k))
-            ret.insert(k, files[k]);
     }
     return ret;
 }
@@ -1455,18 +1459,14 @@ void PasswordDatabase::AddFile(const FileId &id, const char *filename)
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new add_file_command(id, filename));
-    d->wc_thread.notify_one();
+    __queue_command(d, new add_file_command(id, filename));
 }
 
 void PasswordDatabase::AddFile(const FileId &id, const QByteArray &contents)
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new add_file_command(id, contents));
-    d->wc_thread.notify_one();
+    __queue_command(d, new add_file_command(id, contents));
 }
 
 void PasswordDatabase::DeleteFile(const FileId &id)
@@ -1477,18 +1477,14 @@ void PasswordDatabase::DeleteFile(const FileId &id)
     d->file_index.erase(id);
     d->index_lock.unlock();
 
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new delete_file_command(id));
-    d->wc_thread.notify_one();
+    __queue_command(d, new delete_file_command(id));
 }
 
 void PasswordDatabase::ExportFile(const FileId &id, const char *export_path) const
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new export_file_command(id, export_path));
-    d->wc_thread.notify_one();
+    __queue_command(d, new export_file_command(id, export_path));
 }
 
 QByteArray PasswordDatabase::GetFile(const FileId &id) const
@@ -1514,9 +1510,7 @@ void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new export_to_ps_command(export_filename, creds));
-    d->wc_thread.notify_one();
+    __queue_command(d, new export_to_ps_command(export_filename, creds));
 }
 
 void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
@@ -1524,9 +1518,7 @@ void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new import_from_ps_command(import_filename, creds));
-    d->wc_thread.notify_one();
+    __queue_command(d, new import_from_ps_command(import_filename, creds));
 }
 
 static void __count_child_entries(QSqlDatabase &db, int &count, const EntryId &parent_id)
@@ -2044,7 +2036,8 @@ void PasswordDatabase::_bw_add_file(const QString &conn_str,
             m_progressMin = 0, m_progressMax = 75;
             m_curTaskString = QString("Download and encrypt file");
             d->thread_cancellable = true;
-            cryptor.EncryptData(&o, data_in, NULL, nonce, DEFAULT_CHUNK_SIZE, this);
+            cryptor.EncryptData(&o, data_in, NULL, nonce, DEFAULT_CHUNK_SIZE,
+                                [&](int p){ return _progress_callback(p); });
         }
 
         _bw_fail_if_cancelled();
@@ -2114,7 +2107,8 @@ void PasswordDatabase::_bw_exp_file(const QString &conn_str,
 
         m_progressMin = 35, m_progressMax = 100;
         d->thread_cancellable = true;
-        cryptor.DecryptData(&f, &i, NULL, DEFAULT_CHUNK_SIZE, this);
+        cryptor.DecryptData(&f, &i, NULL, DEFAULT_CHUNK_SIZE,
+                            [&](int p){ return _progress_callback(p); });
     }
 }
 
@@ -2168,7 +2162,7 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
         _bw_fail_if_cancelled();
 
         // Open the target file
-        GPSFile_Export gps_file(ps_filepath, creds);
+        GPSFile_Export gps_file(ps_filepath, creds, FileId::Size);
         emit NotifyProgressUpdated(progress_counter+=5, true, m_curTaskString);
         _bw_fail_if_cancelled();
 
@@ -2184,12 +2178,12 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
         // Now let's export all the files as attachments
         int file_cnt = 0;
         const int remaining_progress = 100 - progress_counter;
-        const QHash<FileId, FileInfo_t> files = GetFileSummary();
-        for(const FileId &k : files.keys())
+        const QHash<FileId, FileInfo_t> files = QueryFileSummary();
+        for(const FileId &fid : files.keys())
         {
             // Select a file from the database
             q.prepare("SELECT Data FROM File WHERE ID=?");
-            q.addBindValue((QByteArray)k);
+            q.addBindValue((QByteArray)fid);
             DatabaseUtils::ExecuteQuery(q);
             _bw_fail_if_cancelled();
 
@@ -2211,7 +2205,7 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
 
             // Write it to the GPS, with the file ID in the metadata
             gps_file.AppendPayload((byte const *)pt.ConstData(), pt.Length(),
-                                   (byte const *)k.ConstData(), k.Size);
+                                   (byte const *)fid.ConstData(), fid.Size);
 
             ++file_cnt;
             emit NotifyProgressUpdated(
@@ -2228,29 +2222,49 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
     __commit_transaction(db);    // Nothing should have changed, is a rollback better here?
 }
 
-void PasswordDatabase::_bw_import_from_gps(const QString &,
-                                           GUtil::CryptoPP::Cryptor &,
-                                           const char *,
-                                           const Credentials &)
+void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
+                                           GUtil::CryptoPP::Cryptor &my_cryptor,
+                                           const char *ps_filepath,
+                                           const Credentials &creds)
 {
+    int progress_counter = 0;
+    m_curTaskString = QString(tr("Importing from Portable Safe: %1"))
+                            .arg(QFileInfo(ps_filepath).fileName());
+    emit NotifyProgressUpdated(progress_counter, true, m_curTaskString);
+
     // Always notify that the task is complete, even if it's an error
-    //finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
+    finally([&]{ emit NotifyProgressUpdated(100, false, m_curTaskString); });
 
-    throw NotImplementedException<>();
+    QSqlDatabase db(QSqlDatabase::database(conn_str));
+    GASSERT(db.isValid());
+    QSqlQuery q(db);
+
+    db.transaction();
+    try{
+        GPSFile_Import gps_import(ps_filepath, creds, true);
+        if(!gps_import.NextPayload())
+            throw Exception<>("GPS file is empty");
+
+        // Get the main payload, which has all the entries
+        QByteArray ba;
+        ba.resize(gps_import.CurrentPayloadSize());
+        gps_import.GetCurrentPayload((byte *)ba.data());
+
+        // Decompress the xml data
+        ba = qUncompress(ba);
+
+        QDomDocument xdoc;
+        xdoc.setContent(ba);
+    }
+    catch(...){
+        db.rollback();
+        throw;
+    }
+    __commit_transaction(db);
 }
 
 
-// This function belongs to the background thread and will always execute there
-void PasswordDatabase::ProgressUpdated(int prg)
-{
-    // prg is between 0 and 100, so scale it to m_progressMax-m_progressMin
-    G_D;
-    emit NotifyProgressUpdated(m_progressMin + ((float)prg*(m_progressMax-m_progressMin))/100,
-                               d->thread_cancellable,
-                               m_curTaskString);
-}
-
-bool PasswordDatabase::ShouldOperationCancel()
+bool PasswordDatabase::_should_operation_cancel()
 {
     G_D;
     d->thread_lock.lock();
@@ -2259,9 +2273,19 @@ bool PasswordDatabase::ShouldOperationCancel()
     return ret;
 }
 
+bool PasswordDatabase::_progress_callback(int prg)
+{
+    // prg is between 0 and 100, so scale it to m_progressMax-m_progressMin
+    G_D;
+    emit NotifyProgressUpdated(m_progressMin + ((float)prg*(m_progressMax-m_progressMin))/100,
+                               d->thread_cancellable,
+                               m_curTaskString);
+    return _should_operation_cancel();
+}
+
 void PasswordDatabase::_bw_fail_if_cancelled()
 {
-    if(ShouldOperationCancel())
+    if(_should_operation_cancel())
         throw CancelledOperationException<>();
 }
 

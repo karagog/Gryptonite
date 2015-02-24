@@ -18,7 +18,6 @@ limitations under the License.*/
 #include <grypto_common.h>
 #include <gutil/exception.h>
 #include <gutil/smartpointer.h>
-#include <gutil/iprogresshandler.h>
 #include <QString>
 #include <QObject>
 #include <memory>
@@ -38,8 +37,7 @@ class Entry;
     It throws GUtil::Exception to indicate errors.
 */
 class PasswordDatabase :
-        public QObject,
-        protected GUtil::IProgressHandler
+        public QObject
 {
     Q_OBJECT
     void *d;
@@ -92,6 +90,11 @@ public:
      *      the database.
     */
     void Open(const Credentials &creds);
+    
+    /** This version of Open() uses a cryptor, which does not require you to know the password/keyfile,
+        only the actual key used to encrypt/decrypt. Otherwise this function behaves identically to the other Open().
+    */
+    void Open(const GUtil::CryptoPP::Cryptor &);
 
     /** Returns true if the database was already opened. */
     bool IsOpen() const;
@@ -211,10 +214,7 @@ public:
     /** Returns the complete list of file ids and associated file sizes.
      *  Note that some files may not be referenced by an entry id.
     */
-    QHash<FileId, FileInfo_t> GetFileSummary() const;
-
-    /** Returns a list of the orphaned files, along with their sizes in bytes. */
-    QHash<FileId, FileInfo_t> GetOrphanedFiles() const;
+    QHash<FileId, FileInfo_t> QueryFileSummary() const;
 
     /** Returns the set of file ids which are referenced by the entry ids. */
     QSet<FileId> GetReferencedFileIds() const;
@@ -259,26 +259,20 @@ signals:
     void NotifyExceptionOnBackgroundThread(const std::shared_ptr<GUtil::Exception<>> &);
 
 
-protected:
-
-    /** \name GUtil::IProgressHandler interface
-     *  \{
-    */
-    virtual void ProgressUpdated(int);
-    virtual bool ShouldOperationCancel();
-    /** \}*/
-
-
 private:
 
     // Main thread methods
     void _init_cryptor(const Credentials &, const byte *salt, GUINT32 salt_len);
+    void _init_cryptor(const GUtil::CryptoPP::Cryptor &);
+    void _open(std::function<void()> init_cryptor);
 
     // Worker thread bodies
     void _background_worker(GUtil::CryptoPP::Cryptor *);
 
     // Utility functions
     void _convert_to_readonly_exception_and_notify(const GUtil::Exception<> &);
+    bool _progress_callback(int);
+    bool _should_operation_cancel();
 
     // Background worker methods
     void _bw_add_entry(const QString &, const Entry &);

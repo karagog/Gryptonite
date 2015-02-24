@@ -21,7 +21,6 @@ limitations under the License.*/
 #include <QStringList>
 #include <QIcon>
 #include <unordered_map>
-//#include "../gutil/src/test/modeltest.h"
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);
 using namespace std;
@@ -229,8 +228,14 @@ void DatabaseModel::Open(const Credentials &creds)
 
     // Fetch the root index
     fetchMore(QModelIndex());
+}
 
-    //new ModelTest(this);
+void DatabaseModel::Open(const Cryptor &cryptor)
+{
+    m_db.Open(cryptor);
+
+    // Fetch the root index
+    fetchMore(QModelIndex());
 }
 
 GUtil::CryptoPP::Cryptor const &DatabaseModel::Cryptor() const
@@ -754,21 +759,6 @@ void DatabaseModel::ImportFromDatabase(const DatabaseModel &other)
     // re-fetch the model
     fetchMore();
     FetchAllEntries();
-}
-
-QHash<FileId, PasswordDatabase::FileInfo_t> DatabaseModel::GetFileSummary()
-{
-    return m_db.GetFileSummary();
-}
-
-QHash<FileId, PasswordDatabase::FileInfo_t> DatabaseModel::GetOrphanedFiles()
-{
-    return m_db.GetOrphanedFiles();
-}
-
-QSet<FileId> DatabaseModel::GetReferencedFiles()
-{
-    return m_db.GetReferencedFileIds();
 }
 
 void DatabaseModel::CancelAllBackgroundOperations()

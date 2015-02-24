@@ -49,6 +49,11 @@ public:
         it will close automatically when the object is deleted.
     */
     void Open(const Credentials &);
+    
+    /** Opens the database using the given cryptor for credentials. With this function, you don't
+        require knowledge of the password or keyfile, only the actual key used for encryption/decryption.
+    */
+    void Open(const GUtil::CryptoPP::Cryptor &);
 
     /** Returns true if the database has been opened. */
     bool IsOpen() const{ return m_db.IsOpen(); }
@@ -121,15 +126,6 @@ public:
 
     /** Returns true if the file id is present in the database. */
     bool FileExists(const FileId &);
-
-    /** Returns the complete list of files in the database, along with their sizes. */
-    QHash<FileId, PasswordDatabase::FileInfo_t> GetFileSummary();
-
-    /** Returns a set of all file ids which are not referenced by any entry id. */
-    QHash<FileId, PasswordDatabase::FileInfo_t> GetOrphanedFiles();
-
-    /** Returns the complete list of file ids that are referenced by entries. */
-    QSet<FileId> GetReferencedFiles();
 
     /** Decrypts and exports the file. */
     void ExportFile(const FileId &, const char *export_file_path);

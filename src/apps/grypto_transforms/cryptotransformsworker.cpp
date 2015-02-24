@@ -18,6 +18,7 @@ limitations under the License.*/
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);
 using namespace std;
+using namespace std::placeholders;
 
 NAMESPACE_GRYPTO;
 
@@ -74,16 +75,13 @@ void CryptoTransformsWorker::Cancel()
     m_cancel = true;
 }
 
-bool CryptoTransformsWorker::ShouldOperationCancel()
-{
-    return m_cancel;
-}
-
-void CryptoTransformsWorker::ProgressUpdated(int p)
+bool CryptoTransformsWorker::update_progess(int p)
 {
     // This function is called on the background thread, so we emit a signal
     //  which will be queued on the receiver's event queue and executed on the main thread.
     emit NotifyProgressUpdated(p);
+    
+    return m_cancel;
 }
 
 
@@ -104,9 +102,9 @@ EncryptionWorker::EncryptionWorker(const Cryptor &c,
 void EncryptionWorker::do_work()
 {
     if(m_encrypt)
-        m_cryptor.EncryptData(m_out, m_in, m_aData, NULL, DEFAULT_CHUNK_SIZE, this);
+        m_cryptor.EncryptData(m_out, m_in, m_aData, NULL, DEFAULT_CHUNK_SIZE, bind(&EncryptionWorker::update_progess, this, _1));
     else
-        m_cryptor.DecryptData(m_out, m_in, m_aData, DEFAULT_CHUNK_SIZE, this);
+        m_cryptor.DecryptData(m_out, m_in, m_aData, DEFAULT_CHUNK_SIZE, bind(&EncryptionWorker::update_progess, this, _1));
 }
 
 HashingWorker::HashingWorker(HashAlgorithmEnum algorithm,
@@ -122,7 +120,7 @@ HashingWorker::HashingWorker(HashAlgorithmEnum algorithm,
 void HashingWorker::do_work()
 {
     unique_ptr<byte[]> digest(new byte[m_hash->DigestSize()]);
-    m_hash->AddDataFromDevice(m_dataIn, DEFAULT_CHUNK_SIZE, this);
+    m_hash->AddDataFromDevice(m_dataIn, DEFAULT_CHUNK_SIZE, bind(&HashingWorker::update_progess, this, _1));
     m_hash->Final(digest.get());
     m_digestOut->WriteBytes(digest.get(), m_hash->DigestSize());
 }

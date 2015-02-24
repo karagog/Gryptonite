@@ -789,28 +789,33 @@ void MainWindow::_close_database(bool delete_model)
     }
 }
 
+bool MainWindow::_verify_credentials()
+{
+    bool ret = false;
+    GetPasswordDialog dlg(m_settings,
+                          QFileInfo(_get_database_model()->FilePath()).fileName(),
+                          this);
+    if(QDialog::Accepted == dlg.exec()){
+        if(_get_database_model()->CheckCredentials(dlg.GetCredentials())){
+            ret = true;
+        }
+        else{
+            QMessageBox::information(this,
+                                     tr("Password Incorrect"),
+                                     tr("The password you entered is incorrect"));
+        }
+    }
+    return ret;
+}
+
 void MainWindow::_save_as()
 {
     if(!IsFileOpen())
         return;
 
     modal_dialog_helper_t mh(this);
-    {
-        GetPasswordDialog dlg(m_settings,
-                              QFileInfo(_get_database_model()->FilePath()).fileName(),
-                              this);
-        if(QDialog::Accepted != dlg.exec())
-            return;
-
-        if(!_get_database_model()->CheckCredentials(dlg.GetCredentials())){
-            QMessageBox::information(this,
-                                     tr("Password Incorrect"),
-                                     tr("The password you entered for the current file"
-                                        " is incorrect. Therefore I am not allowed to "
-                                        " save it with different credentials."));
-            return;
-        }
-    }
+    if(!_verify_credentials())
+        return;
 
     QString fn = __get_new_database_filename(this, tr("Save as file"), true);
     if(fn.isEmpty())
@@ -848,22 +853,22 @@ void MainWindow::_save_as()
 
 void MainWindow::_export_to_portable_safe()
 {
+    modal_dialog_helper_t mh(this);
+    if(!_verify_credentials())
+        return;
+    
     QString fn = QFileDialog::getSaveFileName(this, tr("Export to Portable Safe"),
                                               QString(),
                                               "GUtil Portable Safe (*.gps)"
                                               ";;All Files(*)");
     if(fn.isEmpty())
         return;
-
-    if(QFileInfo(fn).suffix().isEmpty())
+    else if(QFileInfo(fn).suffix().isEmpty())
         fn.append(".gps");
 
     NewPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
-    {
-        modal_dialog_helper_t mh(this);
-        if(QDialog::Accepted != dlg.exec())
-            return;
-    }
+    if(QDialog::Accepted != dlg.exec())
+        return;
 
     _get_database_model()->ExportToPortableSafe(fn.toUtf8(), dlg.GetCredentials());
 }

@@ -191,6 +191,7 @@ private:
     void _update_time_format();
     Grypt::FilteredDatabaseModel *_get_proxy_model() const;
     Grypt::DatabaseModel *_get_database_model() const;
+    bool _verify_credentials();
 
     void _select_entry(const Grypt::EntryId &);
     Grypt::Entry const *_get_currently_selected_entry() const;

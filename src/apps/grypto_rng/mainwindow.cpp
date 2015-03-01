@@ -14,12 +14,21 @@ limitations under the License.*/
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <gutil/application.h>
+#include <QWhatsThis>
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
+MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
+    :QMainWindow(parent),
+      ui(new Ui::MainWindow),
+      m_settings(settings)
 {
     ui->setupUi(this);
+
+    ui->menu_Help->insertAction(ui->action_About, QWhatsThis::createAction(this));
+    ui->menu_Help->insertSeparator(ui->action_About);
+
+    connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
+    connect(ui->action_Quit, SIGNAL(triggered()), gApp, SLOT(Quit()));
 }
 
 MainWindow::~MainWindow()

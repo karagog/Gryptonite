@@ -93,7 +93,7 @@ void CoinModel::fetchMore(const QModelIndex &parent)
 
     int diff = m_data.size() - m_lazySize;
     int fetch_size = diff < FETCH_SIZE ? diff : FETCH_SIZE;
-    beginInsertRows(QModelIndex(), m_lazySize, m_lazySize + fetch_size);
+    beginInsertRows(QModelIndex(), m_lazySize, m_lazySize + fetch_size - 1);
     m_lazySize += fetch_size;
     endInsertRows();
 }

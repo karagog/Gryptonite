@@ -38,7 +38,8 @@ HEADERS += \
     coinflipper.h \
     coinmodel.h \
     rollmodel.h \
-    diceroller.h
+    diceroller.h \
+    about.h
 
 FORMS += \
     mainwindow.ui \

@@ -15,6 +15,7 @@ limitations under the License.*/
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <gutil/qt_settings.h>
 #include <QMainWindow>
 
 namespace Ui {
@@ -26,11 +27,12 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(GUtil::Qt::Settings *, QWidget *parent = 0);
     ~MainWindow();
 
 private:
     Ui::MainWindow *ui;
+    GUtil::Qt::Settings *m_settings;
 };
 
 #endif // MAINWINDOW_H

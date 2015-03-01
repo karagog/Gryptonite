@@ -46,4 +46,7 @@ void DiceRoller::_roll()
 
     m_model->Roll(min, max, ui->spn_number->value());
     ui->lbl_lastRoll->setText(QDateTime::currentDateTime().toString("h:mm:ss.zzz"));
+    ui->lbl_total->setText(QString("%1").arg(m_model->Total()));
+    ui->lbl_range->setText(QString("[%1, %2]").arg(m_model->Min()).arg(m_model->Max()));
+    ui->lbl_mean->setText(QString("%1").arg(m_model->Mean()));
 }

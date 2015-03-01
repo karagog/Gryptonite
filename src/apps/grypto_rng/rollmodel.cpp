@@ -19,7 +19,10 @@ using namespace std;
 
 RollModel::RollModel(QObject *p)
     :QAbstractTableModel(p),
-     m_total(0)
+      m_total(0),
+      m_min(GINT32_MAX),
+      m_max(GINT32_MIN),
+      m_mean(0)
 {}
 
 RollModel::~RollModel()
@@ -65,12 +68,8 @@ QVariant RollModel::headerData(int section, Qt::Orientation o, int role) const
     if(o == Qt::Horizontal && 0 <= section && section < columnCount()){
         switch(role){
         case Qt::DisplayRole:
-            if(section == 0){
-                if(0 == rowCount())
-                    ret = tr("Result");
-                else
-                    ret = QString(tr("Result: %1")).arg(Total());
-            }
+//            if(section == 0)
+//                ret = tr("Results");
             break;
         default:
             break;
@@ -84,13 +83,21 @@ void RollModel::Roll(int min, int max, int times)
     beginResetModel();
     m_data.resize(times);
     m_total = 0;
-    
+    m_min = GINT32_MAX;
+    m_max = GINT32_MIN;
+
     for(int i = 0; i < times; i++){
         int X = m_rng.U_Discrete(min, max);
         m_data[i] = X;
         m_total += X;
+
+        if(X < m_min)
+            m_min = X;
+        if(X > m_max)
+            m_max = X;
     }
-    
+    m_mean = (double)m_total/times;
+
     endResetModel();
 }
 
@@ -99,6 +106,9 @@ void RollModel::Clear()
     beginResetModel();
     m_data.clear();
     m_total = 0;
+    m_min = GINT32_MAX;
+    m_max = GINT32_MIN;
+    m_mean = 0;
     endResetModel();
 }
 

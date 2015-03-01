@@ -19,12 +19,12 @@ limitations under the License.*/
 #include <vector>
 #include <QAbstractTableModel>
 
-/** Simulates rolling a set of dice. 
-    
+/** Simulates rolling a set of dice.
+
     You roll the dice by calling Roll() and passing it the minimum and maximum values, as well
     as the number of dice in the set. The values are picked randomly with a uniform distribution
     between the limits, and the model will be updated.
-    
+
     You can get the sum of all dice from the Total() method.
 */
 class RollModel :
@@ -34,9 +34,13 @@ class RollModel :
 public:
     RollModel(QObject * = 0);
     virtual ~RollModel();
-    
+
     /** Returns the sum of all the dice rolled. */
-    int Total() const{ return m_total; }
+    GUINT64 Total() const{ return m_total; }
+
+    int Max() const{ return m_max; }
+    int Min() const{ return m_min; }
+    double Mean() const{ return m_mean; }
 
     virtual QVariant data(const QModelIndex &index, int role) const;
     virtual QVariant headerData(int, Qt::Orientation, int = Qt::DisplayRole) const;
@@ -45,7 +49,7 @@ public:
 
 public slots:
 
-    /** Clears the previous results and rolls the given number of times. 
+    /** Clears the previous results and rolls the given number of times.
         The results will all be contained in the range [min, max]
     */
     void Roll(int min = 1, int max = 6, int times = 1);
@@ -56,7 +60,10 @@ public slots:
 private:
     GUtil::CryptoPP::RNG m_rng;
     std::vector<int> m_data;
-    int m_total;
+    GUINT64 m_total;
+    int m_min;
+    int m_max;
+    double m_mean;
 };
 
 #endif // ROLLMODEL_H

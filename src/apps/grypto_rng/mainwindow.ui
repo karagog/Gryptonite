@@ -17,14 +17,14 @@
    <iconset resource="../../presentation/grypto_ui.qrc">
     <normaloff>:/grypto/icons/main.png</normaloff>:/grypto/icons/main.png</iconset>
   </property>
-  <widget class="QWidget" name="centralWidget"/>
+  <widget class="DiceRoller" name="centralWidget"/>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
      <width>676</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
@@ -53,6 +53,12 @@
    <class>CoinFlipper</class>
    <extends>QWidget</extends>
    <header>coinflipper.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DiceRoller</class>
+   <extends>QWidget</extends>
+   <header>diceroller.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

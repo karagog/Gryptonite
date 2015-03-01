@@ -29,13 +29,18 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     coinflipper.cpp \
-    coinmodel.cpp
+    coinmodel.cpp \
+    rollmodel.cpp \
+    diceroller.cpp
 
 HEADERS += \
     mainwindow.h \
     coinflipper.h \
-    coinmodel.h
+    coinmodel.h \
+    rollmodel.h \
+    diceroller.h
 
 FORMS += \
     mainwindow.ui \
-    coinflipper.ui
+    coinflipper.ui \
+    diceroller.ui

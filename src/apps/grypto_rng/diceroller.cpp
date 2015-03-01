@@ -15,6 +15,7 @@ limitations under the License.*/
 #include "diceroller.h"
 #include "ui_diceroller.h"
 #include "rollmodel.h"
+#include <QDateTime>
 
 DiceRoller::DiceRoller(QWidget *parent)
     :QWidget(parent),
@@ -52,4 +53,5 @@ void DiceRoller::_max_updated(int val)
 void DiceRoller::_roll()
 {
     m_model->Roll(ui->spn_min->value(), ui->spn_max->value(), ui->spn_number->value());
+    ui->lbl_lastRoll->setText(QDateTime::currentDateTime().toString("h:mm:ss.zzz"));
 }

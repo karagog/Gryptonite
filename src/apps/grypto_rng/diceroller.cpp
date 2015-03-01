@@ -16,6 +16,7 @@ limitations under the License.*/
 #include "ui_diceroller.h"
 #include "rollmodel.h"
 #include <QDateTime>
+#include <QSortFilterProxyModel>
 USING_NAMESPACE_GUTIL;
 
 DiceRoller::DiceRoller(QWidget *parent)
@@ -25,7 +26,10 @@ DiceRoller::DiceRoller(QWidget *parent)
       m_suppress(false)
 {
     ui->setupUi(this);
-    ui->tbl_results->setModel(m_model);
+
+    QSortFilterProxyModel *fpm = new QSortFilterProxyModel(this);
+    fpm->setSourceModel(m_model);
+    ui->tbl_results->setModel(fpm);
 }
 
 DiceRoller::~DiceRoller()

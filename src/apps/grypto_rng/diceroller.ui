@@ -152,44 +152,12 @@
    <slot>_roll()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>174</x>
-     <y>74</y>
+     <x>183</x>
+     <y>101</y>
     </hint>
     <hint type="destinationlabel">
      <x>238</x>
      <y>87</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>spn_min</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>DiceRoller</receiver>
-   <slot>_min_updated(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>125</x>
-     <y>41</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>85</x>
-     <y>57</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>spn_max</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>DiceRoller</receiver>
-   <slot>_max_updated(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>320</x>
-     <y>44</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>292</x>
-     <y>58</y>
     </hint>
    </hints>
   </connection>

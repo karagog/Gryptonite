@@ -31,8 +31,6 @@ public:
     ~DiceRoller();
 
 private slots:
-    void _min_updated(int);
-    void _max_updated(int);
     void _roll();
 
 private:

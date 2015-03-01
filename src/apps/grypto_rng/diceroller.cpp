@@ -16,6 +16,7 @@ limitations under the License.*/
 #include "ui_diceroller.h"
 #include "rollmodel.h"
 #include <QDateTime>
+USING_NAMESPACE_GUTIL;
 
 DiceRoller::DiceRoller(QWidget *parent)
     :QWidget(parent),
@@ -32,26 +33,13 @@ DiceRoller::~DiceRoller()
     delete ui;
 }
 
-void DiceRoller::_min_updated(int val)
-{
-    if(!m_suppress && val >= ui->spn_max->value()){
-        m_suppress = true;
-        ui->spn_max->setValue(val + 1);
-        m_suppress = false;
-    }
-}
-
-void DiceRoller::_max_updated(int val)
-{
-    if(!m_suppress && val <= ui->spn_min->value()){
-        m_suppress = true;
-        ui->spn_min->setValue(val - 1);
-        m_suppress = false;
-    }
-}
-
 void DiceRoller::_roll()
 {
-    m_model->Roll(ui->spn_min->value(), ui->spn_max->value(), ui->spn_number->value());
+    int min = ui->spn_min->value();
+    int max = ui->spn_max->value();
+    if(min >= max)
+        throw Exception<>("Invalid range: The minimum must be less than the maximum");
+
+    m_model->Roll(min, max, ui->spn_number->value());
     ui->lbl_lastRoll->setText(QDateTime::currentDateTime().toString("h:mm:ss.zzz"));
 }

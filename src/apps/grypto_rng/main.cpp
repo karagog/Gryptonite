@@ -44,6 +44,7 @@ public:
           main_window(&settings)
     {
         SetTrapExceptions(true);
+        qRegisterMetaType<std::shared_ptr<std::exception>>("std::shared_ptr<std::exception>");
 
         connect(&updater, SIGNAL(UpdateInfoReceived(QString,QUrl)),
                 this, SLOT(_update_info_received(QString,QUrl)));

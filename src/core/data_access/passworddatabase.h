@@ -256,7 +256,7 @@ signals:
     void NotifyProgressUpdated(int progress, bool cancellable, const QString &task_string = QString());
 
     /** Notifies that the exception was received on the background thread. */
-    void NotifyExceptionOnBackgroundThread(const std::shared_ptr<GUtil::Exception<>> &);
+    void NotifyExceptionOnBackgroundThread(const std::shared_ptr<std::exception> &);
 
 
 private:

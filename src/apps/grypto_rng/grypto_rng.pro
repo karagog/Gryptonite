@@ -31,7 +31,8 @@ SOURCES += \
     coinflipper.cpp \
     coinmodel.cpp \
     rollmodel.cpp \
-    diceroller.cpp
+    diceroller.cpp \
+    datagenerator.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -39,9 +40,11 @@ HEADERS += \
     coinmodel.h \
     rollmodel.h \
     diceroller.h \
-    about.h
+    about.h \
+    datagenerator.h
 
 FORMS += \
     mainwindow.ui \
     coinflipper.ui \
-    diceroller.ui
+    diceroller.ui \
+    datagenerator.ui

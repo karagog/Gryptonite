@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>676</width>
-    <height>509</height>
+    <width>669</width>
+    <height>326</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,13 +17,13 @@
    <iconset resource="../../presentation/grypto_ui.qrc">
     <normaloff>:/grypto/icons/main.png</normaloff>:/grypto/icons/main.png</iconset>
   </property>
-  <widget class="QWidget" name="centralWidget"/>
+  <widget class="DataGenerator" name="centralWidget"/>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>676</width>
+     <width>669</width>
      <height>25</height>
     </rect>
    </property>
@@ -48,7 +48,7 @@
     <string>Coin Flipper</string>
    </property>
    <attribute name="dockWidgetArea">
-    <number>1</number>
+    <number>2</number>
    </attribute>
    <widget class="CoinFlipper" name="dockWidgetContents"/>
   </widget>
@@ -57,7 +57,7 @@
     <string>Dice Roller</string>
    </property>
    <attribute name="dockWidgetArea">
-    <number>2</number>
+    <number>1</number>
    </attribute>
    <widget class="DiceRoller" name="dockWidgetContents_2"/>
   </widget>
@@ -84,6 +84,12 @@
    <class>DiceRoller</class>
    <extends>QWidget</extends>
    <header>diceroller.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DataGenerator</class>
+   <extends>QWidget</extends>
+   <header>datagenerator.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

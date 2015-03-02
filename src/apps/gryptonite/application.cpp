@@ -86,7 +86,7 @@ Application::Application(int &argc, char **argv)
     Q_INIT_RESOURCE(grypto_ui);
 
     // Register the metatypes we are going to use
-    qRegisterMetaType<shared_ptr<Exception<>>>("std::shared_ptr<GUtil::Exception<>>");
+    qRegisterMetaType<shared_ptr<exception>>("std::shared_ptr<exception>");
     qRegisterMetaType<Grypt::EntryId>("Grypt::EntryId");
     qRegisterMetaTypeStreamOperators<Grypt::IdType>("Grypt::IdType");
 

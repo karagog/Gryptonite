@@ -1978,7 +1978,7 @@ void PasswordDatabase::_convert_to_readonly_exception_and_notify(const GUtil::Ex
     else{
         ex = (Exception<>*)ex_rx.Clone();
     }
-    emit NotifyExceptionOnBackgroundThread(shared_ptr<Exception<>>((Exception<> *)ex));
+    emit NotifyExceptionOnBackgroundThread(shared_ptr<exception>((exception*)ex));
 }
 
 void PasswordDatabase::_bw_add_file(const QString &conn_str,

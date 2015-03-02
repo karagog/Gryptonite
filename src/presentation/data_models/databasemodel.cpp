@@ -230,7 +230,7 @@ void DatabaseModel::Open(const Credentials &creds)
     fetchMore(QModelIndex());
 }
 
-void DatabaseModel::Open(const Cryptor &cryptor)
+void DatabaseModel::Open(const GUtil::CryptoPP::Cryptor &cryptor)
 {
     m_db.Open(cryptor);
 

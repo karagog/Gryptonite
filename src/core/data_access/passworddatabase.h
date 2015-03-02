@@ -264,7 +264,7 @@ private:
     // Main thread methods
     void _init_cryptor(const Credentials &, const byte *salt, GUINT32 salt_len);
     void _init_cryptor(const GUtil::CryptoPP::Cryptor &);
-    void _open(std::function<void()> init_cryptor);
+    void _open(std::function<void(byte const *)> init_cryptor);
 
     // Worker thread bodies
     void _background_worker(GUtil::CryptoPP::Cryptor *);

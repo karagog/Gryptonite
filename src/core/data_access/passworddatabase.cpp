@@ -453,7 +453,7 @@ static QString __create_connection(const char *file_path, const QString &force_c
 
 static void __init_cryptor(d_t *d, GUtil::CryptoPP::Cryptor *ctor)
 {
-    GASSERT(NULL == d->cryptor);
+    GASSERT(!d->cryptor);
     d->cryptor = ctor;
 }
 
@@ -463,7 +463,7 @@ void PasswordDatabase::_init_cryptor(const Credentials &creds, const byte *s, GU
     __init_cryptor(d, new GUtil::CryptoPP::Cryptor(creds, NONCE_LENGTH, new Cryptor::DefaultKeyDerivation(s, s_l)));
 }
 
-void PasswordDatabase::_init_cryptor(const Cryptor &cryptor)
+void PasswordDatabase::_init_cryptor(const GUtil::CryptoPP::Cryptor &cryptor)
 {
     G_D;
     __init_cryptor(d, new GUtil::CryptoPP::Cryptor(cryptor));
@@ -621,15 +621,29 @@ static void __initialize_cache(d_t *d)
 
 void PasswordDatabase::Open(const Credentials &creds)
 {
-    _open([&]{
-        // Prepare some salt and create the cryptor
-        byte salt[SALT_LENGTH];
-        GUtil::CryptoPP::RNG().Fill(salt, SALT_LENGTH);
-        _init_cryptor(creds, salt, SALT_LENGTH);
+    _open([&](byte const *salt){
+        vector<byte> s(SALT_LENGTH);
+        if(salt){
+            // Use the salt we were given
+            memcpy(s.data(), salt, SALT_LENGTH);
+        }
+        else{
+            // Generate new random salt
+            GUtil::CryptoPP::RNG().Fill(s.data(), SALT_LENGTH);
+        }
+        _init_cryptor(creds, s.data(), s.size());
     });
 }
 
-void PasswordDatabase::_open(function<void()> init_cryptor)
+void PasswordDatabase::Open(const GUtil::CryptoPP::Cryptor &c)
+{
+    _open([&](byte const *){
+        // Initialize the cryptor as a copy of the input (the salt is ignored)
+        _init_cryptor(c);
+    });
+}
+
+void PasswordDatabase::_open(function<void(byte const *)> init_cryptor)
 {
     if(IsOpen())
         throw Exception<>("Database already opened");
@@ -655,7 +669,7 @@ void PasswordDatabase::_open(function<void()> init_cryptor)
                 sql = QByteArray((const char *)rs.data(), rs.size());
             DatabaseUtils::ExecuteScript(db, sql);
 
-            init_cryptor();
+            init_cryptor(NULL);
 
             // Prepare the keycheck data
             QByteArray keycheck_ct;
@@ -667,11 +681,14 @@ void PasswordDatabase::_open(function<void()> init_cryptor)
                 d->cryptor->EncryptData(&ba_out, NULL, &auth_in, nonce);
             }
 
+            Cryptor::DefaultKeyDerivation const &kdf = 
+                (const Cryptor::DefaultKeyDerivation &)d->cryptor->GetKeyDerivationFunction();
+            
             // Insert a version record
             q.prepare("INSERT INTO Version (Version,Salt,KeyCheck)"
                         " VALUES (?,?,?)");
             q.addBindValue(GRYPTO_DATABASE_VERSION);
-            q.addBindValue(QByteArray((const char *)salt, sizeof(salt)));
+            q.addBindValue(QByteArray((const char *)kdf.Salt(), kdf.SaltLength()));
             q.addBindValue(keycheck_ct);
             DatabaseUtils::ExecuteQuery(q);
         }
@@ -686,7 +703,7 @@ void PasswordDatabase::_open(function<void()> init_cryptor)
         if(q.next()){
             if(!d->cryptor){
                 QByteArray salt_ba = q.record().value("Salt").toByteArray();
-                _init_cryptor(creds, (byte const *)salt_ba.constData(), salt_ba.length());
+                init_cryptor((byte const *)salt_ba.constData());
             }
 
             QByteArrayInput bai_ct(q.record().value("KeyCheck").toByteArray());

@@ -379,8 +379,7 @@ void DataGenerator::_generate()
         //m_progressDialog->setModal(true);
         m_progressDialog->show();
 
-        m_worker = QtConcurrent::run(QThreadPool::globalInstance(),
-                                     this, &DataGenerator::_export_raw_data,
+        m_worker = QtConcurrent::run(this, &DataGenerator::_export_raw_data,
                                      num_bytes, fn);
     }
         break;
@@ -406,8 +405,7 @@ void DataGenerator::_generate()
 
             disttype = QString("%1 uniform").arg(discrete ? "discrete" : "continuous");
             msg = QString(tr("in the range [%1, %2]")).arg(min).arg(max);
-            m_worker = QtConcurrent::run(QThreadPool::globalInstance(),
-                                         this, &DataGenerator::_gen_dist_uniform,
+            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_uniform,
                                          N, min, max,
                                          discrete,
                                          fn);
@@ -419,8 +417,7 @@ void DataGenerator::_generate()
             const double stdev = ui->spn_normal_sigma->value();
             disttype = "normal";
             msg = QString(tr("with a mean of %1 and standard deviation of %2")).arg(mean).arg(stdev);
-            m_worker = QtConcurrent::run(QThreadPool::globalInstance(),
-                                         this, &DataGenerator::_gen_dist_normal,
+            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_normal,
                                          N, mean, stdev,
                                          discrete,
                                          fn);
@@ -431,8 +428,7 @@ void DataGenerator::_generate()
             const double E = ui->spn_geometric_e->value();
             disttype = "geometric";
             msg = QString(tr("with an expected value of %1")).arg(E);
-            m_worker = QtConcurrent::run(QThreadPool::globalInstance(),
-                                         this, &DataGenerator::_gen_dist_geometric,
+            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_geometric,
                                          N, E, fn);
         }
             break;
@@ -441,8 +437,7 @@ void DataGenerator::_generate()
             const double lambda = ui->spn_exponential_lambda->value();
             disttype = "exponential";
             msg = QString(tr("with lambda value %1")).arg(lambda);
-            m_worker = QtConcurrent::run(QThreadPool::globalInstance(),
-                                         this, &DataGenerator::_gen_dist_exponential,
+            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_exponential,
                                          N, lambda, fn);
         }
             break;
@@ -451,8 +446,7 @@ void DataGenerator::_generate()
             const double E = ui->spn_poisson_e->value();
             disttype = "poisson";
             msg = QString(tr("with an expected value of %1")).arg(E);
-            m_worker = QtConcurrent::run(QThreadPool::globalInstance(),
-                                         this, &DataGenerator::_gen_dist_poisson,
+            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_poisson,
                                          N, E, fn);
         }
             break;

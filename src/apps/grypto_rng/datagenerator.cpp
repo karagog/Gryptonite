@@ -224,7 +224,7 @@ void DataGenerator::_gen_dist_normal(GUINT32 N, double mean, double sigma, bool 
     GUINT32 progress_mem = progress_increment;
     try{
         CREATE_AND_OPEN_OUTPUT_FILE(fn);
-
+        
         GUINT32 i;
         int len;
         for(i = 0; i < N; i+=2){
@@ -238,24 +238,15 @@ void DataGenerator::_gen_dist_normal(GUINT32 N, double mean, double sigma, bool 
 
             if(discrete){
                 GUtil::Pair<int> X = m_rng.N_Discrete2(mean, sigma);
-                len = sprintf(buf, "%d\n%d\n", X.First, X.Second);
+                len = sprintf(buf, "%d\n", X.First);
+                if(i != N-1)
+                    len += sprintf(buf + len, "%d\n", X.Second);
             }
             else{
                 GUtil::Pair<GFLOAT64> X = m_rng.N2(mean, sigma);
-                len = sprintf(buf, "%f\n%f\n", X.First, X.Second);
-            }
-            outfile.Write(buf, len);
-        }
-
-        // Handle the case of odd-numbered N
-        if(i == N + 1){
-            if(discrete){
-                int X = m_rng.N_Discrete(mean, sigma);
-                len = sprintf(buf, "%d\n", X);
-            }
-            else{
-                double X = m_rng.N(mean, sigma);
-                len = sprintf(buf, "%f\n", X);
+                len = sprintf(buf, "%f\n", X.First);
+                if(i != N-1)
+                    len += sprintf(buf + len, "%f\n", X.Second);
             }
             outfile.Write(buf, len);
         }

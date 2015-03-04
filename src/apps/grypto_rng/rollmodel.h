@@ -36,7 +36,7 @@ public:
     virtual ~RollModel();
 
     /** Returns the sum of all the dice rolled. */
-    GUINT64 Total() const{ return m_total; }
+    GINT64 Total() const{ return m_total; }
 
     int Max() const{ return m_max; }
     int Min() const{ return m_min; }
@@ -60,7 +60,7 @@ public slots:
 private:
     GUtil::CryptoPP::RNG m_rng;
     std::vector<int> m_data;
-    GUINT64 m_total;
+    GINT64 m_total;
     int m_min;
     int m_max;
     double m_mean;

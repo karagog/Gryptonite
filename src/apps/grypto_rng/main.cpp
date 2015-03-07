@@ -14,6 +14,7 @@ limitations under the License.*/
 
 #include "mainwindow.h"
 #include "about.h"
+#include "server.h"
 #include <gutil/application.h>
 #include <gutil/updatenotifier.h>
 #include <gutil/qt_settings.h>
@@ -21,6 +22,10 @@ limitations under the License.*/
 #include <gutil/filelogger.h>
 #include <gutil/messageboxlogger.h>
 #include <gutil/grouplogger.h>
+#include <gutil/smartpointer.h>
+#include <gutil/commandlineargs.h>
+#include <gutil/consoleiodevice.h>
+#include <gutil/consolelogger.h>
 #include <grypto_common.h>
 #include <grypto_notifyupdatedialog.h>
 #include <QApplication>
@@ -35,13 +40,13 @@ class Application : public GUtil::Qt::Application
     Q_OBJECT
     GUtil::Qt::UpdateNotifier updater;
     GUtil::Qt::Settings settings;
-    MainWindow main_window;
+    Server server;
+    GUtil::SmartPointer<MainWindow> main_window;
 public:
     Application(int &argc, char **argv)
         :GUtil::Qt::Application(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING),
           updater(GUtil::Version(GRYPTO_VERSION_STRING)),
-          settings("rng"),
-          main_window(&settings)
+          settings("rng")
     {
         SetTrapExceptions(true);
         qRegisterMetaType<std::shared_ptr<std::exception>>("std::shared_ptr<std::exception>");
@@ -49,14 +54,22 @@ public:
         connect(&updater, SIGNAL(UpdateInfoReceived(QString,QUrl)),
                 this, SLOT(_update_info_received(QString,QUrl)));
 
-        // Log global messages to a group logger, which writes to all loggers in the group
-        SetGlobalLogger(new GUtil::GroupLogger{
-                            new GUtil::Qt::MessageBoxLogger(&main_window),
-                            new GUtil::FileLogger(QString("%1/" APPLICATION_LOG)
-                                .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).toUtf8()),
-                        });
+        SmartPointer<GroupLogger> gl( new GroupLogger );
+        CommandLineArgs args(argc, argv);
+        if(NULL == args.FindArgument("-headless", false)){
+            main_window = new MainWindow(&settings);
+            gl->AddLogger(new GUtil::Qt::MessageBoxLogger(main_window.Data()));
+            main_window->show();
+        }
+        else{
+            gl->AddLogger(new ConsoleLogger(Console::StandardError));
+        }
 
-        main_window.show();
+        // Log global messages to a group logger, which writes to all loggers in the group
+        gl->AddLogger(new GUtil::FileLogger(QString("%1/" APPLICATION_LOG)
+                                            .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).toUtf8()));
+        SetGlobalLogger(gl.Data());
+        gl.Relinquish();
     }
 
     virtual void CheckForUpdates(bool){
@@ -65,21 +78,26 @@ public:
 
 protected:
     virtual void show_about(QWidget *parent){
-        (new ::About(parent == 0 ? &main_window : parent))->ShowAbout();
+        (new ::About(parent == 0 ? main_window.Data() : parent))->ShowAbout();
     }
     virtual void about_to_quit(){
         GUtil::Qt::Application::about_to_quit();
+
+        // The messagebox logger is a child of the main window, so we have to clean up the loggers first
+        //  to avoid a double-deletion
         SetGlobalLogger(NULL);
+        main_window.Clear();
     }
 
 private slots:
     void _update_info_received(const QString &latest_version_string, const QUrl &download_url){
+        GASSERT(main_window);
         GUtil::Version latest_version(latest_version_string.toUtf8().constData());
         if(updater.GetCurrentVersion() < latest_version){
-            Grypt::NotifyUpdateDialog::Show(&main_window, latest_version_string, download_url);
+            Grypt::NotifyUpdateDialog::Show(main_window.Data(), latest_version_string, download_url);
         }
         else{
-            QMessageBox::information(&main_window, tr("Up to date"), tr("Your software is up to date"));
+            QMessageBox::information(main_window.Data(), tr("Up to date"), tr("Your software is up to date"));
         }
     }
 };

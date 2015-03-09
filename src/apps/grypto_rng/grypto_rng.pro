@@ -7,6 +7,7 @@ TOP_DIR = ../../..
 TARGET = grypto_rng
 TEMPLATE = app
 DESTDIR = $$TOP_DIR/bin
+CONFIG += console
 
 QMAKE_CXXFLAGS += -std=c++11
 

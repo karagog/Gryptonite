@@ -32,7 +32,8 @@ enum command_enum{
     quit_command        = 8,
 
     no_command          = -1,
-    ambiguous_command   = -2
+    ambiguous_command   = -2,
+    repeat_command      = -3
 };
 
 const char *__command_strings[] = {
@@ -125,22 +126,29 @@ static command_enum __parse_command(trie_node_t *n, const char *cmd, int len)
 
 void Server::_process_command(const QString &text)
 {
-    QStringList args = text.split(' ');
-    if(0 == args.length())
-        return;
+    QStringList args = text.split(' ', QString::SkipEmptyParts);
+    QByteArray cmd, s;
+    if(0 < args.length())
+        cmd = args[0].toLatin1();
 
-    QString cmd = args[0];
-    QByteArray s = text.right(text.length() - cmd.length()).trimmed().toLatin1();
-
-    // Search for the command in the Trie, accepting all unambiguous abbreviations
-    switch(__parse_command(m_commandTrie, cmd.toLatin1().constData(), cmd.length()))
+    command_enum ce = repeat_command;
+    if(0 < cmd.length()){
+        // Search for the command in the Trie, accepting all unambiguous abbreviations
+        ce = __parse_command(m_commandTrie, cmd.constData(), cmd.length());
+        s = text.right(text.length() - cmd.length()).trimmed().toLatin1();
+    }
+    
+    bool command_executed = false;
+    switch(ce)
     {
     case roll_command:
     {
         int n = 1, min = 1, max = 100;
-        sscanf(s.constData(), "%d %d %d", &min, &max, &n);
-        if(min <= max)
+        int cnt = sscanf(s.constData(), "%d %d %d", &min, &max, &n);
+        if((cnt == EOF || 0 == cnt || cnt >= 2) && min <= max){
             _roll(n, min, max);
+            command_executed = true;
+        }
     }
         break;
     case succeed_command:
@@ -148,28 +156,36 @@ void Server::_process_command(const QString &text)
         double p = 0.5;
         int n = 1;
         sscanf(s.constData(), "%lf %d", &p, &n);
-        if(0.0 <= p && p <= 1.0)
+        if(0.0 <= p && p <= 1.0){
             _succeed(n, p);
+            command_executed = true;
+        }
     }
         break;
     case uniform_command:
     {
         int n = 1;
         double min = 0.0, max = 1.0;
-        sscanf(s.constData(), "%lf %lf %d", &min, &max, &n);
-        if(min <= max)
+        int cnt = sscanf(s.constData(), "%lf %lf %d", &min, &max, &n);
+        if((cnt == EOF || 0 == cnt || cnt >= 2) && min <= max){
             _uniform(n, min, max);
+            command_executed = true;
+        }
     }
         break;
     case normal_command:
     {
         int n = 1, discrete = 0;
         double mean = 0, stdev = 1;
-        sscanf(s.constData(), "%lf %lf %d %d", &mean, &stdev, &discrete, &n);
-        if(0 == discrete)
+        int cnt = sscanf(s.constData(), "%lf %lf %d %d", &mean, &stdev, &discrete, &n);
+        if((cnt == EOF || 0 == cnt || cnt >= 2) && 0 == discrete){
             _normal(n, mean, stdev);
-        else
+            command_executed = true;
+        }
+        else{
             _normal_discrete(n, mean, stdev);
+            command_executed = true;
+        }
     }
         break;
     case geometric_command:
@@ -177,8 +193,10 @@ void Server::_process_command(const QString &text)
         int n = 1;
         double e;
         int cnt = sscanf(s.constData(), "%lf %d", &e, &n);
-        if(cnt >= 1 && 1.0 <= e)
+        if(cnt >= 1 && 1.0 <= e){
             _geometric(n, e);
+            command_executed = true;
+        }
     }
         break;
     case exponential_command:
@@ -186,8 +204,10 @@ void Server::_process_command(const QString &text)
         int n = 1;
         double l;
         int cnt = sscanf(s.constData(), "%lf %d", &l, &n);
-        if(cnt >= 1 && 0 < l)
+        if(cnt >= 1 && 0 < l){
             _exponential(n, l);
+            command_executed = true;
+        }
     }
         break;
     case poisson_command:
@@ -195,21 +215,33 @@ void Server::_process_command(const QString &text)
         int n = 1;
         double e;
         int cnt = sscanf(s.constData(), "%lf %d", &e, &n);
-        if(cnt >= 1 && 0 < e)
+        if(cnt >= 1 && 0 < e){
             _poisson(n, e);
+            command_executed = true;
+        }
     }
         break;
     case help_command:
         _show_commands();
+        m_lastCommandText.clear();
         break;
     case quit_command:
         qApp->exit();
         break;
-    case no_command:
+    case repeat_command:
+        if(0 < m_lastCommandText.length())
+            _process_command(m_lastCommandText);
+        break;
     case ambiguous_command:
+        // \todo Show the commands which could be autocompleted (right now there can be none, so don't worry about it)
+    case no_command:
     default:
+        m_lastCommandText.clear();
         break;
     }
+    
+    if(command_executed)
+        m_lastCommandText = text;
 }
 
 void Server::_roll(int n, int min, int max)

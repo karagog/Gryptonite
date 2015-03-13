@@ -27,6 +27,7 @@ class Server : public QObject
     GUtil::CryptoPP::RNG m_rng;
     GUtil::Qt::ConsoleIODevice m_console;
     trie_node_t *m_commandTrie;
+    QString m_lastCommandText;
 public:
     explicit Server(QObject *parent = 0);
     ~Server();

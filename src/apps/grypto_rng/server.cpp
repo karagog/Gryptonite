@@ -227,7 +227,7 @@ void Server::_succeed(int n, double p)
 void Server::_uniform(int n, double min, double max)
 {
     for(int i = 0; i < n; i++)
-        m_console.WriteLine(QString("%1").arg(m_rng.U(min, max)));
+        m_console.WriteLine(QString("%1").arg(m_rng.U(min, max), 0, 'f'));
 }
 
 void Server::_normal(int n, double mean, double stdev)
@@ -235,10 +235,10 @@ void Server::_normal(int n, double mean, double stdev)
     int i;
     for(i = 0; i < (n-1); i+=2){
         auto p = m_rng.N2(mean, stdev);
-        m_console.WriteLine(QString("%1\n%2").arg(p.First).arg(p.Second));
+        m_console.WriteLine(QString("%1\n%2").arg(p.First, 0, 'f').arg(p.Second, 0, 'f'));
     }
     if(i == n - 1)
-        m_console.WriteLine(QString("%1").arg(m_rng.N(mean, stdev)));
+        m_console.WriteLine(QString("%1").arg(m_rng.N(mean, stdev), 0, 'f'));
 }
 
 void Server::_normal_discrete(int n, double mean, double stdev)
@@ -261,7 +261,7 @@ void Server::_geometric(int n, double e)
 void Server::_exponential(int n, double l)
 {
     for(int i = 0; i < n; i++)
-        m_console.WriteLine(QString("%1").arg(m_rng.Exponential(l)));
+        m_console.WriteLine(QString("%1").arg(m_rng.Exponential(l), 0, 'f'));
 }
 
 void Server::_poisson(int n, double e)

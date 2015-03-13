@@ -38,15 +38,14 @@ USING_NAMESPACE_GUTIL;
 class Application : public GUtil::Qt::Application
 {
     Q_OBJECT
-    GUtil::Qt::UpdateNotifier updater;
-    GUtil::Qt::Settings settings;
     Server server;
+    GUtil::Qt::UpdateNotifier updater;
+    GUtil::SmartPointer<GUtil::Qt::Settings> settings;
     GUtil::SmartPointer<MainWindow> main_window;
 public:
     Application(int &argc, char **argv)
         :GUtil::Qt::Application(argc, argv, GRYPTO_APP_NAME, GRYPTO_VERSION_STRING),
-          updater(GUtil::Version(GRYPTO_VERSION_STRING)),
-          settings("rng")
+          updater(GUtil::Version(GRYPTO_VERSION_STRING))
     {
         SetTrapExceptions(true);
         qRegisterMetaType<std::shared_ptr<std::exception>>("std::shared_ptr<std::exception>");
@@ -57,7 +56,8 @@ public:
         SmartPointer<GroupLogger> gl( new GroupLogger );
         CommandLineArgs args(argc, argv);
         if(NULL == args.FindArgument("-headless", false)){
-            main_window = new MainWindow(&settings);
+            settings = new GUtil::Qt::Settings("rng");
+            main_window = new MainWindow(settings.Data());
             gl->AddLogger(new GUtil::Qt::MessageBoxLogger(main_window.Data()));
             main_window->show();
         }

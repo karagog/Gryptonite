@@ -41,6 +41,9 @@ public:
     int Max() const{ return m_max; }
     int Min() const{ return m_min; }
     double Mean() const{ return m_mean; }
+    double Median() const{ return m_median; }
+    const QList<int> &Mode() const{ return m_mode; }
+    uint ModeCount() const{ return m_modeCount; }
 
     virtual QVariant data(const QModelIndex &index, int role) const;
     virtual QVariant headerData(int, Qt::Orientation, int = Qt::DisplayRole) const;
@@ -64,6 +67,9 @@ private:
     int m_min;
     int m_max;
     double m_mean;
+    double m_median;
+    QList<int> m_mode;
+    uint m_modeCount;
 };
 
 #endif // ROLLMODEL_H

@@ -49,4 +49,17 @@ void DiceRoller::_roll()
     ui->lbl_total->setText(QString("%1").arg(m_model->Total()));
     ui->lbl_range->setText(QString("[%1, %2]").arg(m_model->Min()).arg(m_model->Max()));
     ui->lbl_mean->setText(QString("%1").arg(m_model->Mean()));
+    ui->lbl_median->setText(QString("%1").arg(m_model->Median()));
+    
+    QString mode_string;
+    if(m_model->Mode().length()){
+        int tmp = m_model->Mode().count() - 1;
+        for(int m : m_model->Mode())
+            mode_string.append(QString("%1%2 ").arg(m).arg(tmp-- != 0 ? "," : ""));
+        mode_string.append(QString("(x%1)").arg(m_model->ModeCount()));
+    }
+    else{
+        mode_string.append(tr("(none)"));
+    }
+    ui->lbl_mode->setText(mode_string);
 }

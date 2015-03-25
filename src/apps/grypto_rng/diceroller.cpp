@@ -52,8 +52,8 @@ void DiceRoller::_roll()
     ui->lbl_median->setText(QString("%1").arg(m_model->Median()));
     
     QString mode_string;
-    if(m_model->Mode().length()){
-        int tmp = m_model->Mode().count() - 1;
+    if(m_model->Mode().size()){
+        int tmp = m_model->Mode().size() - 1;
         for(int m : m_model->Mode())
             mode_string.append(QString("%1%2 ").arg(m).arg(tmp-- != 0 ? "," : ""));
         mode_string.append(QString("(x%1)").arg(m_model->ModeCount()));

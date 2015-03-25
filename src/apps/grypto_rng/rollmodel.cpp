@@ -138,9 +138,9 @@ void RollModel::Roll(int min, int max, int times)
         occurrence_t *t = heap.Top();
         uint mode_count = t->count;
         int cnt = 0;
-        QList<int> tmp_mode;
+        vector<int> tmp_mode;
         while(t && (mode_count == t->count)){
-            tmp_mode.append(t->value);
+            tmp_mode.push_back(t->value);
             heap.Pop();
             t = heap.Top();
             cnt++;

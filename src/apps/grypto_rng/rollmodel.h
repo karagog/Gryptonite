@@ -42,7 +42,7 @@ public:
     int Min() const{ return m_min; }
     double Mean() const{ return m_mean; }
     double Median() const{ return m_median; }
-    const QList<int> &Mode() const{ return m_mode; }
+    const std::vector<int> &Mode() const{ return m_mode; }
     uint ModeCount() const{ return m_modeCount; }
 
     virtual QVariant data(const QModelIndex &index, int role) const;
@@ -68,7 +68,7 @@ private:
     int m_max;
     double m_mean;
     double m_median;
-    QList<int> m_mode;
+    std::vector<int> m_mode;
     uint m_modeCount;
 };
 

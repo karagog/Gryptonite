@@ -55,20 +55,21 @@ public:
 
         SmartPointer<GroupLogger> gl( new GroupLogger );
         CommandLineArgs args(argc, argv);
+        
+        // Log global messages to a group logger, which writes to all loggers in the group
+        SetGlobalLogger(gl.Data());
+        gl->AddLogger(new GUtil::FileLogger(QString("%1/" APPLICATION_LOG)
+                                            .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).toUtf8()));
+        
         if(NULL == args.FindArgument("-headless", false)){
+            gl->AddLogger(new GUtil::Qt::MessageBoxLogger(main_window.Data()));
             settings = new GUtil::Qt::Settings("rng");
             main_window = new MainWindow(settings.Data());
-            gl->AddLogger(new GUtil::Qt::MessageBoxLogger(main_window.Data()));
             main_window->show();
         }
         else{
             gl->AddLogger(new ConsoleLogger(Console::StandardError));
         }
-
-        // Log global messages to a group logger, which writes to all loggers in the group
-        gl->AddLogger(new GUtil::FileLogger(QString("%1/" APPLICATION_LOG)
-                                            .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).toUtf8()));
-        SetGlobalLogger(gl.Data());
         gl.Relinquish();
     }
 

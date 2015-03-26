@@ -81,6 +81,9 @@ protected:
         (new ::About(parent == 0 ? main_window.Data() : parent))->ShowAbout();
     }
     virtual void about_to_quit(){
+        if(main_window)
+            main_window->AboutToQuit();
+        
         GUtil::Qt::Application::about_to_quit();
 
         // The messagebox logger is a child of the main window, so we have to clean up the loggers first

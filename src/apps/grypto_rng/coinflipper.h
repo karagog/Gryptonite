@@ -16,6 +16,7 @@ limitations under the License.*/
 #define COINFLIPPER_H
 
 #include "coinmodel.h"
+#include <gutil/qt_settings.h>
 #include <QWidget>
 
 namespace Ui {
@@ -31,6 +32,9 @@ class CoinFlipper :
 public:
     explicit CoinFlipper(QWidget *parent = 0);
     ~CoinFlipper();
+    
+    void SaveParameters(GUtil::Qt::Settings *) const;
+    void RestoreParameters(GUtil::Qt::Settings *);
 
 private slots:
     void _flip();

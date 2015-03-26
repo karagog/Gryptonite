@@ -17,12 +17,22 @@ limitations under the License.*/
 #include <gutil/application.h>
 #include <QWhatsThis>
 
+#define SETTING_LAST_GEOMETRY   "mw_geometry"
+#define SETTING_LAST_STATE      "mw_state"
+
 MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
     :QMainWindow(parent),
       ui(new Ui::MainWindow),
       m_settings(settings)
 {
     ui->setupUi(this);
+    if(settings->Contains(SETTING_LAST_GEOMETRY)){
+        restoreGeometry(settings->Value(SETTING_LAST_GEOMETRY).toByteArray());
+        restoreState(settings->Value(SETTING_LAST_STATE).toByteArray());
+        
+        ui->diceRoller->RestoreParameters(settings);
+        ui->coinFlipper->RestoreParameters(settings);
+    }
 
     ui->menu_Help->insertAction(ui->action_About, QWhatsThis::createAction(this));
     ui->menu_Help->insertSeparator(ui->action_About);
@@ -34,4 +44,16 @@ MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::AboutToQuit()
+{
+    m_settings->SetValue(SETTING_LAST_GEOMETRY, saveGeometry());
+    m_settings->SetValue(SETTING_LAST_STATE, saveState());
+    
+    // Save the last-used parameters for next session
+    ui->diceRoller->SaveParameters(m_settings);
+    ui->coinFlipper->SaveParameters(m_settings);
+    
+    m_settings->CommitChanges();
 }

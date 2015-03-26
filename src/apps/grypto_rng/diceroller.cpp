@@ -19,6 +19,10 @@ limitations under the License.*/
 #include <QSortFilterProxyModel>
 USING_NAMESPACE_GUTIL;
 
+#define SETTING_DICEROLLER_N    "dr_n"
+#define SETTING_DICEROLLER_MIN  "dr_min"
+#define SETTING_DICEROLLER_MAX  "dr_max"
+
 DiceRoller::DiceRoller(QWidget *parent)
     :QWidget(parent),
       ui(new Ui::DiceRoller),
@@ -62,4 +66,21 @@ void DiceRoller::_roll()
         mode_string.append(tr("(none)"));
     }
     ui->lbl_mode->setText(mode_string);
+}
+
+void DiceRoller::SaveParameters(GUtil::Qt::Settings *s) const
+{
+    s->SetValue(SETTING_DICEROLLER_N, ui->spn_number->value());
+    s->SetValue(SETTING_DICEROLLER_MIN, ui->spn_min->value());
+    s->SetValue(SETTING_DICEROLLER_MAX, ui->spn_max->value());
+}
+
+void DiceRoller::RestoreParameters(GUtil::Qt::Settings *s)
+{
+    if(s->Contains(SETTING_DICEROLLER_N))
+        ui->spn_number->setValue(s->Value(SETTING_DICEROLLER_N).toInt());
+    if(s->Contains(SETTING_DICEROLLER_MIN))
+        ui->spn_min->setValue(s->Value(SETTING_DICEROLLER_MIN).toInt());
+    if(s->Contains(SETTING_DICEROLLER_MAX))
+        ui->spn_max->setValue(s->Value(SETTING_DICEROLLER_MAX).toInt());
 }

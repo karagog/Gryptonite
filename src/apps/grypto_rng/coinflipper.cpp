@@ -16,6 +16,8 @@ limitations under the License.*/
 #include "ui_coinflipper.h"
 #include "coinmodel.h"
 
+#define SETTING_COINFLIPPER_N    "cf_n"
+
 CoinFlipper::CoinFlipper(QWidget *parent)
     :QWidget(parent),
       ui(new Ui::coinflipper),
@@ -57,4 +59,15 @@ void CoinFlipper::_clear()
 {
     m_model->Clear();
     _update();
+}
+
+void CoinFlipper::SaveParameters(GUtil::Qt::Settings *s) const
+{
+    s->SetValue(SETTING_COINFLIPPER_N, ui->spn_flip->value());
+}
+
+void CoinFlipper::RestoreParameters(GUtil::Qt::Settings *s)
+{
+    if(s->Contains(SETTING_COINFLIPPER_N))
+        ui->spn_flip->setValue(s->Value(SETTING_COINFLIPPER_N).toInt());
 }

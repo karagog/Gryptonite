@@ -30,6 +30,9 @@ public:
     explicit MainWindow(GUtil::Qt::Settings *, QWidget *parent = 0);
     ~MainWindow();
 
+    /** Call this when the application is about to quit. */
+    void AboutToQuit();
+    
 private:
     Ui::MainWindow *ui;
     GUtil::Qt::Settings *m_settings;

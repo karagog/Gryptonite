@@ -50,7 +50,7 @@
    <attribute name="dockWidgetArea">
     <number>2</number>
    </attribute>
-   <widget class="CoinFlipper" name="dockWidgetContents"/>
+   <widget class="CoinFlipper" name="coinFlipper"/>
   </widget>
   <widget class="QDockWidget" name="dw_diceRoller">
    <property name="windowTitle">
@@ -59,7 +59,7 @@
    <attribute name="dockWidgetArea">
     <number>1</number>
    </attribute>
-   <widget class="DiceRoller" name="dockWidgetContents_2"/>
+   <widget class="DiceRoller" name="diceRoller"/>
   </widget>
   <action name="action_Quit">
    <property name="text">

@@ -15,6 +15,7 @@ limitations under the License.*/
 #ifndef DICEROLLER_H
 #define DICEROLLER_H
 
+#include <gutil/qt_settings.h>
 #include <QWidget>
 
 namespace Ui {
@@ -29,6 +30,9 @@ class DiceRoller : public QWidget
 public:
     explicit DiceRoller(QWidget *parent = 0);
     ~DiceRoller();
+    
+    void SaveParameters(GUtil::Qt::Settings *) const;
+    void RestoreParameters(GUtil::Qt::Settings *);
 
 private slots:
     void _roll();

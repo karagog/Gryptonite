@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>669</width>
-    <height>326</height>
+    <width>450</width>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <iconset resource="../../presentation/grypto_ui.qrc">
     <normaloff>:/grypto/icons/main.png</normaloff>:/grypto/icons/main.png</iconset>
   </property>
-  <widget class="DataGenerator" name="centralWidget"/>
+  <widget class="DiceRoller" name="diceRoller"/>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
@@ -33,6 +33,13 @@
     </property>
     <addaction name="action_Quit"/>
    </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>&amp;Window</string>
+    </property>
+    <addaction name="action_CoinFlipper"/>
+    <addaction name="action_DataGenerator"/>
+   </widget>
    <widget class="QMenu" name="menu_Help">
     <property name="title">
      <string>&amp;Help</string>
@@ -40,6 +47,7 @@
     <addaction name="action_About"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuWindow"/>
    <addaction name="menu_Help"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -47,20 +55,36 @@
    <property name="windowTitle">
     <string>Coin Flipper</string>
    </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="CoinFlipper" name="coinFlipper"/>
-  </widget>
-  <widget class="QDockWidget" name="dw_diceRoller">
-   <property name="windowTitle">
-    <string>Dice Roller</string>
+   <property name="visible">
+    <bool>false</bool>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
    </attribute>
-   <widget class="DiceRoller" name="diceRoller"/>
+   <widget class="CoinFlipper" name="coinFlipper"/>
   </widget>
+  <widget class="QDockWidget" name="dw_dataGenerator">
+   <property name="windowTitle">
+    <string>Data Generator</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="DataGenerator" name="dataGenerator"/>
+  </widget>
+  <action name="action_CoinFlipper">
+   <property name="text">
+    <string>&amp;Coin Tosser</string>
+   </property>
+  </action>
+  <action name="action_DataGenerator">
+   <property name="text">
+    <string>&amp;Data Generator</string>
+   </property>
+  </action>
   <action name="action_Quit">
    <property name="text">
     <string>&amp;Quit</string>

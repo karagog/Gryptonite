@@ -39,6 +39,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
 
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
     connect(ui->action_Quit, SIGNAL(triggered()), gApp, SLOT(Quit()));
+    connect(ui->action_CoinFlipper, SIGNAL(triggered()), this, SLOT(_coin_tosser()));
+    connect(ui->action_DataGenerator, SIGNAL(triggered()), this, SLOT(_data_generator()));
 }
 
 MainWindow::~MainWindow()
@@ -56,4 +58,18 @@ void MainWindow::AboutToQuit()
     ui->coinFlipper->SaveParameters(m_settings);
     
     m_settings->CommitChanges();
+}
+
+void MainWindow::_coin_tosser()
+{
+    ui->dw_coinFlipper->show();
+    ui->dw_coinFlipper->activateWindow();
+    ui->dw_coinFlipper->setFocus();
+}
+
+void MainWindow::_data_generator()
+{
+    ui->dw_dataGenerator->show();
+    ui->dw_dataGenerator->activateWindow();
+    ui->dw_dataGenerator->setFocus();
 }

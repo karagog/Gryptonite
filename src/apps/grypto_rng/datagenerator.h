@@ -39,6 +39,7 @@ public:
 
 signals:
     void ProgressUpdated(int);
+    void NotifyInfo(const QString &);
     void NotifyError(const std::shared_ptr<std::exception> &);
 
 private slots:

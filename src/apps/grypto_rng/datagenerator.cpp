@@ -169,6 +169,7 @@ void DataGenerator::_distribution_type_changed(int ind)
 void DataGenerator::_export_raw_data(GUINT32 num_bytes,
                                      const QString &fn)
 {
+    bool success = false;
     try{
         CREATE_AND_OPEN_OUTPUT_FILE(fn);
 
@@ -188,18 +189,23 @@ void DataGenerator::_export_raw_data(GUINT32 num_bytes,
                 emit ProgressUpdated(p);
                 return m_cancel;
             });
+        success = true;
     }
     catch(const Exception<> &ex){
         emit NotifyError(std::shared_ptr<std::exception>(
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
+    
+    if(success)
+        emit NotifyInfo(tr("Raw data exported"));
 }
 
 #define SMALL_BUFFER_SIZE 100
 
 void DataGenerator::_gen_dist_uniform(GUINT32 N, double min, double max, bool discrete, const QString &fn)
 {
+    bool success = false;
     char buf[SMALL_BUFFER_SIZE];
     GUINT32 progress_increment = N / 100;
     try{
@@ -224,16 +230,21 @@ void DataGenerator::_gen_dist_uniform(GUINT32 N, double min, double max, bool di
             outfile.Write(buf, len);
         }
         emit ProgressUpdated(100);
+        success = true;
     }
     catch(const Exception<> &ex){
         emit NotifyError(std::shared_ptr<std::exception>(
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
+    
+    if(success)
+        emit NotifyInfo(tr("Uniform distribution generated"));
 }
 
 void DataGenerator::_gen_dist_normal(GUINT32 N, double mean, double sigma, bool discrete, const QString &fn)
 {
+    bool success = false;
     char buf[2*SMALL_BUFFER_SIZE];
     GUINT32 progress_increment = N / 100;
     GUINT32 progress_mem = progress_increment;
@@ -266,16 +277,21 @@ void DataGenerator::_gen_dist_normal(GUINT32 N, double mean, double sigma, bool 
             outfile.Write(buf, len);
         }
         emit ProgressUpdated(100);
+        success = true;
     }
     catch(const Exception<> &ex){
         emit NotifyError(std::shared_ptr<std::exception>(
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
+    
+    if(success)
+        emit NotifyInfo(tr("Normal distribution generated"));
 }
 
 void DataGenerator::_gen_dist_geometric(GUINT32 N, double E, const QString &fn)
 {
+    bool success = false;
     char buf[SMALL_BUFFER_SIZE];
     GUINT32 progress_increment = N / 100;
     try{
@@ -293,16 +309,21 @@ void DataGenerator::_gen_dist_geometric(GUINT32 N, double E, const QString &fn)
             outfile.Write(buf, len);
         }
         emit ProgressUpdated(100);
+        success = true;
     }
     catch(const Exception<> &ex){
         emit NotifyError(std::shared_ptr<std::exception>(
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
+    
+    if(success)
+        emit NotifyInfo(tr("Geometric distribution generated"));
 }
 
 void DataGenerator::_gen_dist_exponential(GUINT32 N, double lambda, const QString &fn)
 {
+    bool success = false;
     char buf[SMALL_BUFFER_SIZE];
     GUINT32 progress_increment = N / 100;
     try{
@@ -320,16 +341,21 @@ void DataGenerator::_gen_dist_exponential(GUINT32 N, double lambda, const QStrin
             outfile.Write(buf, len);
         }
         emit ProgressUpdated(100);
+        success = true;
     }
     catch(const Exception<> &ex){
         emit NotifyError(std::shared_ptr<std::exception>(
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
+    
+    if(success)
+        emit NotifyInfo(tr("Exponential distribution generated"));
 }
 
 void DataGenerator::_gen_dist_poisson(GUINT32 N, double E, const QString &fn)
 {
+    bool success = false;
     char buf[SMALL_BUFFER_SIZE];
     GUINT32 progress_increment = N / 100;
     try{
@@ -347,12 +373,16 @@ void DataGenerator::_gen_dist_poisson(GUINT32 N, double E, const QString &fn)
             outfile.Write(buf, len);
         }
         emit ProgressUpdated(100);
+        success = true;
     }
     catch(const Exception<> &ex){
         emit NotifyError(std::shared_ptr<std::exception>(
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
+    
+    if(success)
+        emit NotifyInfo(tr("Poisson distribution generated"));
 }
 
 void DataGenerator::_generate()

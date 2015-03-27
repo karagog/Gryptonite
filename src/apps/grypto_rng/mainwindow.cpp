@@ -42,6 +42,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
     connect(ui->action_Quit, SIGNAL(triggered()), gApp, SLOT(Quit()));
     connect(ui->action_CoinFlipper, SIGNAL(triggered()), this, SLOT(_coin_tosser()));
     connect(ui->action_DataGenerator, SIGNAL(triggered()), this, SLOT(_data_generator()));
+    
+    connect(ui->dataGenerator, SIGNAL(NotifyInfo(QString)), ui->statusBar, SLOT(showMessage(QString)));
 }
 
 MainWindow::~MainWindow()

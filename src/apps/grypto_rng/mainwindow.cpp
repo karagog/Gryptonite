@@ -32,6 +32,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
         
         ui->diceRoller->RestoreParameters(settings);
         ui->coinFlipper->RestoreParameters(settings);
+        ui->dataGenerator->RestoreParameters(settings);
     }
 
     ui->menu_Help->insertAction(ui->action_About, QWhatsThis::createAction(this));
@@ -56,6 +57,7 @@ void MainWindow::AboutToQuit()
     // Save the last-used parameters for next session
     ui->diceRoller->SaveParameters(m_settings);
     ui->coinFlipper->SaveParameters(m_settings);
+    ui->dataGenerator->SaveParameters(m_settings);
     
     m_settings->CommitChanges();
 }

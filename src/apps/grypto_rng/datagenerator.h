@@ -15,6 +15,7 @@ limitations under the License.*/
 #ifndef DATAGENERATOR_H
 #define DATAGENERATOR_H
 
+#include <gutil/qt_settings.h>
 #include <gutil/cryptopp_rng.h>
 #include <QWidget>
 #include <QFuture>
@@ -32,6 +33,9 @@ class DataGenerator : public QWidget
 public:
     explicit DataGenerator(QWidget *parent = 0);
     ~DataGenerator();
+    
+    void SaveParameters(GUtil::Qt::Settings *) const;
+    void RestoreParameters(GUtil::Qt::Settings *);
 
 signals:
     void ProgressUpdated(int);

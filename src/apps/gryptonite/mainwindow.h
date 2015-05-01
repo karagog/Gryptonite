@@ -64,7 +64,9 @@ class MainWindow : public QMainWindow
 public:
 
     /** Creates a main window, optionally opening the given file. */
-    explicit MainWindow(GUtil::Qt::Settings *, const char *open_file = 0, QWidget *parent = 0);
+    explicit MainWindow(GUtil::Qt::Settings *,
+                        const QString &open_file = QString::null,
+                        QWidget *parent = 0);
     ~MainWindow();
 
     bool IsFileOpen() const;

@@ -74,9 +74,9 @@ Application::Application(int &argc, char **argv)
                     });
 
     CommandLineArgs args(argc, argv);
-    String open_file;
+    QString open_file;
     if(args.Length() > 1){
-        open_file = args[1];
+        open_file = QString::fromUtf8(args[1]);
     }
 
     // Don't let exceptions crash us, they will be logged to the global logger

@@ -103,7 +103,7 @@ public:
 };
 
 
-MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *parent)
+MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget *parent)
     :QMainWindow(parent),
       ui(new Ui::MainWindow),
       m_trayIcon(QIcon(":/grypto/icons/main.png"), this),
@@ -253,7 +253,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     m_taskbarButton.setWindow(this->windowHandle());
 #endif // Q_OS_WIN
 
-    if(open_file){
+    if(!open_file.isEmpty()){
         _new_open_database(open_file);
     }
     else if(m_settings->Value(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE).toBool()){
@@ -856,7 +856,7 @@ void MainWindow::_export_to_portable_safe()
     modal_dialog_helper_t mh(this);
     if(!_verify_credentials())
         return;
-    
+
     QString fn = QFileDialog::getSaveFileName(this, tr("Export to Portable Safe"),
                                               QString(),
                                               "GUtil Portable Safe (*.gps)"

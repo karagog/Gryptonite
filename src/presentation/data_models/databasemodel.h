@@ -201,11 +201,15 @@ signals:
     void NotifyProgressUpdated(int, bool, const QString &);
     void NotifyUndoStackChanged();
 
+    /** This signal notifies that the last import operation was finished. */
+    void NotifyImportFinished();
+
 
 private slots:
 
     void _handle_database_worker_exception(const std::shared_ptr<std::exception> &);
 
+    void _database_import_finished();
 
 private:
 

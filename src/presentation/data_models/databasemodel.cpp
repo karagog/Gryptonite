@@ -757,14 +757,24 @@ void DatabaseModel::ExportToXml(const QString &export_filename)
 
 void DatabaseModel::ImportFromXml(const QString &import_filename)
 {
-    beginResetModel();
+    ClearUndoStack();
     m_db.ImportFromXml(import_filename);
+    connect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_database_import_finished()));
+}
+
+void DatabaseModel::_database_import_finished()
+{
+    disconnect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_database_import_finished()));
+
+    beginResetModel();
     __cleanup_entry_list(m_root);
     m_index.clear();
     endResetModel();
 
     fetchMore();
     FetchAllEntries();
+
+    emit NotifyImportFinished();
 }
 
 void DatabaseModel::ImportFromDatabase(const DatabaseModel &other)

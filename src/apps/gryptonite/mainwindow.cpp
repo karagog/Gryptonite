@@ -609,6 +609,7 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
     connect(&m_progressBar, SIGNAL(Clicked()), dbm, SLOT(CancelAllBackgroundOperations()));
     connect(dbm, SIGNAL(NotifyProgressUpdated(int, bool, QString)),
             this, SLOT(_progress_updated(int, bool, QString)));
+    connect(dbm, SIGNAL(NotifyImportFinished()), this, SLOT(RecoverFromReadOnly()));
 }
 
 void MainWindow::_new_open_database(const QString &path)
@@ -937,6 +938,20 @@ void MainWindow::_import_from_xml()
     if(fn.isEmpty() || !QFile::exists(fn))
         return;
 
+//    QMessageBox *mb = new QMessageBox(this);
+//    mb->setWindowTitle("Importing from XML");
+//    mb->setText(tr("The import process may take several minutes, depending on"
+//                   " how many entries you're importing and the speed of your"
+//                   " connection to the database. Thank you for your patience."));
+//    mb->show();
+
+    DropToReadOnly();
+    ui->actionNewOpenDB->setEnabled(false);
+    ui->action_Save_As->setEnabled(false);
+    ui->action_Close->setEnabled(false);
+    ui->menu_Export->setEnabled(false);
+    ui->menu_Recent_Files->setEnabled(false);
+    ui->actionLockUnlock->setEnabled(false);
     _get_database_model()->ImportFromXml(fn);
 }
 
@@ -1497,6 +1512,11 @@ void MainWindow::_update_available_actions()
 
     bool enable_if_unlocked = !IsLocked() && IsFileOpen();
     bool enable_if_writable = enable_if_unlocked && !IsReadOnly();
+    ui->actionNewOpenDB->setEnabled(true);
+    ui->action_Close->setEnabled(true);
+    ui->menu_Recent_Files->setEnabled(true);
+    ui->actionLockUnlock->setEnabled(true);
+
     ui->action_Save_As->setEnabled(enable_if_unlocked);
     ui->menu_Export->setEnabled(enable_if_unlocked);
     ui->menu_Import->setEnabled(enable_if_writable);
@@ -1685,14 +1705,29 @@ void MainWindow::_collapse_all()
     ui->treeView->ResizeColumnsToContents();
 }
 
+#define READ_ONLY_STRING " (Read Only)"
+
 void MainWindow::DropToReadOnly()
 {
     if(!IsReadOnly()){
-        setWindowTitle(tr(GRYPTO_APP_NAME " (Read Only)"));
+        setWindowTitle(tr(GRYPTO_APP_NAME READ_ONLY_STRING));
         ui->statusbar->showMessage(tr("Now in Read-Only mode for your protection"));
-        m_fileLabel->setText(m_fileLabel->text().append(" (Read Only)"));
+        m_fileLabel->setText(m_fileLabel->text().append(READ_ONLY_STRING));
 
         m_readonly = true;
         _update_available_actions();
+    }
+}
+
+void MainWindow::RecoverFromReadOnly()
+{
+    if(IsReadOnly()){
+        setWindowTitle(tr(GRYPTO_APP_NAME));
+        m_fileLabel->setText(m_fileLabel->text().left(m_fileLabel->text().length() - strlen(READ_ONLY_STRING)));
+        _update_undo_text();
+
+        m_readonly = false;
+        _update_available_actions();
+        ui->treeView->ResizeColumnsToContents();
     }
 }

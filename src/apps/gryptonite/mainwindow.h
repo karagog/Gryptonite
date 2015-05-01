@@ -73,17 +73,20 @@ public:
 
     bool IsLocked() const{ return m_isLocked; }
 
-    /** Puts the interface irrevocably into read only mode. This is used in case of
-     *  emergencies, like if the data access layer is failing to write the database.
-    */
-    void DropToReadOnly();
-
     bool IsReadOnly() const{ return m_readonly; }
 
     /** For proper behavior this must be called before any application cleanup code. */
     void AboutToQuit();
 
 public slots:
+
+    /** Puts the interface irrevocably into read only mode. This is used in case of
+     *  emergencies, like if the data access layer is failing to write the database.
+    */
+    void DropToReadOnly();
+
+    /** If the interface was in read-only mode, this puts it back in editable mode. */
+    void RecoverFromReadOnly();
 
     /** Locks the interface. (true = lock)*/
     void Lock();

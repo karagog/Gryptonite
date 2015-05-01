@@ -1106,7 +1106,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
         // Add to the appropriate parent
         auto pi = d->parent_index.find(e.GetParentId());
         QList<EntryId> &child_ids = pi->second.children;
-        if(e.GetRow() > child_ids.length())
+        if(0 > e.GetRow() || e.GetRow() > child_ids.length())
             e.SetRow(child_ids.length());
 
         child_ids.insert(e.GetRow(), e.GetId());
@@ -1885,6 +1885,9 @@ void PasswordDatabase::_background_worker(GUtil::CryptoPP::Cryptor *c)
     unique_lock<mutex> lkr(d->thread_lock);
     while(!d->closing)
     {
+        if(!d->thread_idle)
+            emit NotifyThreadIdle();
+
         // Tell everyone who's waiting that we're going idle
         d->thread_idle = true;
         d->wc_thread.notify_all();
@@ -2501,9 +2504,237 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
     }
 }
 
-void PasswordDatabase::_bw_import_from_xml(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath)
+static void __parse_xml_entries(QXmlStreamReader &sr,
+                                QMap<int, Entry> &entries,
+                                QMap<int, FileId> &file_mapping)
 {
-    throw NotImplementedException<>();
+    int depth = 0;
+    int cur_id = -1;
+    Entry tmp_entry;
+    while(0 <= depth){
+        switch(sr.readNext()){
+        case QXmlStreamReader::StartElement:
+            depth++;
+            if(sr.name() == "e"){
+                tmp_entry.SetName(sr.attributes().value("name").toString());
+                if(sr.attributes().hasAttribute("desc"))
+                    tmp_entry.SetDescription(sr.attributes().value("desc").toString());
+                tmp_entry.SetModifyDate(QDateTime::fromString(sr.attributes().value("date").toString()));
+                if(sr.attributes().hasAttribute("f_id")){
+                    int fid_local = sr.attributes().value("f_id").toInt();
+                    FileId fid(true);
+                    file_mapping.insert(fid_local, fid);
+                    tmp_entry.SetFileId(fid);
+                    tmp_entry.SetFileName(sr.attributes().value("f_name").toString());
+                }
+                cur_id = sr.attributes().value("id").toInt();
+            }
+            else if(sr.name() == "s"){
+                SecretValue sv;
+                sv.SetName(sr.attributes().value("key").toString());
+                sv.SetValue(sr.attributes().value("val").toString());
+                if(sr.attributes().hasAttribute("note"))
+                    sv.SetNotes(sr.attributes().value("note").toString());
+                if(sr.attributes().hasAttribute("hide"))
+                    sv.SetIsHidden(0 != sr.attributes().value("hide").toInt());
+                tmp_entry.Values().append(sv);
+            }
+            break;
+        case QXmlStreamReader::EndElement:
+            depth--;
+            if(0 == depth){
+                entries.insert(cur_id, tmp_entry);
+
+                tmp_entry = Entry();
+                cur_id = -1;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+static void __parse_xml_hierarchy(QXmlStreamReader &sr, QMap<int, QList<int>> &hierarchy)
+{
+    int depth = 0;
+    int cur_parent = -1;
+    QList<int> tmplist;
+    while(0 <= depth){
+        switch(sr.readNext()){
+        case QXmlStreamReader::StartElement:
+            depth++;
+            if(sr.name() == "p"){
+                if(sr.attributes().hasAttribute("id"))
+                    cur_parent = sr.attributes().value("id").toInt();
+            }
+            else if(sr.name() == "c"){
+                tmplist.append(sr.attributes().value("id").toInt());
+            }
+            break;
+        case QXmlStreamReader::EndElement:
+            depth--;
+            if(0 == depth){
+                hierarchy.insert(cur_parent, tmplist);
+
+                cur_parent = -1;
+                tmplist.clear();
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+static void __parse_xml_files(QXmlStreamReader &sr, QMap<int, QString> &files)
+{
+    int depth = 0;
+    int cur_id = -1;
+    QString cur_path;
+    while(0 <= depth){
+        switch(sr.readNext()){
+        case QXmlStreamReader::StartElement:
+            depth++;
+            if(sr.name() == "f")
+                cur_id = sr.attributes().value("id").toInt();
+            break;
+        case QXmlStreamReader::Characters:
+            if(cur_id != -1)
+            {
+                QTemporaryFile tf;
+                tf.setAutoRemove(false);
+                if(!tf.open())
+                    throw Exception<>("Cannot open temporary file");
+
+                cur_path = tf.fileName();
+                tf.write(QByteArray::fromBase64(sr.text().toLatin1()));
+            }
+            break;
+        case QXmlStreamReader::EndElement:
+            depth--;
+            if(0 == depth){
+                files.insert(cur_id, cur_path);
+                cur_id = -1;
+                cur_path.clear();
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void PasswordDatabase::_add_children_from_xml(QMap<int, Entry> &entries,
+                                              const QMap<int, QList<int>> &hierarchy,
+                                              const EntryId &parent_id,
+                                              int local_parent_id)
+{
+    const QList<int> &child_ids = hierarchy[local_parent_id];
+    for(int i = 0; i < child_ids.length(); ++i){
+        Entry &e = entries[child_ids[i]];
+        e.SetParentId(parent_id);
+        e.SetRow(i);
+        AddEntry(e);
+
+        _add_children_from_xml(entries, hierarchy, e.GetId(), child_ids[i]);
+    }
+}
+
+void PasswordDatabase::_add_files_from_xml(const QString &conn_str,
+                                           GUtil::CryptoPP::Cryptor &cryptor,
+                                           const QMap<int, QString> &files,
+                                           const QMap<int, FileId> &file_mapping)
+{
+    for(int fid_local : files.keys()){
+        _bw_add_file(conn_str, cryptor, file_mapping[fid_local], files[fid_local].toUtf8(), true);
+    }
+}
+
+void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
+                                           GUtil::CryptoPP::Cryptor &my_cryptor,
+                                           const QString &filepath)
+{
+    int progress_counter = 0;
+    const QString file_name = QFileInfo(filepath).fileName();
+    m_curTaskString = QString(tr("Importing from XML: %1")).arg(file_name);
+    emit NotifyProgressUpdated(progress_counter, true, m_curTaskString);
+
+    QSqlDatabase db(QSqlDatabase::database(conn_str));
+    GASSERT(db.isValid());
+    QSqlQuery q(db);
+
+    QFile f(filepath);
+    if(!f.open(QFile::ReadOnly))
+        throw Exception<>(QString(tr("Cannot open \"%1\"\n%2"))
+                          .arg(QFileInfo(filepath).absoluteFilePath())
+                          .arg(f.errorString()).toUtf8());
+
+    QMap<int, Entry> entries;
+    QMap<int, QList<int>> hierarchy;
+    QMap<int, QString> files;
+    QMap<int, FileId> file_mapping;
+    bool xml_recognized = false;
+
+    auto throw_xml_format_error = []{
+        throw Exception<>("Unknown XML format");
+    };
+
+    QXmlStreamReader sr(&f);
+    while(!sr.atEnd()){
+        switch(sr.readNext()){
+        case QXmlStreamReader::StartElement:
+            if(sr.name() == "grypto_data"){
+                if(sr.attributes().at(0).value() == GRYPTO_XML_VERSION)
+                    xml_recognized = true;
+                else{
+                    emit NotifyProgressUpdated(100, true, m_curTaskString);
+                    throw_xml_format_error();
+                }
+            }
+            else if(sr.name() == "entries"){
+                if(!xml_recognized)
+                    throw_xml_format_error();
+                __parse_xml_entries(sr, entries, file_mapping);
+            }
+            else if(sr.name() == "hierarchy"){
+                if(!xml_recognized)
+                    throw_xml_format_error();
+                __parse_xml_hierarchy(sr, hierarchy);
+            }
+            else if(sr.name() == "files"){
+                if(!xml_recognized)
+                    throw_xml_format_error();
+                __parse_xml_files(sr, files);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    // Cleanup code should always execute, even in case of exception
+    finally([&]{
+        // Make sure the temp files are cleaned up (no plaintext data left in /tmp)
+        for(const QString &f : files.values())
+            QFile::remove(f);
+
+        emit NotifyProgressUpdated(100, false, m_curTaskString);
+    });
+
+    if(sr.hasError())
+        throw Exception<>(QString(tr("XML has errors: %1").arg(sr.errorString())).toUtf8());
+
+    // Add a root node, under which to put the imported data
+    Entry tmp_root;
+    tmp_root.SetName(QString(tr("Imported on %1 at %2"))
+                     .arg(QDateTime::currentDateTime().toString("MMMM d, yyyy"))
+                     .arg(QDateTime::currentDateTime().toString("h:mm")));
+    tmp_root.SetDescription(QString(tr("Imported from XML document: %1")).arg(file_name));
+    AddEntry(tmp_root);
+
+    _add_children_from_xml(entries, hierarchy, tmp_root.GetId(), -1);
+    _add_files_from_xml(conn_str, my_cryptor, files, file_mapping);
 }
 
 

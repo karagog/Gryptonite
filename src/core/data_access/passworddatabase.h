@@ -263,6 +263,9 @@ signals:
     /** Notifies that the exception was received on the background thread. */
     void NotifyExceptionOnBackgroundThread(const std::shared_ptr<std::exception> &);
 
+    /** Notifies that the background thread is no longer busy with tasks. */
+    void NotifyThreadIdle();
+
 
 private:
 
@@ -302,6 +305,15 @@ private:
     void _bw_fail_if_cancelled();
     int m_progressMin, m_progressMax;
     QString m_curTaskString;
+
+    void _add_children_from_xml(QMap<int, Entry> &entries,
+                                const QMap<int, QList<int>> &hierarchy,
+                                const EntryId &parent_id,
+                                int local_parent_id);
+    void _add_files_from_xml(const QString &,
+                             GUtil::CryptoPP::Cryptor&,
+                             const QMap<int, QString> &,
+                             const QMap<int, FileId> &);
 
 };
 

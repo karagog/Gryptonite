@@ -2335,36 +2335,36 @@ void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
 
 static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
                                         QList<FileId> &file_references,
-                                        QSet<FileId> &all_files)
+                                        const QMap<EntryId, int> &entry_mapping,
+                                        const QMap<FileId, int> &file_mapping)
 {
-    sw.writeStartElement("entry");
+    sw.writeStartElement("e");
     sw.writeAttribute("name", e.GetName());
-    sw.writeAttribute("description", e.GetDescription());
-    sw.writeAttribute("modify_date", e.GetModifyDate().toString());
+    if(!e.GetDescription().isEmpty())
+        sw.writeAttribute("desc", e.GetDescription());
+    sw.writeAttribute("date", e.GetModifyDate().toString());
     if(e.IsFavorite())
-        sw.writeAttribute("favorite", QString("%1").arg(e.GetFavoriteIndex()));
+        sw.writeAttribute("fav", QVariant(e.GetFavoriteIndex()).toString());
     if(!e.GetFileId().IsNull()){
-        sw.writeAttribute("file_id", e.GetFileId().ToQByteArray().toBase64());
-        sw.writeAttribute("file_name", e.GetFileName());
-        if(all_files.contains(e.GetFileId()))
+        sw.writeAttribute("f_id", QVariant(file_mapping[e.GetFileId()]).toString());
+        sw.writeAttribute("f_name", e.GetFileName());
+        if(file_mapping.contains(e.GetFileId()))
             file_references.append(e.GetFileId());
     }
-    sw.writeAttribute("id", e.GetId().ToQByteArray().toBase64());
+    sw.writeAttribute("id", QVariant(entry_mapping[e.GetId()]).toString());
 
     if(0 < e.Values().length()){
         // Write the secret data key-value pairs
-        sw.writeStartElement("secrets");
         for(const SecretValue &v : e.Values()){
-            sw.writeStartElement("item");
-            sw.writeAttribute("name", v.GetName());
-            sw.writeAttribute("value", v.GetValue());
+            sw.writeStartElement("s");
+            sw.writeAttribute("key", v.GetName());
+            sw.writeAttribute("val", v.GetValue());
             if(!v.GetNotes().isEmpty())
-                sw.writeAttribute("notes", v.GetNotes());
+                sw.writeAttribute("note", v.GetNotes());
             if(v.GetIsHidden())
-                sw.writeAttribute("is_secret", "1");
+                sw.writeAttribute("hide", "1");
             sw.writeEndElement();
         }
-        sw.writeEndElement();
     }
 
     sw.writeEndElement();
@@ -2372,23 +2372,24 @@ static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
 
 static void __write_hierarchy_to_xml_writer(QXmlStreamWriter &sw,
                                             unordered_map<EntryId, parent_cache> &parent_index,
+                                            const QMap<EntryId, int> &entry_mapping,
                                             const EntryId &pid)
 {
     if(0 < parent_index[pid].children.length()){
         QQueue<EntryId> q;
-        sw.writeStartElement("parent");
+        sw.writeStartElement("p");
         if(!pid.IsNull())
-            sw.writeAttribute("id", pid.ToQByteArray().toBase64());
+            sw.writeAttribute("id", QVariant(entry_mapping[pid]).toString());
         for(const EntryId &cid : parent_index[pid].children){
-            sw.writeStartElement("child");
-            sw.writeAttribute("id", cid.ToQByteArray().toBase64());
+            sw.writeStartElement("c");
+            sw.writeAttribute("id", QVariant(entry_mapping[cid]).toString());
             sw.writeEndElement();
             q.append(cid);
         }
         sw.writeEndElement();
 
         for(const EntryId &eid : q)
-            __write_hierarchy_to_xml_writer(sw, parent_index, eid);
+            __write_hierarchy_to_xml_writer(sw, parent_index, entry_mapping, eid);
     }
 }
 
@@ -2424,28 +2425,34 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
 
         // Start the XML document
         sw.writeStartDocument();
-        sw.writeStartElement("Gryptonite_Data");
+        sw.writeStartElement("grypto_data");
         sw.writeAttribute("version", GRYPTO_XML_VERSION);
 
         // Write all the entries in no particular order, without the hierarchy
         sw.writeStartElement("entries");
-        QSet<FileId> all_files;
+        QMap<FileId, int> file_mapping;
+        QMap<EntryId, int> entry_mapping;
         QList<FileId> referenced_files;
         QList<entry_cache> entries;
         unordered_map<EntryId, parent_cache> parent_index_cpy;
 
         // We want to lock the index for the minimum time
         d->index_lock.lock();
-        for(auto p : d->index)
+        int tmpid = 0;
+        for(auto p : d->index){
             entries.append(p.second);
+            entry_mapping.insert(p.first, tmpid++);
+        }
+
+        tmpid = 0;
         for(auto p : d->file_index)
-            all_files.insert(p.first);
+            file_mapping.insert(p.first, tmpid++);
         parent_index_cpy = d->parent_index;
         d->index_lock.unlock();
 
         for(auto ec : entries)
             __write_entry_to_xml_writer(sw, __convert_cache_to_entry(ec, my_cryptor),
-                                        referenced_files, all_files);
+                                        referenced_files, entry_mapping, file_mapping);
         sw.writeEndElement();
 
         emit NotifyProgressUpdated(progress_counter+=33, true, m_curTaskString);
@@ -2453,7 +2460,7 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
 
         // Write the hierarchy for the entries
         sw.writeStartElement("hierarchy");
-        __write_hierarchy_to_xml_writer(sw, parent_index_cpy, FileId::Null());
+        __write_hierarchy_to_xml_writer(sw, parent_index_cpy, entry_mapping, FileId::Null());
         sw.writeEndElement();
 
         emit NotifyProgressUpdated(progress_counter+=33, true, m_curTaskString);
@@ -2463,13 +2470,14 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
         if(0 < referenced_files.length()){
             sw.writeStartElement("files");
             for(const FileId &fid : referenced_files){
-                sw.writeStartElement("file");
-                sw.writeAttribute("id", fid.ToQByteArray().toBase64());
+                sw.writeStartElement("f");
+                sw.writeAttribute("id", QVariant(file_mapping[fid]).toString());
 
                 // Export the file to a temp file, then read in the temp file and add it to xml
                 QTemporaryFile tf;
                 if(!tf.open())
                     throw Exception<>(QString(tr("Cannot open temp file: %1")).arg(tf.errorString()).toUtf8());
+
                 _bw_exp_file(conn_str, my_cryptor, fid, tf.fileName().toUtf8());
                 QByteArray file_data;
                 {
@@ -2478,7 +2486,8 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
                     file_data = f.readAll();
                 }
                 tf.remove();
-                sw.writeAttribute("data", file_data.toBase64());
+
+                sw.writeCharacters(file_data.toBase64());
                 sw.writeEndElement();
             }
             sw.writeEndElement();
@@ -2488,10 +2497,8 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
         sw.writeEndDocument();
     }
     catch(...){
-        db.rollback();
         throw;
     }
-    __commit_transaction(db);    // Nothing should have changed, is a rollback better here?
 }
 
 void PasswordDatabase::_bw_import_from_xml(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath)

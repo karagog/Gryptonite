@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "databasemodel.h"
-#include "grypto_passworddatabase.h"
-#include <grypto_entry.h>
+#include <grypto/passworddatabase.h>
+#include <grypto/entry.h>
 #include <QFont>
 #include <QSet>
 #include <QMimeData>

@@ -16,7 +16,7 @@ limitations under the License.*/
 #define GRYPTO_NEWPASSWORD_H
 
 #include <gutil/qt_settings.h>
-#include <grypto_common.h>
+#include <grypto/common.h>
 #include <QDialog>
 
 namespace Ui{

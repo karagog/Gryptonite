@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "noteseditdialog.h"
 #include "ui_noteseditdialog.h"
-#include "grypto_common.h"
+#include <grypto/common.h>
 
 NAMESPACE_GRYPTO;
 

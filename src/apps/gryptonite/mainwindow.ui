@@ -19,7 +19,7 @@
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="page_locked">
        <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -462,7 +462,7 @@
   <customwidget>
    <class>Grypt::SearchWidget</class>
    <extends>QWidget</extends>
-   <header>grypto_searchwidget.h</header>
+   <header location="global">grypto/searchwidget.h</header>
    <container>1</container>
    <slots>
     <signal>FilterChanged(Grypt::FilterInfo_t)</signal>
@@ -471,12 +471,12 @@
   <customwidget>
    <class>GUtil::Qt::TreeView</class>
    <extends>QTreeView</extends>
-   <header>gutil/treeview.h</header>
+   <header location="global">gutil/treeview.h</header>
   </customwidget>
   <customwidget>
    <class>Grypt::EntryView</class>
    <extends>QWidget</extends>
-   <header>grypto_entryview.h</header>
+   <header location="global">grypto/entryview.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

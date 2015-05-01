@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #ifndef _LABEL_DEL_H
 #define	_LABEL_DEL_H
-#include "grypto_common.h"
+#include <grypto/common.h>
 #include <QStyledItemDelegate>
 
 namespace Grypt{

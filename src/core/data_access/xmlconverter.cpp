@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "xmlconverter.h"
-#include "grypto_entry.h"
+#include <grypto/entry.h>
 #include <gutil/databaseutils.h>
 #include <QDomDocument>
 USING_NAMESPACE_GUTIL1(Qt);

@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "mainwindow.h"
 #include "about.h"
-#include <grypto_notifyupdatedialog.h>
+#include <grypto/notifyupdatedialog.h>
 #include <gutil/updatenotifier.h>
 #include <gutil/application.h>
 #include <gutil/qt_settings.h>

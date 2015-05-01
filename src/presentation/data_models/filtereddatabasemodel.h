@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef FILTEREDDATABASEMODEL_H
 #define FILTEREDDATABASEMODEL_H
 
-#include "grypto_common.h"
+#include <grypto/common.h>
 #include <QDateTime>
 #include <QSortFilterProxyModel>
 

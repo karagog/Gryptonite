@@ -14,8 +14,8 @@ limitations under the License.*/
 
 #include "entryview.h"
 #include "ui_entryview.h"
-#include <grypto_entrymodel.h>
-#include <grypto_databasemodel.h>
+#include <grypto/entrymodel.h>
+#include <grypto/databasemodel.h>
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QSortFilterProxyModel>

@@ -14,8 +14,8 @@ limitations under the License.*/
 
 #include "searchwidget.h"
 #include "ui_searchwidget.h"
-#include <grypto_common.h>
-#include <grypto_lockout.h>
+#include <grypto/common.h>
+#include <grypto/lockout.h>
 #include <QKeyEvent>
 
 NAMESPACE_GRYPTO;

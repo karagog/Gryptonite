@@ -15,8 +15,8 @@ limitations under the License.*/
 #ifndef GRYPTO_ENTRY_H
 #define	GRYPTO_ENTRY_H
 
-#include "grypto_common.h"
-#include "grypto_secret_value.h"
+#include <grypto/common.h>
+#include <grypto/secret_value.h>
 #include <QList>
 #include <QDateTime>
 

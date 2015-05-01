@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef SEARCHWIDGET_H
 #define SEARCHWIDGET_H
 
-#include "grypto_filtereddatabasemodel.h"
+#include <grypto/filtereddatabasemodel.h>
 #include <QWidget>
 
 namespace Ui {

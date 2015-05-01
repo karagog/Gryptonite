@@ -16,7 +16,7 @@ limitations under the License.*/
 #include "mainwindow.h"
 #include "about.h"
 #include "settings.h"
-#include <grypto_notifyupdatedialog.h>
+#include <grypto/notifyupdatedialog.h>
 #include <gutil/globallogger.h>
 #include <gutil/grouplogger.h>
 #include <gutil/filelogger.h>

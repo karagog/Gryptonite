@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "filtereddatabasemodel.h"
 #include "databasemodel.h"
-#include "grypto_entry.h"
+#include <grypto/entry.h>
 #include <gutil/variant.h>
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL;

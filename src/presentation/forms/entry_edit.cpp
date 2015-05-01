@@ -14,9 +14,9 @@ limitations under the License.*/
 
 #include "entry_edit.h"
 #include "ui_entry_edit.h"
-#include "grypto_secretlabeldelegate.h"
-#include "grypto_entrymodel.h"
-#include "grypto_databasemodel.h"
+#include <grypto/secretlabeldelegate.h>
+#include <grypto/entrymodel.h>
+#include <grypto/databasemodel.h>
 #include "generatepassworddialog.h"
 #include "noteseditdialog.h"
 #include <QFileDialog>

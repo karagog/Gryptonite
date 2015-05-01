@@ -17,8 +17,8 @@ limitations under the License.*/
 
 #include "ui_entry_popup.h"
 #include "settings.h"
-#include <grypto_clipboardaccess.h>
-#include <grypto_databasemodel.h>
+#include <grypto/clipboardaccess.h>
+#include <grypto/databasemodel.h>
 #include <gutil/qt_settings.h>
 
 #define SETTING_ENTRY_POPUP_GEOMETRY "ep_geometry"

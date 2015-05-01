@@ -12,8 +12,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-#include <grypto_aboutbase.h>
-#include <grypto_common.h>
+#include <grypto/aboutbase.h>
+#include <grypto/common.h>
 
 #define GRYPTO_TRANSFORMS_APP_NAME "Grypto-Transforms"
 

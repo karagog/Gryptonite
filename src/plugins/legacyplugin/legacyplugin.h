@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef LEGACYPLUGIN_H
 #define LEGACYPLUGIN_H
 
-#include <grypto_ilegacy.h>
+#include <grypto/ilegacy.h>
 #include <QObject>
 
 namespace Grypt{

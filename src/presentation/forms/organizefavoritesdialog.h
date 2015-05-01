@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef ORGANIZEFAVORITESDIALOG_H
 #define ORGANIZEFAVORITESDIALOG_H
 
-#include <grypto_entry.h>
+#include <grypto/entry.h>
 #include <QDialog>
 #include <QMenu>
 

@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef ENTRYVIEW_H
 #define ENTRYVIEW_H
 
-#include <grypto_entry.h>
+#include <grypto/entry.h>
 #include <QWidget>
 
 namespace Ui {

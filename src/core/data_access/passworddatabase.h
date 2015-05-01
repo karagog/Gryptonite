@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef GRYPTO_PASSWORDDATABASE_H
 #define GRYPTO_PASSWORDDATABASE_H
 
-#include <grypto_common.h>
+#include <grypto/common.h>
 #include <gutil/exception.h>
 #include <QString>
 #include <QObject>

@@ -26,8 +26,8 @@ limitations under the License.*/
 #include <gutil/commandlineargs.h>
 #include <gutil/consoleiodevice.h>
 #include <gutil/consolelogger.h>
-#include <grypto_common.h>
-#include <grypto_notifyupdatedialog.h>
+#include <grypto/common.h>
+#include <grypto/notifyupdatedialog.h>
 #include <QApplication>
 #include <QMessageBox>
 #include <QStandardPaths>

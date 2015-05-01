@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "newpassworddialog.h"
 #include "ui_newpassworddialog.h"
-#include "grypto_common.h"
+#include <grypto/common.h>
 #include <gutil/file.h>
 #include <QMessageBox>
 #include <QKeyEvent>

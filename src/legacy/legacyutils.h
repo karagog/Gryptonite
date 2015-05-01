@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef GRYPTO_LEGACY_UTILS_H
 #define GRYPTO_LEGACY_UTILS_H
 
-#include <grypto_passworddatabase.h>
+#include <grypto/passworddatabase.h>
 #include <functional>
 
 namespace Grypt{ namespace Legacy{

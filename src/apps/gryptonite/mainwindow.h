@@ -15,9 +15,9 @@ limitations under the License.*/
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "grypto_clipboardaccess.h"
-#include "grypto_databasemodel.h"
-#include <grypto_lockout.h>
+#include <grypto/clipboardaccess.h>
+#include <grypto/databasemodel.h>
+#include <grypto/lockout.h>
 #include <gutil/smartpointer.h>
 #include <gutil/progressbarcontrol.h>
 #include <QMainWindow>

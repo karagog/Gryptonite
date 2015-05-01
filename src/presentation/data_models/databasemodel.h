@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef GRYPTO_DATABASEMODEL_H
 #define GRYPTO_DATABASEMODEL_H
 
-#include <grypto_passworddatabase.h>
+#include <grypto/passworddatabase.h>
 #include <gutil/undostack.h>
 #include <QAbstractItemModel>
 

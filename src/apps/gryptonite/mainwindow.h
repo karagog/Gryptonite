@@ -114,6 +114,8 @@ private slots:
     void _save_as();
     void _export_to_portable_safe();
     void _import_from_portable_safe();
+    void _export_to_xml();
+    void _import_from_xml();
 
     void _new_entry();
     void _new_child_entry();

@@ -17,13 +17,13 @@ limitations under the License.*/
 #include "preferences_edit.h"
 #include "settings.h"
 #include "legacymanager.h"
+#include "entry_popup.h"
 #include <grypto/common.h>
 #include <grypto/newpassworddialog.h>
 #include <grypto/getpassworddialog.h>
 #include <grypto/databasemodel.h>
 #include <grypto/filtereddatabasemodel.h>
 #include <grypto/entry_edit.h>
-#include "entry_popup.h"
 #include <grypto/organizefavoritesdialog.h>
 #include <gutil/qt_settings.h>
 #include <gutil/widget.h>
@@ -180,6 +180,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget
     connect(ui->action_Save_As, SIGNAL(triggered()), this, SLOT(_save_as()));
     connect(ui->action_export_ps, SIGNAL(triggered()), this, SLOT(_export_to_portable_safe()));
     connect(ui->action_import_ps, SIGNAL(triggered()), this, SLOT(_import_from_portable_safe()));
+    connect(ui->action_XML_export, SIGNAL(triggered()), this, SLOT(_export_to_xml()));
+    connect(ui->action_XML_import, SIGNAL(triggered()), this, SLOT(_import_from_xml()));
     connect(ui->action_Close, SIGNAL(triggered()), this, SLOT(_close_database()));
     connect(ui->actionNew_Entry, SIGNAL(triggered()), this, SLOT(_new_entry()));
     connect(ui->action_EditEntry, SIGNAL(triggered()), this, SLOT(_edit_entry()));
@@ -870,7 +872,7 @@ void MainWindow::_export_to_portable_safe()
     if(QDialog::Accepted != dlg.exec())
         return;
 
-    _get_database_model()->ExportToPortableSafe(fn.toUtf8(), dlg.GetCredentials());
+    _get_database_model()->ExportToPortableSafe(fn, dlg.GetCredentials());
 }
 
 void MainWindow::_import_from_portable_safe()
@@ -892,7 +894,50 @@ void MainWindow::_import_from_portable_safe()
             return;
     }
 
-    _get_database_model()->ImportFromPortableSafe(fn.toUtf8(), dlg.GetCredentials());
+    _get_database_model()->ImportFromPortableSafe(fn, dlg.GetCredentials());
+}
+
+void MainWindow::_export_to_xml()
+{
+    modal_dialog_helper_t mh(this);
+
+    if(QMessageBox::Yes !=
+            QMessageBox::warning(this, tr("Caution!"),
+                         tr("You are about to export all your secret information"
+                            " as plaintext. Are you sure you want to do this?"),
+                         QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)){
+        return;
+    }
+
+    QString fn = QFileDialog::getSaveFileName(this, tr("Export to XML"),
+                                              QString(),
+                                              "XML (*.xml)"
+                                              ";;All Files(*)");
+    if(fn.isEmpty())
+        return;
+    else if(QFileInfo(fn).suffix().isEmpty())
+        fn.append(".xml");
+
+    // Make sure it's you who's exporting
+    if(!_verify_credentials())
+        return;
+
+    _get_database_model()->ExportToXml(fn);
+}
+
+void MainWindow::_import_from_xml()
+{
+    if(!IsFileOpen())
+        return;
+
+    QString fn = QFileDialog::getOpenFileName(this, tr("Import from XML"),
+                                              QString(),
+                                              "XML (*.xml)"
+                                              ";;All Files(*)");
+    if(fn.isEmpty() || !QFile::exists(fn))
+        return;
+
+    _get_database_model()->ImportFromXml(fn);
 }
 
 void MainWindow::_new_entry()

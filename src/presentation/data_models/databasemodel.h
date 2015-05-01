@@ -131,12 +131,18 @@ public:
     void ExportFile(const FileId &, const char *export_file_path);
 
     /** Exports the entire database in the portable safe format. */
-    void ExportToPortableSafe(const char *export_filename,
+    void ExportToPortableSafe(const QString &export_filename,
                               const Credentials &);
 
     /** Imports data from the portable safe file. */
-    void ImportFromPortableSafe(const char *export_filename,
+    void ImportFromPortableSafe(const QString &import_filename,
                                 const Credentials &);
+
+    /** Exports the secrets in plaintext to the given XML file. */
+    void ExportToXml(const QString &export_filename);
+
+    /** Imports the plaintext XML. */
+    void ImportFromXml(const QString &import_filename);
 
     /** Imports the contents from the other database model.
      *  All Entry and File ID's will be new. Both databases

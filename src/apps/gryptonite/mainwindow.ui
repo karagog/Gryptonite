@@ -121,6 +121,7 @@
      <property name="toolTipsVisible">
       <bool>true</bool>
      </property>
+     <addaction name="action_XML_export"/>
      <addaction name="action_export_ps"/>
     </widget>
     <widget class="QMenu" name="menu_Import">
@@ -136,6 +137,7 @@
      <property name="toolTipsVisible">
       <bool>true</bool>
      </property>
+     <addaction name="action_XML_import"/>
      <addaction name="action_import_ps"/>
     </widget>
     <addaction name="actionNewOpenDB"/>
@@ -455,6 +457,16 @@
   <action name="action_What_s_This">
    <property name="text">
     <string>&amp;What's This?</string>
+   </property>
+  </action>
+  <action name="action_XML_export">
+   <property name="text">
+    <string>&amp;XML</string>
+   </property>
+  </action>
+  <action name="action_XML_import">
+   <property name="text">
+    <string>&amp;XML</string>
    </property>
   </action>
  </widget>

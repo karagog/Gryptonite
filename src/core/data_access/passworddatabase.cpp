@@ -27,6 +27,7 @@ limitations under the License.*/
 #include <condition_variable>
 #include <QString>
 #include <QSet>
+#include <QQueue>
 #include <QFileInfo>
 #include <QResource>
 #include <QSqlDatabase>
@@ -35,6 +36,9 @@ limitations under the License.*/
 #include <QSqlError>
 #include <QDomDocument>
 #include <QLockFile>
+#include <QXmlStreamWriter>
+#include <QXmlStreamReader>
+#include <QTemporaryFile>
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL1(CryptoPP);
 USING_NAMESPACE_GUTIL;
@@ -50,6 +54,8 @@ using namespace std;
 #define NONCE_LENGTH 10
 
 #define GRYPTO_DATABASE_VERSION "3.0.0"
+
+#define GRYPTO_XML_VERSION  "3.0"
 
 #define MAX_TRY_COUNT 20
 
@@ -269,6 +275,8 @@ public:
         ExportFile,
         ExportToPS,
         ImportFromPS,
+        ExportToXML,
+        ImportFromXML,
 
         // Misc commands
         DispatchOrphans
@@ -410,25 +418,45 @@ public:
 class export_to_ps_command : public bg_worker_command
 {
 public:
-    export_to_ps_command(const char *filepath, const Credentials &creds)
+    export_to_ps_command(const QString &filepath, const Credentials &creds)
         :bg_worker_command(ExportToPS),
           FilePath(filepath),
           Creds(creds)
     {}
-    const QByteArray FilePath;
+    const QString FilePath;
     Credentials Creds;
 };
 
 class import_from_ps_command : public bg_worker_command
 {
 public:
-    import_from_ps_command(const char *filepath, const Credentials &creds)
+    import_from_ps_command(const QString &filepath, const Credentials &creds)
         :bg_worker_command(ImportFromPS),
           FilePath(filepath),
           Creds(creds)
     {}
-    const QByteArray FilePath;
+    const QString FilePath;
     Credentials Creds;
+};
+
+class export_to_xml_command : public bg_worker_command
+{
+public:
+    export_to_xml_command(const QString &filepath)
+        :bg_worker_command(ExportToXML),
+          FilePath(filepath)
+    {}
+    const QString FilePath;
+};
+
+class import_from_xml_command : public bg_worker_command
+{
+public:
+    import_from_xml_command(const QString &filepath)
+        :bg_worker_command(ImportFromXML),
+          FilePath(filepath)
+    {}
+    const QString FilePath;
 };
 
 
@@ -1521,7 +1549,7 @@ QByteArray PasswordDatabase::GetFile(const FileId &id) const
     return ret;
 }
 
-void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
+void PasswordDatabase::ExportToPortableSafe(const QString &export_filename,
                                             const Credentials &creds) const
 {
     FailIfNotOpen();
@@ -1529,12 +1557,26 @@ void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
     __queue_command(d, new export_to_ps_command(export_filename, creds));
 }
 
-void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
+void PasswordDatabase::ImportFromPortableSafe(const QString &import_filename,
                                               const Credentials &creds)
 {
     FailIfNotOpen();
     G_D;
     __queue_command(d, new import_from_ps_command(import_filename, creds));
+}
+
+void PasswordDatabase::ExportToXml(const QString &export_filename)
+{
+    FailIfNotOpen();
+    G_D;
+    __queue_command(d, new export_to_xml_command(export_filename));
+}
+
+void PasswordDatabase::ImportFromXml(const QString &import_filename)
+{
+    FailIfNotOpen();
+    G_D;
+    __queue_command(d, new import_from_xml_command(import_filename));
 }
 
 static void __count_child_entries(QSqlDatabase &db, int &count, const EntryId &parent_id)
@@ -1957,6 +1999,18 @@ void PasswordDatabase::_background_worker(GUtil::CryptoPP::Cryptor *c)
                     _bw_import_from_gps(conn_str, *bgCryptor, ifps->FilePath, ifps->Creds);
                 }
                     break;
+                case bg_worker_command::ExportToXML:
+                {
+                    export_to_xml_command *e2x = static_cast<export_to_xml_command *>(cmd.Data());
+                    _bw_export_to_xml(conn_str, *bgCryptor, e2x->FilePath);
+                }
+                    break;
+                case bg_worker_command::ImportFromXML:
+                {
+                    import_from_xml_command *ifx = static_cast<import_from_xml_command *>(cmd.Data());
+                    _bw_import_from_xml(conn_str, *bgCryptor, ifx->FilePath);
+                }
+                    break;
                 default:
                     break;
                 }
@@ -2148,7 +2202,7 @@ static void __append_children_to_xml(QDomDocument &xdoc, QDomNode &n,
 
 void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
                                          GUtil::CryptoPP::Cryptor &my_cryptor,
-                                         const char *ps_filepath,
+                                         const QString &ps_filepath,
                                          const Credentials &creds)
 {
     int progress_counter = 0;
@@ -2178,7 +2232,7 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
         _bw_fail_if_cancelled();
 
         // Open the target file
-        GPSFile_Export gps_file(ps_filepath, creds, FileId::Size);
+        GPSFile_Export gps_file(ps_filepath.toUtf8(), creds, FileId::Size);
         emit NotifyProgressUpdated(progress_counter+=5, true, m_curTaskString);
         _bw_fail_if_cancelled();
 
@@ -2240,7 +2294,7 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
 
 void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
                                            GUtil::CryptoPP::Cryptor &my_cryptor,
-                                           const char *ps_filepath,
+                                           const QString &ps_filepath,
                                            const Credentials &creds)
 {
     int progress_counter = 0;
@@ -2257,7 +2311,7 @@ void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
 
     db.transaction();
     try{
-        GPSFile_Import gps_import(ps_filepath, creds, true);
+        GPSFile_Import gps_import(ps_filepath.toUtf8(), creds, true);
         if(!gps_import.NextPayload())
             throw Exception<>("GPS file is empty");
 
@@ -2277,6 +2331,172 @@ void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
         throw;
     }
     __commit_transaction(db);
+}
+
+static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
+                                        QList<FileId> &file_references,
+                                        QSet<FileId> &all_files)
+{
+    sw.writeStartElement("entry");
+    sw.writeAttribute("name", e.GetName());
+    sw.writeAttribute("description", e.GetDescription());
+    sw.writeAttribute("modify_date", e.GetModifyDate().toString());
+    if(e.IsFavorite())
+        sw.writeAttribute("favorite", QString("%1").arg(e.GetFavoriteIndex()));
+    if(!e.GetFileId().IsNull()){
+        sw.writeAttribute("file_id", e.GetFileId().ToQByteArray().toBase64());
+        sw.writeAttribute("file_name", e.GetFileName());
+        if(all_files.contains(e.GetFileId()))
+            file_references.append(e.GetFileId());
+    }
+    sw.writeAttribute("id", e.GetId().ToQByteArray().toBase64());
+
+    if(0 < e.Values().length()){
+        // Write the secret data key-value pairs
+        sw.writeStartElement("secrets");
+        for(const SecretValue &v : e.Values()){
+            sw.writeStartElement("item");
+            sw.writeAttribute("name", v.GetName());
+            sw.writeAttribute("value", v.GetValue());
+            if(!v.GetNotes().isEmpty())
+                sw.writeAttribute("notes", v.GetNotes());
+            if(v.GetIsHidden())
+                sw.writeAttribute("is_secret", "1");
+            sw.writeEndElement();
+        }
+        sw.writeEndElement();
+    }
+
+    sw.writeEndElement();
+}
+
+static void __write_hierarchy_to_xml_writer(QXmlStreamWriter &sw,
+                                            unordered_map<EntryId, parent_cache> &parent_index,
+                                            const EntryId &pid)
+{
+    if(0 < parent_index[pid].children.length()){
+        QQueue<EntryId> q;
+        sw.writeStartElement("parent");
+        if(!pid.IsNull())
+            sw.writeAttribute("id", pid.ToQByteArray().toBase64());
+        for(const EntryId &cid : parent_index[pid].children){
+            sw.writeStartElement("child");
+            sw.writeAttribute("id", cid.ToQByteArray().toBase64());
+            sw.writeEndElement();
+            q.append(cid);
+        }
+        sw.writeEndElement();
+
+        for(const EntryId &eid : q)
+            __write_hierarchy_to_xml_writer(sw, parent_index, eid);
+    }
+}
+
+void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoPP::Cryptor &my_cryptor, const QString &filepath)
+{
+    G_D;
+    int progress_counter = 0;
+    m_curTaskString = QString(tr("Exporting to XML: %1"))
+                            .arg(QFileInfo(filepath).fileName());
+    emit NotifyProgressUpdated(progress_counter, true, m_curTaskString);
+
+    // Always notify that the task is complete, even if it's an error
+    finally([&]{ emit NotifyProgressUpdated(100, false, m_curTaskString); });
+
+    QSqlDatabase db(QSqlDatabase::database(conn_str));
+    GASSERT(db.isValid());
+    QSqlQuery q(db);
+
+    // We export inside a database transaction. Even though we're reading only
+    //  this makes sure nobody changes anything while we're exporting
+    db.transaction();
+    try{
+        emit NotifyProgressUpdated(progress_counter+=5, true, m_curTaskString);
+
+        QFile f(filepath);
+        if(!f.open(QFile::ReadWrite | QFile::Truncate))
+            throw Exception<>(QString(tr("Cannot open \"%1\"\n%2"))
+                              .arg(QFileInfo(filepath).absoluteFilePath())
+                              .arg(f.errorString()).toUtf8());
+
+        QXmlStreamWriter sw(&f);
+        sw.setAutoFormatting(true);
+
+        // Start the XML document
+        sw.writeStartDocument();
+        sw.writeStartElement("Gryptonite_Data");
+        sw.writeAttribute("version", GRYPTO_XML_VERSION);
+
+        // Write all the entries in no particular order, without the hierarchy
+        sw.writeStartElement("entries");
+        QSet<FileId> all_files;
+        QList<FileId> referenced_files;
+        QList<entry_cache> entries;
+        unordered_map<EntryId, parent_cache> parent_index_cpy;
+
+        // We want to lock the index for the minimum time
+        d->index_lock.lock();
+        for(auto p : d->index)
+            entries.append(p.second);
+        for(auto p : d->file_index)
+            all_files.insert(p.first);
+        parent_index_cpy = d->parent_index;
+        d->index_lock.unlock();
+
+        for(auto ec : entries)
+            __write_entry_to_xml_writer(sw, __convert_cache_to_entry(ec, my_cryptor),
+                                        referenced_files, all_files);
+        sw.writeEndElement();
+
+        emit NotifyProgressUpdated(progress_counter+=33, true, m_curTaskString);
+        _bw_fail_if_cancelled();
+
+        // Write the hierarchy for the entries
+        sw.writeStartElement("hierarchy");
+        __write_hierarchy_to_xml_writer(sw, parent_index_cpy, FileId::Null());
+        sw.writeEndElement();
+
+        emit NotifyProgressUpdated(progress_counter+=33, true, m_curTaskString);
+        _bw_fail_if_cancelled();
+
+        // Lastly write the files
+        if(0 < referenced_files.length()){
+            sw.writeStartElement("files");
+            for(const FileId &fid : referenced_files){
+                sw.writeStartElement("file");
+                sw.writeAttribute("id", fid.ToQByteArray().toBase64());
+
+                // Export the file to a temp file, then read in the temp file and add it to xml
+                QTemporaryFile tf;
+                if(!tf.open())
+                    throw Exception<>(QString(tr("Cannot open temp file: %1")).arg(tf.errorString()).toUtf8());
+                _bw_exp_file(conn_str, my_cryptor, fid, tf.fileName().toUtf8());
+                QByteArray file_data;
+                {
+                    QFile f(tf.fileName());
+                    f.open(QFile::ReadOnly);
+                    file_data = f.readAll();
+                }
+                tf.remove();
+                sw.writeAttribute("data", file_data.toBase64());
+                sw.writeEndElement();
+            }
+            sw.writeEndElement();
+        }
+
+        sw.writeEndElement();
+        sw.writeEndDocument();
+    }
+    catch(...){
+        db.rollback();
+        throw;
+    }
+    __commit_transaction(db);    // Nothing should have changed, is a rollback better here?
+}
+
+void PasswordDatabase::_bw_import_from_xml(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath)
+{
+    throw NotImplementedException<>();
 }
 
 

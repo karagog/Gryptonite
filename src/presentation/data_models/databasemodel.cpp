@@ -731,17 +731,34 @@ void DatabaseModel::ExportFile(const FileId &id, const char *export_file_path)
     m_db.ExportFile(id, export_file_path);
 }
 
-void DatabaseModel::ExportToPortableSafe(const char *export_filename,
+void DatabaseModel::ExportToPortableSafe(const QString &export_filename,
                                          const Credentials &creds)
 {
     m_db.ExportToPortableSafe(export_filename, creds);
 }
 
-void DatabaseModel::ImportFromPortableSafe(const char *export_filename,
+void DatabaseModel::ImportFromPortableSafe(const QString &import_filename,
                                            const Credentials &creds)
 {
     beginResetModel();
-    m_db.ImportFromPortableSafe(export_filename, creds);
+    m_db.ImportFromPortableSafe(import_filename, creds);
+    __cleanup_entry_list(m_root);
+    m_index.clear();
+    endResetModel();
+
+    fetchMore();
+    FetchAllEntries();
+}
+
+void DatabaseModel::ExportToXml(const QString &export_filename)
+{
+    m_db.ExportToXml(export_filename);
+}
+
+void DatabaseModel::ImportFromXml(const QString &import_filename)
+{
+    beginResetModel();
+    m_db.ImportFromXml(import_filename);
     __cleanup_entry_list(m_root);
     m_index.clear();
     endResetModel();

@@ -224,12 +224,18 @@ public:
     void CancelFileTasks();
 
     /** Exports the entire database in the portable safe format. */
-    void ExportToPortableSafe(const char *export_filename,
+    void ExportToPortableSafe(const QString &export_filename,
                               const Credentials &) const;
 
     /** Imports data from the portable safe file. */
-    void ImportFromPortableSafe(const char *export_filename,
+    void ImportFromPortableSafe(const QString &import_filename,
                                 const Credentials &);
+
+    /** Exports the database in plaintext to an XML file. */
+    void ExportToXml(const QString &export_filename);
+
+    /** Imports the XML data that was generated using ExportToXml(). */
+    void ImportFromXml(const QString &import_filename);
 
     /** Imports data from the other database. New ID's will be given to
      *  every entry and file, so there is no possibility of collision.
@@ -289,8 +295,10 @@ private:
     void _bw_add_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const QByteArray &, bool);
     void _bw_exp_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
     void _bw_del_file(const QString &, const FileId &);
-    void _bw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
-    void _bw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
+    void _bw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath, const Credentials &);
+    void _bw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath, const Credentials &);
+    void _bw_export_to_xml(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath);
+    void _bw_import_from_xml(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath);
     void _bw_fail_if_cancelled();
     int m_progressMin, m_progressMax;
     QString m_curTaskString;

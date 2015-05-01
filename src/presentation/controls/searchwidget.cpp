@@ -30,9 +30,9 @@ SearchWidget::SearchWidget(QWidget *parent)
     Clear();
 
     // By default show dates for the past month
-    QDateTime curdate = QDateTime::currentDateTime();
-    ui->dte_start->setDateTime(curdate.addMonths(-1));
-    ui->dte_end->setDateTime(curdate);
+    QDate curdate = QDate::currentDate();
+    ui->de_start->setDate(curdate.addMonths(-1));
+    ui->de_end->setDate(curdate);
 
     ui->lineEdit->installEventFilter(this);
     ui->chk_caseSensitive->installEventFilter(this);
@@ -43,9 +43,9 @@ SearchWidget::SearchWidget(QWidget *parent)
     ui->rdo_regexp->installEventFilter(this);
     ui->rdo_wildCard->installEventFilter(this);
     ui->chk_start->installEventFilter(this);
-    ui->dte_start->installEventFilter(this);
+    ui->de_start->installEventFilter(this);
     ui->chk_end->installEventFilter(this);
-    ui->dte_end->installEventFilter(this);
+    ui->de_end->installEventFilter(this);
     ui->btn_clear->installEventFilter(this);
     ui->gb_time->installEventFilter(this);
 }
@@ -86,8 +86,8 @@ void SearchWidget::SetFilter(const FilterInfo_t &fi)
     ui->chk_alsoSecrets->setChecked(fi.AlsoSearchSecrets);
     ui->chk_start->setChecked(!fi.StartTime.isNull());
     ui->chk_end->setChecked(!fi.EndTime.isNull());
-    ui->dte_start->setDateTime(fi.StartTime);
-    ui->dte_end->setDateTime(fi.EndTime);
+    ui->de_start->setDateTime(fi.StartTime);
+    ui->de_end->setDateTime(fi.EndTime);
     ui->gb_time->setChecked(!fi.StartTime.isNull() || !fi.EndTime.isNull());
 }
 
@@ -106,9 +106,9 @@ FilterInfo_t SearchWidget::GetFilter() const
     if(ui->gb_time->isChecked())
     {
         if(ui->chk_start->isChecked())
-            ret.StartTime = ui->dte_start->dateTime();
+            ret.StartTime = ui->de_start->dateTime();
         if(ui->chk_end->isChecked())
-            ret.EndTime = ui->dte_end->dateTime();
+            ret.EndTime = ui->de_end->dateTime();
     }
     return ret;
 }

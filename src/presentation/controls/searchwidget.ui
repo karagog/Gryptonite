@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>311</width>
-    <height>454</height>
+    <height>487</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -164,11 +164,14 @@
    </item>
    <item row="4" column="0" colspan="2">
     <widget class="QGroupBox" name="gb_time">
+     <property name="toolTip">
+      <string>Select a date range by which to filter entries</string>
+     </property>
      <property name="whatsThis">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Select a time range by which to filter entries&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This selection will filter all entries that were not modified within the date range&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="title">
-      <string>Time Range Selection</string>
+      <string>Date Range Selection</string>
      </property>
      <property name="flat">
       <bool>false</bool>
@@ -186,22 +189,36 @@
       <item row="0" column="0">
        <widget class="QCheckBox" name="chk_start">
         <property name="text">
-         <string>Start Time</string>
+         <string>Earliest</string>
         </property>
        </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QDateTimeEdit" name="dte_start"/>
       </item>
       <item row="1" column="0">
        <widget class="QCheckBox" name="chk_end">
         <property name="text">
-         <string>End Time</string>
+         <string>Latest</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QDateEdit" name="de_start">
+        <property name="displayFormat">
+         <string>MMMM d, yyyy</string>
+        </property>
+        <property name="calendarPopup">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QDateTimeEdit" name="dte_end"/>
+       <widget class="QDateEdit" name="de_end">
+        <property name="displayFormat">
+         <string>MMMM d, yyyy</string>
+        </property>
+        <property name="calendarPopup">
+         <bool>true</bool>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -281,8 +298,8 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>98</x>
-     <y>362</y>
+     <x>107</x>
+     <y>395</y>
     </hint>
     <hint type="destinationlabel">
      <x>129</x>
@@ -297,44 +314,12 @@
    <slot>_something_changed()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>72</x>
-     <y>395</y>
+     <x>98</x>
+     <y>428</y>
     </hint>
     <hint type="destinationlabel">
      <x>299</x>
      <y>158</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>dte_start</sender>
-   <signal>dateTimeChanged(QDateTime)</signal>
-   <receiver>SearchWidget</receiver>
-   <slot>_something_changed()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>292</x>
-     <y>367</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>394</x>
-     <y>184</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>dte_end</sender>
-   <signal>dateTimeChanged(QDateTime)</signal>
-   <receiver>SearchWidget</receiver>
-   <slot>_something_changed()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>292</x>
-     <y>400</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>394</x>
-     <y>232</y>
     </hint>
    </hints>
   </connection>
@@ -349,7 +334,7 @@
      <y>94</y>
     </hint>
     <hint type="destinationlabel">
-     <x>344</x>
+     <x>310</x>
      <y>35</y>
     </hint>
    </hints>
@@ -361,8 +346,8 @@
    <slot>Clear()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>166</x>
-     <y>444</y>
+     <x>175</x>
+     <y>477</y>
     </hint>
     <hint type="destinationlabel">
      <x>218</x>
@@ -431,6 +416,38 @@
     <hint type="destinationlabel">
      <x>4</x>
      <y>245</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>de_start</sender>
+   <signal>dateChanged(QDate)</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>257</x>
+     <y>383</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>228</x>
+     <y>343</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>de_end</sender>
+   <signal>dateChanged(QDate)</signal>
+   <receiver>SearchWidget</receiver>
+   <slot>_something_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>220</x>
+     <y>420</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>272</x>
+     <y>345</y>
     </hint>
    </hints>
   </connection>

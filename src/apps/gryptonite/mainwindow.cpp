@@ -1057,12 +1057,22 @@ void MainWindow::_update_trayIcon_menu()
 
 void MainWindow::_update_undo_text()
 {
-    DatabaseModel *m = _get_database_model();
-    ui->action_Undo->setText(m && m->CanUndo() ? QString("&Undo %1").arg(m->UndoText().ConstData()) : "Undo");
-    ui->action_Undo->setEnabled(m && m->CanUndo());
+    if(IsLocked()){
+        ui->action_Undo->setText(tr("&Undo"));
+        ui->action_Redo->setText(tr("&Redo"));
+    }
+    else{
+        DatabaseModel *m = _get_database_model();
+        ui->action_Undo->setEnabled(m && m->CanUndo());
+        ui->action_Undo->setText(m && m->CanUndo() ?
+                                     QString(tr("&Undo %1")).arg(m->UndoText().ConstData()) :
+                                     tr("&Undo"));
 
-    ui->action_Redo->setText(m && m->CanRedo() ? QString("&Redo %1").arg(m->RedoText().ConstData()) : "Redo");
-    ui->action_Redo->setEnabled(m && m->CanRedo());
+        ui->action_Redo->setEnabled(m && m->CanRedo());
+        ui->action_Redo->setText(m && m->CanRedo() ?
+                                     QString(tr("&Redo %1")).arg(m->RedoText().ConstData()) :
+                                     tr("&Redo"));
+    }
 }
 
 FilteredDatabaseModel *MainWindow::_get_proxy_model() const
@@ -1428,6 +1438,7 @@ void MainWindow::_lock_unlock_interface(bool lock)
     }
 
     _update_available_actions();
+    _update_undo_text();
 }
 
 void MainWindow::_update_available_actions()

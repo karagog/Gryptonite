@@ -20,8 +20,6 @@ limitations under the License.*/
 #include <gutil/databaseutils.h>
 #include <gutil/sourcesandsinks.h>
 #include <gutil/qtsourcesandsinks.h>
-#include <gutil/smartpointer.h>
-#include <gutil/file.h>
 #include <queue>
 #include <unordered_map>
 #include <thread>
@@ -435,7 +433,7 @@ public:
 
 
 // Creates a database connection and returns the qt connection string
-static QString __create_connection(const char *file_path, const QString &force_conn_str = QString())
+static QString __create_connection(const QString &file_path, const QString &force_conn_str = QString())
 {
     QString conn_str(force_conn_str.isEmpty() ? Id<10>::NewId().ToString16().ToQString() :
                                                 force_conn_str);
@@ -520,7 +518,7 @@ void PasswordDatabase::ValidateDatabase(const char *filepath)
     QSqlDatabase::removeDatabase(dbstring);
 }
 
-PasswordDatabase::PasswordDatabase(const char *file_path,
+PasswordDatabase::PasswordDatabase(const QString &file_path,
                                    function<bool(const ProcessInfo &)> ask_for_lock_override,
                                    QObject *par)
     :QObject(par),
@@ -533,8 +531,8 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
 
     // Attempt to lock the database
     QFileInfo fi(file_path);
-    m_lockfile = new QLockFile(QString("%1.LOCKFILE")
-                                   .arg(fi.absoluteFilePath()));
+    m_lockfile.reset(new QLockFile(QString("%1.LOCKFILE")
+                                   .arg(fi.absoluteFilePath())));
     m_lockfile->setStaleLockTime(0);
     if(!m_lockfile->tryLock(0)){
         if(QLockFile::LockFailedError == m_lockfile->error()){
@@ -649,7 +647,7 @@ void PasswordDatabase::_open(function<void(byte const *)> init_cryptor)
         throw Exception<>("Database already opened");
 
     G_D;
-    bool file_exists = File::Exists(m_filepath);
+    bool file_exists = QFile::exists(m_filepath);
     QString dbstring = __create_connection(m_filepath);   // After we check if the file exists
     try
     {
@@ -681,9 +679,9 @@ void PasswordDatabase::_open(function<void(byte const *)> init_cryptor)
                 d->cryptor->EncryptData(&ba_out, NULL, &auth_in, nonce);
             }
 
-            Cryptor::DefaultKeyDerivation const &kdf = 
+            Cryptor::DefaultKeyDerivation const &kdf =
                 (const Cryptor::DefaultKeyDerivation &)d->cryptor->GetKeyDerivationFunction();
-            
+
             // Insert a version record
             q.prepare("INSERT INTO Version (Version,Salt,KeyCheck)"
                         " VALUES (?,?,?)");

@@ -49,7 +49,7 @@ public:
         it will close automatically when the object is deleted.
     */
     void Open(const Credentials &);
-    
+
     /** Opens the database using the given cryptor for credentials. With this function, you don't
         require knowledge of the password or keyfile, only the actual key used for encryption/decryption.
     */
@@ -59,7 +59,7 @@ public:
     bool IsOpen() const{ return m_db.IsOpen(); }
 
     /** The path to the database on disk. */
-    const char *FilePath() const;
+    const QString &FilePath() const;
 
     /** Returns true if this is the correct password for the database. */
     bool CheckCredentials(const Credentials &) const;
@@ -198,7 +198,7 @@ signals:
 
 private slots:
 
-    void _handle_database_worker_exception(const std::shared_ptr<GUtil::Exception<>> &);
+    void _handle_database_worker_exception(const std::shared_ptr<std::exception> &);
 
 
 private:

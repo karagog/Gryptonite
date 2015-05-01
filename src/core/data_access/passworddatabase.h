@@ -17,7 +17,6 @@ limitations under the License.*/
 
 #include <grypto_common.h>
 #include <gutil/exception.h>
-#include <gutil/smartpointer.h>
 #include <QString>
 #include <QObject>
 #include <memory>
@@ -41,8 +40,8 @@ class PasswordDatabase :
 {
     Q_OBJECT
     void *d;
-    const GUtil::String m_filepath;
-    GUtil::SmartPointer<QLockFile> m_lockfile;
+    const QString m_filepath;
+    std::unique_ptr<QLockFile> m_lockfile;
 public:
 
     /** Holds information about a process */
@@ -70,7 +69,7 @@ public:
      *      The default always returns false.
      *      The argument contains information about the process that has locked the database.
     */
-    PasswordDatabase(const char *file_path,
+    PasswordDatabase(const QString &file_path,
                      std::function<bool(const ProcessInfo &)> ask_for_lock_override =
                             [](const ProcessInfo &){ return false; },
                      QObject * = NULL);
@@ -90,7 +89,7 @@ public:
      *      the database.
     */
     void Open(const Credentials &creds);
-    
+
     /** This version of Open() uses a cryptor, which does not require you to know the password/keyfile,
         only the actual key used to encrypt/decrypt. Otherwise this function behaves identically to the other Open().
     */
@@ -103,7 +102,7 @@ public:
     void FailIfNotOpen() const{ if(!IsOpen()) throw GUtil::Exception<>("Database not open"); }
 
     /** Returns the filepath. */
-    GUtil::String const &FilePath() const{ return m_filepath; }
+    QString const &FilePath() const{ return m_filepath; }
 
     /** Returns true if the password and keyfile are correct. */
     bool CheckCredentials(const Credentials &) const;

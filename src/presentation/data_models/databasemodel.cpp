@@ -699,7 +699,7 @@ void DatabaseModel::_mov_entries(const EntryId &pid, int r_first, int r_last,
     endMoveRows();
 }
 
-const char *DatabaseModel::FilePath() const
+const QString &DatabaseModel::FilePath() const
 {
     return m_db.FilePath();
 }
@@ -766,7 +766,7 @@ void DatabaseModel::CancelAllBackgroundOperations()
     m_db.CancelFileTasks();
 }
 
-void DatabaseModel::_handle_database_worker_exception(const shared_ptr<Exception<>> &ex)
+void DatabaseModel::_handle_database_worker_exception(const shared_ptr<exception> &ex)
 {
     // We will throw the exception for the background worker, because here we'll catch
     //  it on the main thread.

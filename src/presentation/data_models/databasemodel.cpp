@@ -678,12 +678,14 @@ void DatabaseModel::_mov_entries(const EntryId &pid, int r_first, int r_last,
         r_dest_cpy -= move_cnt;
 
     QList<EntryContainer *> &cl = _get_child_list(parent_index);
-    Vector<EntryContainer *> to_move((EntryContainer *)NULL, move_cnt, true);
+    QVector<EntryContainer *> to_move;
+    to_move.resize(move_cnt);
+
     for(int i = r_last; i >= r_first; --i){
         to_move[i - r_first] = cl[i];
         cl.removeAt(i);
     }
-    for(uint i = 0; i < to_move.Length(); ++i)
+    for(int i = 0; i < to_move.length(); ++i)
         cl_targ.insert(r_dest_cpy + i, to_move[i]);
 
     // Adjust rows at both source and dest
@@ -784,16 +786,18 @@ QMimeData *DatabaseModel::mimeData(const QModelIndexList &indexes) const
 {
     QMimeData *ret = NULL;
 
-    // Gather data for all indexes.
-    Vector<EntryId> l(indexes.length());
+    // Gather data for all indexes
+    QList<EntryId> l;
+    l.reserve(indexes.length());
+
     for(const QModelIndex &ind : indexes){
         if(ind.column() != 0) continue;     // Ignore duplicate rows
         EntryContainer *ec = _get_container_from_index(ind);
         if(!ec) continue;
-        l.PushBack(ec->entry.GetId());
+        l.append(ec->entry.GetId());
     }
 
-    if(l.Length() > 0){
+    if(l.length() > 0){
         // Serialize the move data
         QByteArray data;
         for(auto iter = l.begin(), e = l.end(); iter != e; ++iter){

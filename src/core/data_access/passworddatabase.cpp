@@ -61,7 +61,7 @@ class bg_worker_command;
 struct entry_cache{
     Grypt::EntryId id, parentid;
     Grypt::FileId file_id;
-    uint row;
+    int row;
     int favoriteindex;
     QByteArray crypttext;
     bool exists = true;
@@ -80,7 +80,7 @@ struct entry_cache{
 
 // Cached parent information
 struct parent_cache{
-    Vector<Grypt::EntryId> children;
+    QList<Grypt::EntryId> children;
 };
 
 struct file_cache{
@@ -96,7 +96,7 @@ struct d_t
 {
     // Main thread member variables
     QString dbString;
-    GUtil::SmartPointer<GUtil::CryptoPP::Cryptor> cryptor;
+    unique_ptr<GUtil::CryptoPP::Cryptor> cryptor;
 
     // Background thread
     thread worker;
@@ -209,9 +209,9 @@ static entry_cache __fetch_entry_row_by_id(QSqlQuery &q, const EntryId &id)
     return ret;
 }
 
-static vector<entry_cache> __fetch_entry_rows_by_parentid(QSqlQuery &q, const EntryId &id)
+static QList<entry_cache> __fetch_entry_rows_by_parentid(QSqlQuery &q, const EntryId &id)
 {
-    vector<entry_cache> ret;
+    QList<entry_cache> ret;
     bool isnull = id.IsNull();
     q.prepare(QString("SELECT * FROM Entry WHERE ParentID%1 ORDER BY Row ASC")
               .arg(isnull ? " IS NULL" : "=?"));
@@ -219,17 +219,17 @@ static vector<entry_cache> __fetch_entry_rows_by_parentid(QSqlQuery &q, const En
         q.addBindValue((QByteArray)id);
     DatabaseUtils::ExecuteQuery(q);
     while(q.next())
-        ret.emplace_back(__convert_record_to_entry_cache(q.record()));
+        ret.append(__convert_record_to_entry_cache(q.record()));
     return ret;
 }
 
-static Vector<Entry> __find_entries_by_parent_id(QSqlQuery &q,
+static QList<Entry> __find_entries_by_parent_id(QSqlQuery &q,
                                                 GUtil::CryptoPP::Cryptor &cryptor,
                                                 const EntryId &id)
 {
-    Vector<Entry> ret;
+    QList<Entry> ret;
     foreach(const entry_cache &er, __fetch_entry_rows_by_parentid(q, id))
-        ret.PushBack(__convert_cache_to_entry(er, cryptor));
+        ret.append(__convert_cache_to_entry(er, cryptor));
     return ret;
 }
 
@@ -452,7 +452,7 @@ static QString __create_connection(const QString &file_path, const QString &forc
 static void __init_cryptor(d_t *d, GUtil::CryptoPP::Cryptor *ctor)
 {
     GASSERT(!d->cryptor);
-    d->cryptor = ctor;
+    d->cryptor.reset(ctor);
 }
 
 void PasswordDatabase::_init_cryptor(const Credentials &creds, const byte *s, GUINT32 s_l)
@@ -583,18 +583,18 @@ static void __initialize_cache(d_t *d)
     for(const pair<EntryId, entry_cache> &ec : d->index){
         auto piter = d->parent_index.find(ec.second.parentid);
         if(piter != d->parent_index.end())
-            piter->second.children.PushBack(ec.first);
+            piter->second.children.append(ec.first);
     }
 
     // Sort each parent's child list
     for(auto tmp : d->parent_index){
-        d->parent_index[tmp.first].children.Sort(
-             [&](const EntryId &lhs, const EntryId &rhs) -> int{
-                 int lhs_v = d->index[lhs].row;
-                 int rhs_v = d->index[rhs].row;
-                 return lhs_v < rhs_v ? -1 : 1;
-             }
-        );
+        sort(d->parent_index[tmp.first].children.begin(),
+             d->parent_index[tmp.first].children.end(),
+          [&](const EntryId &lhs, const EntryId &rhs) -> bool{
+            int lhs_v = d->index[lhs].row;
+            int rhs_v = d->index[rhs].row;
+            return lhs_v < rhs_v;
+        });
     }
 
     // Then cache the file ID's
@@ -714,7 +714,7 @@ void PasswordDatabase::_open(function<void(byte const *)> init_cryptor)
     catch(...)
     {
         QSqlDatabase::removeDatabase(dbstring);
-        d->cryptor.Clear();
+        d->cryptor.reset(NULL);
         throw;
     }
 
@@ -1077,14 +1077,14 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     {
         // Add to the appropriate parent
         auto pi = d->parent_index.find(e.GetParentId());
-        Vector<EntryId> &child_ids = pi->second.children;
-        if((uint)e.GetRow() > child_ids.Length())
-            e.SetRow(child_ids.Length());
+        QList<EntryId> &child_ids = pi->second.children;
+        if(e.GetRow() > child_ids.length())
+            e.SetRow(child_ids.length());
 
-        child_ids.Insert(e.GetId(), e.GetRow());
+        child_ids.insert(e.GetRow(), e.GetId());
 
         // Adjust the siblings
-        for(uint i = e.GetRow() + 1; i < child_ids.Length(); ++i){
+        for(int i = e.GetRow() + 1; i < child_ids.length(); ++i){
             auto iter = d->index.find(child_ids[i]);
             if(iter != d->index.end())
                 iter->second.row = i;
@@ -1156,10 +1156,10 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
     auto i = d->index.find(id);
     if(i != d->index.end()){
         auto pi = d->parent_index.find(i->second.parentid);
-        pi->second.children.RemoveAt(i->second.row);
+        pi->second.children.removeAt(i->second.row);
 
         // Update the siblings of the item we just removed
-        for(auto r = i->second.row; r < pi->second.children.Length(); ++r){
+        for(auto r = i->second.row; r < pi->second.children.length(); ++r){
             auto ci = d->index.find(pi->second.children[r]);
             if(ci != d->index.end())
                 ci->second.row = r;
@@ -1196,23 +1196,24 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
 
-    Vector<EntryId> &src = d->parent_index.find(parentId_src)->second.children;
-    Vector<EntryId> &dest = d->parent_index.find(parentId_dest)->second.children;
-    Vector<EntryId> moving_rows(move_cnt);
+    QList<EntryId> &src = d->parent_index.find(parentId_src)->second.children;
+    QList<EntryId> &dest = d->parent_index.find(parentId_dest)->second.children;
+    QList<EntryId> moving_rows;
+    moving_rows.reserve(move_cnt);
 
-    if(row_first >= src.Length() || row_last >= src.Length() ||
-            (same_parents && row_dest > dest.Length()) ||
-            (!same_parents && row_dest > dest.Length()))
+    if((int)row_first >= src.length() || (int)row_last >= src.length() ||
+            (same_parents && (int)row_dest > dest.length()) ||
+            (!same_parents && (int)row_dest > dest.length()))
         throw Exception<>("Invalid move parameters");
 
     // Extract the rows from the source parent
-    for(quint32 i = row_first; i <= row_last; ++i){
-        moving_rows.PushBack(src[row_first]);
-        src.RemoveAt(row_first);
+    for(uint i = row_first; i <= row_last; ++i){
+        moving_rows.append(src[row_first]);
+        src.removeAt(row_first);
     }
 
     // Update the siblings at the source
-    for(quint32 i = row_first; i < src.Length(); ++i)
+    for(int i = row_first; i < src.length(); ++i)
         d->index.find(src[i])->second.row = i;
 
     // Insert the rows at the dest parent
@@ -1220,12 +1221,12 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
         row_dest -= move_cnt;
 
     for(int i = 0; i < move_cnt; ++i){
-        dest.Insert(moving_rows[i], row_dest + i);
+        dest.insert(row_dest + i, moving_rows[i]);
         d->index.find(moving_rows[i])->second.parentid = parentId_dest;
     }
 
     // Update the siblings at the dest
-    for(quint32 i = row_dest; i < dest.Length(); ++i)
+    for(int i = row_dest; i < dest.length(); ++i)
         d->index.find(dest[i])->second.row = i;
     lkr.unlock();
 
@@ -1262,7 +1263,7 @@ int PasswordDatabase::CountEntriesByParentId(const EntryId &id) const
     int ret = 0;
     auto pi = d->parent_index.find(id);
     if(pi != d->parent_index.end())
-        ret = pi->second.children.Length();
+        ret = pi->second.children.length();
     return ret;
 }
 
@@ -2138,7 +2139,7 @@ static void __append_children_to_xml(QDomDocument &xdoc, QDomNode &n,
                                      const EntryId &eid)
 {
     // Find my children and add them to xml
-    Vector<Entry> child_list = __find_entries_by_parent_id(q, cryptor, eid);
+    QList<Entry> child_list = __find_entries_by_parent_id(q, cryptor, eid);
     foreach(const Entry &e, child_list){
         QDomNode new_node = XmlConverter::AppendToXmlNode(e, n, xdoc, true);
         __append_children_to_xml(xdoc, new_node, q, cryptor, e.GetId());

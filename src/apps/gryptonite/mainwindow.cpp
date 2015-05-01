@@ -1070,12 +1070,12 @@ void MainWindow::_update_undo_text()
         DatabaseModel *m = _get_database_model();
         ui->action_Undo->setEnabled(m && m->CanUndo());
         ui->action_Undo->setText(m && m->CanUndo() ?
-                                     QString(tr("&Undo %1")).arg(m->UndoText().ConstData()) :
+                                     QString(tr("&Undo %1")).arg(m->UndoText()) :
                                      tr("&Undo"));
 
         ui->action_Redo->setEnabled(m && m->CanRedo());
         ui->action_Redo->setText(m && m->CanRedo() ?
-                                     QString(tr("&Redo %1")).arg(m->RedoText().ConstData()) :
+                                     QString(tr("&Redo %1")).arg(m->RedoText()) :
                                      tr("&Redo"));
     }
 }
@@ -1188,7 +1188,7 @@ void MainWindow::_undo()
     DatabaseModel *m = _get_database_model();
     if(m->CanUndo())
     {
-        QString txt = m->UndoText().ToQString();
+        QString txt = m->UndoText();
         m->Undo();
         ui->statusbar->showMessage(QString("Undid %1").arg(txt), STATUSBAR_MSG_TIMEOUT);
     }
@@ -1199,7 +1199,7 @@ void MainWindow::_redo()
     DatabaseModel *m = _get_database_model();
     if(m->CanRedo())
     {
-        QString txt = m->RedoText().ToQString();
+        QString txt = m->RedoText();
         m->Redo();
         ui->statusbar->showMessage(QString("Redid %1").arg(txt), STATUSBAR_MSG_TIMEOUT);
     }

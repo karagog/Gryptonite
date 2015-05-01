@@ -113,8 +113,8 @@ public:
 
     inline bool CanUndo() const{ return m_undostack.CanUndo(); }
     inline bool CanRedo() const{ return m_undostack.CanRedo(); }
-    inline GUtil::String UndoText() const{ return m_undostack.GetUndoText(); }
-    inline GUtil::String RedoText() const{ return m_undostack.GetRedoText(); }
+    inline QString UndoText() const{ return m_undostack.GetUndoText().ToQString(); }
+    inline QString RedoText() const{ return m_undostack.GetRedoText().ToQString(); }
     inline void ClearUndoStack(){ m_undostack.Clear(); }
 
 

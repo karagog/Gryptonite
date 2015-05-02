@@ -50,17 +50,18 @@ public:
         SetTrapExceptions(true);
         qRegisterMetaType<std::shared_ptr<std::exception>>("std::shared_ptr<std::exception>");
 
+        connect(&server, SIGNAL(ActivateMainWindow()), this, SLOT(_activate_main_window()));
         connect(&updater, SIGNAL(UpdateInfoReceived(QString,QUrl)),
                 this, SLOT(_update_info_received(QString,QUrl)));
 
         SmartPointer<GroupLogger> gl( new GroupLogger );
         CommandLineArgs args(argc, argv);
-        
+
         // Log global messages to a group logger, which writes to all loggers in the group
         SetGlobalLogger(gl.Data());
         gl->AddLogger(new GUtil::FileLogger(QString("%1/" APPLICATION_LOG)
                                             .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).toUtf8()));
-        
+
         if(NULL == args.FindArgument("-headless", false)){
             gl->AddLogger(new GUtil::Qt::MessageBoxLogger(main_window.Data()));
             settings = new GUtil::Qt::Settings("rng");
@@ -84,7 +85,7 @@ protected:
     virtual void about_to_quit(){
         if(main_window)
             main_window->AboutToQuit();
-        
+
         GUtil::Qt::Application::about_to_quit();
 
         // The messagebox logger is a child of the main window, so we have to clean up the loggers first
@@ -104,13 +105,49 @@ private slots:
             QMessageBox::information(main_window.Data(), tr("Up to date"), tr("Your software is up to date"));
         }
     }
+
+    void _activate_main_window()
+    {
+        if(main_window){
+            main_window->showNormal();
+            main_window->activateWindow();
+        }
+    }
 };
 
 #include "main.moc"
 
+void show_usage();
 
 int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(grypto_ui);
+
+    CommandLineArgs args(argc, argv);
+    if(args.Contains("-v", false)){
+        Console::WriteLine(GRYPTO_VERSION_STRING);
+        return 0;
+    }
+    else if(args.Contains("-h", false)){
+        show_usage();
+        return 0;
+    }
+
     return Application(argc, argv).exec();
+}
+
+
+void show_usage()
+{
+    Console::WriteLine(String::Format(
+                           "%s is a high quality pseudo-random number generator.\n\n"
+                           "By default it has both a Command Line Interface and"
+                           " a Graphical User Interface, but you can switch off"
+                           " the GUI with the \"-headless\" flag.\n\n"
+                           "Other flags:\n"
+                           "  -v            Show the version\n"
+                           "  -h            Show this help text\n"
+                           "  -headless     Start program without GUI",
+
+                           GRYPTO_RNG_APP_NAME));
 }

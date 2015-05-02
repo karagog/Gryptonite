@@ -127,7 +127,8 @@ private slots:
     void _add_remove_favorite();
     void _search();
     void _action_lock_unlock_interface();
-    void _cryptographic_transformations();
+    void _grypto_transforms();
+    void _grypto_rng();
 
     void _undo();
     void _redo();
@@ -178,6 +179,7 @@ private:
     QByteArray m_lockedState;
     QByteArray m_savedState;
     QProcess m_grypto_transforms;
+    QProcess m_grypto_rng;
     bool m_grypto_transforms_visible;
     QPointer<QWidget> m_entryView;
 

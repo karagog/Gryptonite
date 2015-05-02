@@ -32,6 +32,9 @@ public:
     explicit Server(QObject *parent = 0);
     ~Server();
 
+signals:
+    void ActivateMainWindow();
+
 private slots:
     void _new_data_ready();
 

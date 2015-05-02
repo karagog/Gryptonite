@@ -29,7 +29,8 @@ enum command_enum{
     poisson_command     = 6,
 
     help_command        = 7,
-    quit_command        = 8,
+    activate_command    = 8,
+    quit_command        = 9,
 
     no_command          = -1,
     ambiguous_command   = -2,
@@ -45,6 +46,7 @@ const char *__command_strings[] = {
     "exponential",
     "poisson",
     "help",
+    "activate",
     "quit"
 };
 
@@ -137,7 +139,7 @@ void Server::_process_command(const QString &text)
         ce = __parse_command(m_commandTrie, cmd.constData(), cmd.length());
         s = text.right(text.length() - cmd.length()).trimmed().toLatin1();
     }
-    
+
     bool command_executed = false;
     switch(ce)
     {
@@ -225,6 +227,9 @@ void Server::_process_command(const QString &text)
         _show_commands();
         m_lastCommandText.clear();
         break;
+    case activate_command:
+        emit ActivateMainWindow();
+        break;
     case quit_command:
         qApp->exit();
         break;
@@ -239,7 +244,7 @@ void Server::_process_command(const QString &text)
         m_lastCommandText.clear();
         break;
     }
-    
+
     if(command_executed)
         m_lastCommandText = text;
 }

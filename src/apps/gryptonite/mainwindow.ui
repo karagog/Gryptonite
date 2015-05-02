@@ -157,6 +157,7 @@
     <property name="title">
      <string>&amp;Tools</string>
     </property>
+    <addaction name="action_grypto_rng"/>
     <addaction name="action_grypto_transforms"/>
    </widget>
    <widget class="QMenu" name="menu_Help">
@@ -467,6 +468,11 @@
   <action name="action_XML_import">
    <property name="text">
     <string>&amp;XML</string>
+   </property>
+  </action>
+  <action name="action_grypto_rng">
+   <property name="text">
+    <string>Grypto-&amp;RNG</string>
    </property>
   </action>
  </widget>

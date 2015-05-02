@@ -192,7 +192,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget
     connect(ui->action_Redo, SIGNAL(triggered()), this, SLOT(_redo()));
     connect(ui->action_Search, SIGNAL(triggered()), this, SLOT(_search()));
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
-    connect(ui->action_grypto_transforms, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
+    connect(ui->action_grypto_transforms, SIGNAL(triggered()), this, SLOT(_grypto_transforms()));
+    connect(ui->action_grypto_rng, SIGNAL(triggered()), this, SLOT(_grypto_rng()));
     connect(ui->action_Favorites, SIGNAL(triggered()), this, SLOT(_organize_favorites()));
     connect(ui->action_Preferences, SIGNAL(triggered()), this, SLOT(_edit_preferences()));
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
@@ -281,6 +282,10 @@ void MainWindow::AboutToQuit()
     if(m_grypto_transforms_visible)
         m_grypto_transforms.write("quit\n");
 
+    bool rng_active = QProcess::Running == m_grypto_rng.state();
+    if(rng_active)
+        m_grypto_rng.write("quit\n");
+
     // Save the search settings before we close
     m_settings->SetValue(MAINWINDOW_SEARCH_SETTING, ui->searchWidget->GetFilter().ToXml());
 
@@ -301,6 +306,9 @@ void MainWindow::AboutToQuit()
 
     if(m_grypto_transforms_visible)
         m_grypto_transforms.waitForFinished();
+
+    if(rng_active)
+        m_grypto_rng.waitForFinished();
 }
 
 void MainWindow::_hide()
@@ -1586,7 +1594,7 @@ void MainWindow::_reset_lockout_timer()
     //QApplication::beep();
 }
 
-void MainWindow::_cryptographic_transformations()
+void MainWindow::_grypto_transforms()
 {
     if(QProcess::Running == m_grypto_transforms.state()){
         m_grypto_transforms.write("activate\n");
@@ -1601,6 +1609,25 @@ void MainWindow::_cryptographic_transformations()
                                   QString(tr("Unable to start %1: %2")
                                           .arg(path)
                                           .arg(m_grypto_transforms.errorString())));
+        }
+    }
+}
+
+void MainWindow::_grypto_rng()
+{
+    if(QProcess::Running == m_grypto_rng.state()){
+        m_grypto_rng.write("activate\n");
+    }
+    else{
+        QString path = QString("\"%1/%2\"")
+                .arg(QApplication::applicationDirPath())
+                .arg("grypto_rng");
+        m_grypto_rng.start(path);
+        if(!m_grypto_rng.waitForStarted()){
+            QMessageBox::critical(this, tr("Error"),
+                                  QString(tr("Unable to start %1: %2")
+                                          .arg(path)
+                                          .arg(m_grypto_rng.errorString())));
         }
     }
 }

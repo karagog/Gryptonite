@@ -2312,28 +2312,26 @@ void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
     GASSERT(db.isValid());
     QSqlQuery q(db);
 
-    db.transaction();
-    try{
-        GPSFile_Import gps_import(ps_filepath.toUtf8(), creds, true);
-        if(!gps_import.NextPayload())
-            throw Exception<>("GPS file is empty");
+    GPSFile_Import gps_import(ps_filepath.toUtf8(), creds, true);
+    if(!gps_import.NextPayload())
+        throw Exception<>("GPS file is empty");
 
-        // Get the main payload, which has all the entries
-        QByteArray ba;
-        ba.resize(gps_import.CurrentPayloadSize());
-        gps_import.GetCurrentPayload((byte *)ba.data());
+    // Get the main payload, which has all the entries
+    QByteArray ba;
+    ba.resize(gps_import.CurrentPayloadSize());
+    gps_import.GetCurrentPayload((byte *)ba.data());
 
-        // Decompress the xml data
-        ba = qUncompress(ba);
+    // Decompress the xml data
+    ba = qUncompress(ba);
 
-        QDomDocument xdoc;
-        xdoc.setContent(ba);
-    }
-    catch(...){
-        db.rollback();
-        throw;
-    }
-    __commit_transaction(db);
+    QDomDocument xdoc;
+    xdoc.setContent(ba);
+
+    // Add a root node, under which to put the imported data
+    Entry tmp_root;
+    tmp_root.SetName(tr("Newly imported entries"));
+    tmp_root.SetDescription(QString(tr("Imported from GPS file: %1")).arg(ps_filepath));
+    AddEntry(tmp_root);
 }
 
 static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
@@ -2727,9 +2725,7 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
 
     // Add a root node, under which to put the imported data
     Entry tmp_root;
-    tmp_root.SetName(QString(tr("Imported on %1 at %2"))
-                     .arg(QDateTime::currentDateTime().toString("MMMM d, yyyy"))
-                     .arg(QDateTime::currentDateTime().toString("h:mm")));
+    tmp_root.SetName(tr("Newly imported entries"));
     tmp_root.SetDescription(QString(tr("Imported from XML document: %1")).arg(file_name));
     AddEntry(tmp_root);
 

@@ -740,14 +740,9 @@ void DatabaseModel::ExportToPortableSafe(const QString &export_filename,
 void DatabaseModel::ImportFromPortableSafe(const QString &import_filename,
                                            const Credentials &creds)
 {
-    beginResetModel();
+    ClearUndoStack();
     m_db.ImportFromPortableSafe(import_filename, creds);
-    __cleanup_entry_list(m_root);
-    m_index.clear();
-    endResetModel();
-
-    fetchMore();
-    FetchAllEntries();
+    connect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_database_import_finished()));
 }
 
 void DatabaseModel::ExportToXml(const QString &export_filename)
@@ -838,30 +833,42 @@ QMimeData *DatabaseModel::mimeData(const QModelIndexList &indexes) const
     return ret;
 }
 
-bool DatabaseModel::dropMimeData(const QMimeData *data,
+bool DatabaseModel::dropMimeData(const QMimeData *mimedata,
                                  Qt::DropAction action,
                                  int row, int,
                                  const QModelIndex &parent)
 {
-    if(action != Qt::MoveAction)
+    if(action != Qt::MoveAction && action != Qt::CopyAction)
         return false;
 
-    QByteArray sd = data->data(MIMETYPE_MOVE_ENTRY);
-    if(!sd.isEmpty()){
-        QList<QByteArray> entries = sd.split(':');
+    QByteArray sd = mimedata->data(MIMETYPE_MOVE_ENTRY);
+    if(sd.isEmpty())
+        return false;
 
-        if(entries.length() > 1)
-            throw NotImplementedException<>("Moving more than one entry not implemented");
-        else if(entries.isEmpty())
-            return false;
+    QList<QByteArray> entries = sd.split(':');
 
-        QModelIndex eind = FindIndexById(QByteArray::fromBase64(entries[0]));
-        if(!eind.isValid())
-            throw Exception<>("Source Entry Id not found in model");
+    if(entries.length() > 1)
+        throw NotImplementedException<>("Moving or copying more than one entry not implemented");
+    else if(entries.isEmpty())
+        return false;
 
+    QModelIndex eind = FindIndexById(QByteArray::fromBase64(entries[0]));
+    if(!eind.isValid())
+        throw Exception<>("Source Entry Id not found in model");
+
+    if(action == Qt::MoveAction)
+    {
         MoveEntries(eind.parent(), eind.row(), eind.row(), parent, row);
     }
-    return false;
+    else if(action == Qt::CopyAction)
+    {
+        Entry cpy = *GetEntryFromIndex(eind);
+        cpy.SetParentId(data(parent, EntryIdRole).value<EntryId>());
+        cpy.SetRow(row);
+        cpy.SetModifyDate(QDateTime::currentDateTime());
+        AddEntry(cpy);
+    }
+    return true;
 }
 
 void DatabaseModel::MoveEntries(const QModelIndex &src_parent, int src_first, int src_last,
@@ -894,7 +901,7 @@ void DatabaseModel::_emit_row_changed(const QModelIndex &ind)
 
 Qt::DropActions DatabaseModel::supportedDropActions() const
 {
-    return Qt::MoveAction;
+    return Qt::MoveAction | Qt::CopyAction;
 }
 
 void DatabaseModel::WaitForBackgroundThreadIdle()

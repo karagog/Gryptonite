@@ -206,6 +206,7 @@ private:
     Grypt::Entry const *_get_currently_selected_entry() const;
     void _edit_entry(const Grypt::Entry &);
     bool _handle_key_pressed(QKeyEvent *);
+    void _prepare_ui_for_import();
 
 };
 

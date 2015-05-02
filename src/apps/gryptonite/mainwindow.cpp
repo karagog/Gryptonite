@@ -904,6 +904,7 @@ void MainWindow::_import_from_portable_safe()
             return;
     }
 
+    _prepare_ui_for_import();
     _get_database_model()->ImportFromPortableSafe(fn, dlg.GetCredentials());
 }
 
@@ -935,6 +936,17 @@ void MainWindow::_export_to_xml()
     _get_database_model()->ExportToXml(fn);
 }
 
+void MainWindow::_prepare_ui_for_import()
+{
+    DropToReadOnly();
+    ui->actionNewOpenDB->setEnabled(false);
+    ui->action_Save_As->setEnabled(false);
+    ui->action_Close->setEnabled(false);
+    ui->menu_Export->setEnabled(false);
+    ui->menu_Recent_Files->setEnabled(false);
+    ui->actionLockUnlock->setEnabled(false);
+}
+
 void MainWindow::_import_from_xml()
 {
     if(!IsFileOpen())
@@ -954,13 +966,7 @@ void MainWindow::_import_from_xml()
 //                   " connection to the database. Thank you for your patience."));
 //    mb->show();
 
-    DropToReadOnly();
-    ui->actionNewOpenDB->setEnabled(false);
-    ui->action_Save_As->setEnabled(false);
-    ui->action_Close->setEnabled(false);
-    ui->menu_Export->setEnabled(false);
-    ui->menu_Recent_Files->setEnabled(false);
-    ui->actionLockUnlock->setEnabled(false);
+    _prepare_ui_for_import();
     _get_database_model()->ImportFromXml(fn);
 }
 

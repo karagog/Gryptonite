@@ -784,6 +784,7 @@ void MainWindow::_close_database(bool delete_model)
     {
         m_lockoutTimer.StopLockoutTimer();
         ui->statusbar->showMessage(tr("Closing database..."));
+        m_trayIcon.setToolTip(GRYPTO_APP_NAME " (Closing file... Sometimes this can take a while...)");
 
         // Disconnect the database model
         QAbstractItemModel *old_model = _get_proxy_model()->sourceModel();
@@ -1054,7 +1055,10 @@ void MainWindow::_update_ui_file_opened(bool b)
         m_fileLabel->clear();
     }
     _update_undo_text();
+
     _update_trayIcon_menu();
+    m_trayIcon.setToolTip(tr(GRYPTO_APP_NAME " Encrypted Secrets"));
+
     _treeview_currentindex_changed(ui->treeView->currentIndex());
 }
 
@@ -1501,7 +1505,6 @@ void MainWindow::_lock_unlock_interface(bool lock)
         ui->stackedWidget->setCurrentIndex(1);
         ui->actionLockUnlock->setText(tr("&Lock Application"));
         ui->actionLockUnlock->setData(true);
-        m_trayIcon.setToolTip(tr(GRYPTO_APP_NAME " Encrypted Secrets"));
         m_isLocked = false;
 
         // We have to start the lockout timer again, because it was stopped when we locked

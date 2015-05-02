@@ -11,6 +11,7 @@ INSTALL_DIR_BIN="$INSTALL_BASE_DIR/bin"
 #  the proper LD_LIBRARY_PATH and calls the executable in the lib directory
 START_LOC="$INSTALL_DIR_BIN/gryptonite"
 START_LOC_TRANSFORMS="$INSTALL_DIR_BIN/grypto_transforms"
+START_LOC_RNG="$INSTALL_DIR_BIN/grypto_rng"
 
 LAUNCHER=Gryptonite.desktop
 DESKTOP_LAUNCHER=~/Desktop/$LAUNCHER
@@ -33,6 +34,7 @@ echo "#! /bin/bash"                 > uninstall.bash
 echo "if [ -f $DESKTOP_LAUNCHER ]; then rm $DESKTOP_LAUNCHER; fi;" >> uninstall.bash
 echo "rm $START_LOC"                >> uninstall.bash
 echo "rm $START_LOC_TRANSFORMS"     >> uninstall.bash
+echo "rm $START_LOC_RNG"            >> uninstall.bash
 echo "rm -rf $INSTALL_DIR_LIBS"     >> uninstall.bash
 chmod +x uninstall.bash
 
@@ -40,12 +42,15 @@ chmod +x uninstall.bash
 echo "#! /bin/bash"                                 > $START_LOC
 echo "export LD_LIBRARY_PATH=$INSTALL_DIR_LIBS"      >> $START_LOC
 cp $START_LOC $START_LOC_TRANSFORMS
+cp $START_LOC $START_LOC_RNG
 
 echo "$INSTALL_DIR_LIBS/gryptonite"                 >> $START_LOC
 echo "$INSTALL_DIR_LIBS/grypto_transforms"          >> $START_LOC_TRANSFORMS
+echo "$INSTALL_DIR_LIBS/grypto_rng"                 >> $START_LOC_RNG
 
 chmod +x $START_LOC
 chmod +x $START_LOC_TRANSFORMS
+chmod +x $START_LOC_RNG
 
 if [ -d "$INSTALL_DIR_LIBS" ]; then
     cp -r * "$INSTALL_DIR_LIBS"

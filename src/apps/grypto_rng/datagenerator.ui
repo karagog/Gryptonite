@@ -13,9 +13,19 @@
   <property name="windowTitle">
    <string>Data Generator</string>
   </property>
+  <property name="toolTip">
+   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Generate statistical distributions to a file&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+  </property>
+  <property name="whatsThis">
+   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;This window generates statistical data according to the parameters you choose and saves it to a file which can be easily loaded into other programs like Matlab. It is capable of doing most major distribution types.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Uniform&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Any value in the range is equally likely. Can be either continuous or discrete. This simulates events like rolling a die, flipping a coin or spinning a roulette wheel.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Normal (Gaussian)&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Produces a bell curve about the mean with a given standard deviation. Can be either continuous or discrete.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Geometric&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Simulates the number of trials until a success, where each trial is successful with a probability of 1/Expected Value. For example you could simulate the number of coin tosses until you get tails, by using a geometric distribution with expected value of 2.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Exponential&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Simulates the occurence of random events over a line, such as time. Lambda controls how frequently the event occurs on the line. For example, if you want to simulate the occurrence of a volcano erupting and you know it erupts every 1 million years, you could use an exponential distribution with lambda of 1/(1 million) and the results would tell you the number of years between each simulated eruption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Poisson&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Generates a poisson distribution with the given expected value. The poisson distribution is related to the exponential distribution, but it does something slightly different. Suppose you live by the highway and you want to count the number of cars that drive by at a certain time of day. If you know the average density of the cars you can compute the expected value (i.e. how many cars you expect to drive past in 1 minute) and use a poisson distribution to simulate each minute where you count the cars. Whereas you would use the exponential distribution to simulate the time/distance between cars, you would use the poisson distribution to simulate counting the cars within an interval.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+  </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="2" column="1">
-    <widget class="QLineEdit" name="le_outFile"/>
+    <widget class="QLineEdit" name="le_outFile">
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The output file will contain all data points, each on its own line. It can be loaded and analyzed easily with a tool like Matlab via the &amp;quot;load&amp;quot; and &amp;quot;hist&amp;quot; commands:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Matlab console:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;&amp;gt;&amp;gt; data = load('data_generator_output.txt');&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;&amp;gt;&amp;gt; hist(data, 1000);&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
    </item>
    <item row="1" column="0" colspan="3">
     <widget class="QGroupBox" name="groupBox">
@@ -72,7 +82,7 @@
              </sizepolicy>
             </property>
             <property name="currentText">
-             <string>Megabytes</string>
+             <string>Bytes</string>
             </property>
             <item>
              <property name="text">
@@ -104,6 +114,9 @@
           </item>
           <item row="0" column="1">
            <widget class="QComboBox" name="cmb_distribution">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The distribution type controls which distribution will be generated&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <item>
              <property name="text">
               <string>Uniform</string>
@@ -140,6 +153,9 @@
           </item>
           <item row="1" column="1">
            <widget class="QComboBox" name="cmb_distributionType">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Controls whether the distribution is continuous or discrete&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <item>
              <property name="text">
               <string>Continuous</string>
@@ -291,6 +307,9 @@
               </item>
               <item row="0" column="1">
                <widget class="QDoubleSpinBox" name="spn_geometric_e">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The expected value of the geometric distribution&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="decimals">
                  <number>4</number>
                 </property>
@@ -315,6 +334,9 @@
               </item>
               <item row="0" column="1">
                <widget class="QDoubleSpinBox" name="spn_exponential_lambda">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Lambda controls the expected value of the exponential distribution like 1/L&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="decimals">
                  <number>4</number>
                 </property>
@@ -339,6 +361,9 @@
               </item>
               <item row="0" column="1">
                <widget class="QDoubleSpinBox" name="spn_poisson_e">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The expected value of the poisson distribution. Note that this becomes less efficient with higher expected values.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="decimals">
                  <number>4</number>
                 </property>

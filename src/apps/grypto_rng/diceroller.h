@@ -41,6 +41,8 @@ private:
     Ui::DiceRoller *ui;
     RollModel *m_model;
     bool m_suppress;
+
+    void _update_new_data();
 };
 
 #endif // DICEROLLER_H

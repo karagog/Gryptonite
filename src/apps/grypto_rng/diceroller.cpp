@@ -34,11 +34,23 @@ DiceRoller::DiceRoller(QWidget *parent)
     QSortFilterProxyModel *fpm = new QSortFilterProxyModel(this);
     fpm->setSourceModel(m_model);
     ui->tbl_results->setModel(fpm);
+
+    _update_new_data();
 }
 
 DiceRoller::~DiceRoller()
 {
     delete ui;
+}
+
+void DiceRoller::_update_new_data()
+{
+    ui->lbl_total->setText(QString("%1").arg(m_model->Total()));
+    ui->lbl_range->setText(QString("[%1, %2]")
+                           .arg(m_model->Min() == GINT32_MAX ? 0 : m_model->Min())
+                           .arg(m_model->Max() == GINT32_MIN ? 0 : m_model->Max()));
+    ui->lbl_mean->setText(QString("%1").arg(m_model->Mean()));
+    ui->lbl_median->setText(QString("%1").arg(m_model->Median()));
 }
 
 void DiceRoller::_roll()
@@ -49,11 +61,8 @@ void DiceRoller::_roll()
         throw Exception<>("Invalid range: The minimum must be less than the maximum");
 
     m_model->Roll(min, max, ui->spn_number->value());
-    ui->lbl_lastRoll->setText(QDateTime::currentDateTime().toString("h:mm:ss.zzz"));
-    ui->lbl_total->setText(QString("%1").arg(m_model->Total()));
-    ui->lbl_range->setText(QString("[%1, %2]").arg(m_model->Min()).arg(m_model->Max()));
-    ui->lbl_mean->setText(QString("%1").arg(m_model->Mean()));
-    ui->lbl_median->setText(QString("%1").arg(m_model->Median()));
+    ui->lbl_lastRoll->setText(QDateTime::currentDateTime().toString("h:mm:ss"));
+    _update_new_data();
     
     QString mode_string;
     if(m_model->Mode().size()){

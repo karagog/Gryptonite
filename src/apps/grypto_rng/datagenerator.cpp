@@ -270,9 +270,9 @@ void DataGenerator::_gen_dist_normal(GUINT32 N, double mean, double sigma, bool 
             }
             else{
                 GUtil::Pair<GFLOAT64> X = m_rng.N2(mean, sigma);
-                len = sprintf(buf, "%f\n", X.First);
+                len = sprintf(buf, "%.100f\n", X.First);
                 if(i != N-1)
-                    len += sprintf(buf + len, "%f\n", X.Second);
+                    len += sprintf(buf + len, "%.100f\n", X.Second);
             }
             outfile.Write(buf, len);
         }

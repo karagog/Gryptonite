@@ -215,7 +215,7 @@
                  <string>The uniform range minimum</string>
                 </property>
                 <property name="decimals">
-                 <number>4</number>
+                 <number>9</number>
                 </property>
                 <property name="minimum">
                  <double>-1000000.000000000000000</double>
@@ -231,7 +231,7 @@
                  <string>The uniform range maximum</string>
                 </property>
                 <property name="decimals">
-                 <number>4</number>
+                 <number>9</number>
                 </property>
                 <property name="minimum">
                  <double>-1000000.000000000000000</double>
@@ -268,10 +268,10 @@
                  <string>The normal distribution standard deviation</string>
                 </property>
                 <property name="decimals">
-                 <number>4</number>
+                 <number>21</number>
                 </property>
                 <property name="maximum">
-                 <double>1000000.000000000000000</double>
+                 <double>1000000000000000.000000000000000</double>
                 </property>
                 <property name="value">
                  <double>10.000000000000000</double>
@@ -284,13 +284,13 @@
                  <string>The normal distribution mean</string>
                 </property>
                 <property name="decimals">
-                 <number>4</number>
+                 <number>21</number>
                 </property>
                 <property name="minimum">
-                 <double>-1000000.000000000000000</double>
+                 <double>-1000000000000000.000000000000000</double>
                 </property>
                 <property name="maximum">
-                 <double>1000000.000000000000000</double>
+                 <double>1000000000000000.000000000000000</double>
                 </property>
                </widget>
               </item>
@@ -311,7 +311,10 @@
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The expected value of the geometric distribution&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="decimals">
-                 <number>4</number>
+                 <number>6</number>
+                </property>
+                <property name="minimum">
+                 <double>1.000000000000000</double>
                 </property>
                 <property name="maximum">
                  <double>1000000.000000000000000</double>
@@ -365,7 +368,7 @@
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The expected value of the poisson distribution. Note that this becomes less efficient with higher expected values.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="decimals">
-                 <number>4</number>
+                 <number>9</number>
                 </property>
                 <property name="maximum">
                  <double>1000000.000000000000000</double>

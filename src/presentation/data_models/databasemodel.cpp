@@ -909,10 +909,5 @@ void DatabaseModel::WaitForBackgroundThreadIdle()
     m_db.WaitForThreadIdle();
 }
 
-void DatabaseModel::DeleteOrphans()
-{
-    m_db.DeleteOrphans();
-}
-
 
 END_NAMESPACE_GRYPTO;

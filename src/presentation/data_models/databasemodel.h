@@ -150,9 +150,6 @@ public:
     */
     void ImportFromDatabase(const DatabaseModel &);
 
-    /** Cleans up orphan entries and files. */
-    void DeleteOrphans();
-
     /** Loads all entries from the database. */
     void FetchAllEntries();
 

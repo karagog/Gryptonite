@@ -770,7 +770,7 @@ PasswordDatabase::~PasswordDatabase()
     G_D;
     if(IsOpen()){
         // Let's clean up any orphaned entries/files
-        DeleteOrphans();
+        _delete_orphans();
 
         d->thread_lock.lock();
         d->closing = true;
@@ -1418,7 +1418,7 @@ QList<EntryId> PasswordDatabase::FindFavoriteIds() const
     return d->favorite_index;
 }
 
-void PasswordDatabase::DeleteOrphans()
+void PasswordDatabase::_delete_orphans()
 {
     FailIfNotOpen();
     G_D;
@@ -1795,83 +1795,87 @@ void PasswordDatabase::_bw_remove_favorite(const QString &conn_str, const EntryI
 
 void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
 {
-    G_D;
+    // Note: This function does not grab locks or update the index.
+    //  It was designed to be called only upon class destruction, so it
+    //  is optimized to not care about the index after cleanup.
+
     QSqlDatabase db(QSqlDatabase::database(conn_str));
-    QSqlQuery q("SELECT ID,ParentID,FileID FROM Entry", db);
+    db.transaction();
+    try
+    {
+        struct entry_row{
+            EntryId id;
+            FileId file_id;
+        };
 
-    Vector<tuple<EntryId, EntryId, FileId>> ids;
-    QSet<EntryId> entry_ids;
-    while(q.next()){
-        EntryId cur_id = q.value("ID").toByteArray();
+        QMap<EntryId, entry_row> entries;
+        QMap<EntryId, QSet<EntryId>> parent_index;
+        QSet<FileId> all_files;
+        QSet<EntryId> claimed_entries;
+        QSet<FileId> claimed_files;
 
-        if(!entry_ids.contains(cur_id))
-            entry_ids.insert(cur_id);
+        // Populate an in-memory index of the hierarchy
+        QSqlQuery q("SELECT ID,ParentID,FileID FROM Entry", db);
+        while(q.next()){
+            EntryId eid = q.value("ID").toByteArray();
+            EntryId pid = q.value("ParentID").toByteArray();
+            FileId  fid = q.value("FileID").toByteArray();
+            entries.insert(eid, {eid, fid});
+            parent_index[pid].insert(eid);
+            if(!fid.IsNull())
+                all_files.insert(fid);
+        }
 
-        ids.PushBack(tuple<EntryId, EntryId, FileId>(
-                          cur_id,
-                          q.value("ParentID").toByteArray(),
-                          q.value("FileID").toByteArray()));
-    }
+        // Starting at the root, populate a set of entries that can be reached,
+        //  and remember any files that were referenced along the way
+        function<void(const EntryId &)> add_children_to_claimed_entries;
+        add_children_to_claimed_entries = [&](const EntryId &eid){
+            if(parent_index.contains(eid)){
+                claimed_entries.unite(parent_index[eid]);
+                for(const EntryId &cid : parent_index[eid]){
+                    if(!entries[cid].file_id.IsNull())
+                        claimed_files.insert(entries[cid].file_id);
+                    add_children_to_claimed_entries(cid);
+                }
+            }
+        };
+        add_children_to_claimed_entries(EntryId::Null());
 
-    // Delete all entries whose parent ids are missing
-    vector<EntryId> delete_list_e;
-    bool recheck = true;
-    while(recheck){
-        recheck = false;
-        for(int i = ids.Length() - 1; i >= 0; --i){
-            const tuple<EntryId, EntryId, FileId> &t = ids[i];
-            if(!get<1>(t).IsNull() && entry_ids.find(get<1>(t)) == entry_ids.end()){
-                delete_list_e.push_back(get<0>(t));
-                _bw_delete_entry(conn_str, get<0>(t));
-
-                // Every time we remove an id, we need to recheck the list
-                //  because that id could have been someone's parent
-                recheck = true;
-                entry_ids.remove(get<0>(t));
-                ids.RemoveAt(i);
+        // Now delete any entries that are orphaned:
+        int delete_cnt = 0;
+        for(const EntryId &eid : entries.keys()){
+            if(!claimed_entries.contains(eid)){
+                q.prepare("DELETE FROM Entry WHERE ID=?");
+                q.addBindValue((QByteArray)eid);
+                DatabaseUtils::ExecuteQuery(q);
+                delete_cnt++;
             }
         }
+
+        if(0 < delete_cnt){
+            qDebug("Removed %d orphaned entries...", delete_cnt);
+        }
+
+        delete_cnt = 0;
+        for(const FileId &fid : all_files){
+            if(!claimed_files.contains(fid)){
+                q.prepare("DELETE FROM File WHERE ID=?");
+                q.addBindValue((QByteArray)fid);
+                DatabaseUtils::ExecuteQuery(q);
+                delete_cnt++;
+            }
+        }
+
+        if(0 < delete_cnt){
+            qDebug("Removed %d orphaned files...", delete_cnt);
+        }
     }
-
-    if(0 < delete_list_e.size()){
-        qDebug("Removed %d orphaned entries...", (int)delete_list_e.size());
-    }
-
-    // Update the index before removing the files (because it affects our calculation)
-    d->index_lock.lock();
-    for(const EntryId &eid : delete_list_e){
-        d->index.erase(eid);
-        d->parent_index.erase(eid);
-    }
-    d->index_lock.unlock();
-    d->wc_index.notify_all();
-
-    // Get the set of referenced file ids
-    QSet<FileId> all_file_ids;
-    for(const tuple<EntryId, EntryId, FileId> &t : ids){
-        if(entry_ids.find(get<0>(t)) != entry_ids.end())
-            all_file_ids.insert(get<2>(t));
-    }
-
-
-    // Now delete all the orphan files
-    q.prepare("SELECT ID FROM File");
-    DatabaseUtils::ExecuteQuery(q);
+    catch(...)
     {
-        vector<FileId> delete_list_f;
-        while(q.next()){
-            FileId cur = q.value("ID").toByteArray();
-            if(!all_file_ids.contains(cur))
-                delete_list_f.push_back(cur);
-        }
-
-        for(FileId const &fid : delete_list_f)
-            _bw_del_file(conn_str, fid);
-
-        if(0 < delete_list_f.size()){
-            qDebug("Removed %d orphaned files...", (int)delete_list_f.size());
-        }
+        db.rollback();
+        throw;
     }
+    db.commit();
 }
 
 

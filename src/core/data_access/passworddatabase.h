@@ -280,6 +280,10 @@ private:
     // Utility functions
     void _convert_to_readonly_exception_and_notify(const GUtil::Exception<> &);
 
+    // These util functions can only be called if you possess the index lock
+    // Returns true if the second id is an ancestor of the first
+    bool _has_ancestor(const EntryId &child, const EntryId &ancestor);
+
     // Background worker methods
     void _bw_add_entry(const QString &, const Entry &);
     void _bw_update_entry(const QString &, const Entry &);

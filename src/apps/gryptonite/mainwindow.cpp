@@ -607,6 +607,12 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
     connect(&m_progressBar, SIGNAL(Clicked()), dbm, SLOT(CancelAllBackgroundOperations()));
     connect(dbm, SIGNAL(NotifyProgressUpdated(int, bool, QString)),
             this, SLOT(_progress_updated(int, bool, QString)));
+    connect(dbm, SIGNAL(rowsInserted(QModelIndex,int,int)),
+            ui->treeView, SLOT(ResizeColumnsToContents()));
+    connect(dbm, SIGNAL(rowsRemoved(QModelIndex,int,int)),
+            ui->treeView, SLOT(ResizeColumnsToContents()));
+    connect(dbm, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+            ui->treeView, SLOT(ResizeColumnsToContents()));
 }
 
 void MainWindow::_new_open_database(const QString &path)
@@ -910,7 +916,6 @@ void MainWindow::_new_entry()
         }
         model->AddEntry(dlg.GetEntry());
         _select_entry(dlg.GetEntry().GetId());
-        ui->treeView->ResizeColumnsToContents();
     }
 }
 
@@ -1112,7 +1117,6 @@ void MainWindow::_delete_entry()
                     QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel))
         {
             model->RemoveEntry(*e);
-            ui->treeView->ResizeColumnsToContents();
         }
     }
 }
@@ -1139,7 +1143,6 @@ void MainWindow::_edit_entry(const Entry &e)
     {
         _get_database_model()->UpdateEntry(dlg.GetEntry());
         _nav_index_changed(m_navStack.index());
-        ui->treeView->ResizeColumnsToContents();
     }
 }
 

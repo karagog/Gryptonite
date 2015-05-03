@@ -603,7 +603,9 @@ static void __initialize_cache(d_t *d)
     stable_sort(d->favorite_index.begin(),
                 d->favorite_index.end(),
                 [&](const EntryId &lhs, const EntryId &rhs) -> bool{
-                    return d->index[lhs].favoriteindex < d->index[rhs].favoriteindex;
+                    int lhs_fav = d->index[lhs].favoriteindex;
+                    int rhs_fav = d->index[rhs].favoriteindex;
+                    return lhs_fav != 0 && (rhs_fav == 0 || lhs_fav < rhs_fav);
                 }
     );
 }
@@ -807,9 +809,6 @@ void PasswordDatabase::_bw_add_entry(const QString &conn_str, const Entry &e)
         success = true;
     }
 
-    if(e.IsFavorite())
-        emit NotifyFavoritesUpdated();
-
     // Add any new files to the database
     __add_new_files(this, e);
 }
@@ -859,7 +858,6 @@ void PasswordDatabase::_bw_delete_entry(const QString &conn_str,
     QSqlDatabase db = QSqlDatabase::database(conn_str);
     QSqlQuery q(db);
     QString task_string = tr("Deleting entry");
-    int old_favorite_index;
     EntryId pid;
     uint row;
     uint child_count;
@@ -878,7 +876,7 @@ void PasswordDatabase::_bw_delete_entry(const QString &conn_str,
             });
         });
 
-        q.prepare("SELECT ParentId,Row,Favorite FROM Entry WHERE Id=?");
+        q.prepare("SELECT ParentId,Row FROM Entry WHERE Id=?");
         q.addBindValue((QByteArray)id);
         DatabaseUtils::ExecuteQuery(q);
         if(!q.next())
@@ -886,9 +884,8 @@ void PasswordDatabase::_bw_delete_entry(const QString &conn_str,
 
         emit NotifyProgressUpdated(10, false, task_string);
 
-        pid = q.record().value(0).toByteArray();
-        row = q.record().value(1).toInt();
-        old_favorite_index = q.record().value(2).toInt();
+        pid = q.record().value("ParentId").toByteArray();
+        row = q.record().value("Row").toInt();
 
         // We have to manually count the children, because at this point the entry
         //  has been deleted from the index
@@ -919,9 +916,6 @@ void PasswordDatabase::_bw_delete_entry(const QString &conn_str,
 
         success = true;
     }
-
-    if(old_favorite_index >= 0)
-        emit NotifyFavoritesUpdated();
 }
 
 void PasswordDatabase::_bw_move_entry(const QString &conn_str,
@@ -1040,6 +1034,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     QByteArray crypttext = __generate_crypttext(*d->cryptor, e);
 
     // Update the index
+    bool favs_updated = false;
     unique_lock<mutex> lkr(d->index_lock);
     {
         // Add to the appropriate parent
@@ -1057,14 +1052,42 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
                 iter->second.row = i;
         }
 
-        if(e.IsFavorite())
-            d->favorite_index.append(e.GetId());
-
         entry_cache ec(e);
         ec.crypttext = crypttext;
         d->index[e.GetId()] = ec;
-        if(d->deleted_entries.contains(e.GetId()))
+        if(d->deleted_entries.contains(e.GetId())){
             d->deleted_entries.remove(e.GetId());
+
+            // Restore any children which happen to be favorites
+            QMap<int, EntryId> favorites;
+            function<void(const EntryId &)> restore_favorites;
+            restore_favorites = [&](const EntryId &eid){
+                // If this ID is a favorite, add it to the index
+                auto i = d->index.find(eid);
+                if(i == d->index.end())
+                    return;
+                else if(0 <= i->second.favoriteindex){
+                    if(0 < i->second.favoriteindex){
+                        GASSERT(i->second.favoriteindex <= d->favorite_index.length());
+                        favorites.insert(i->second.favoriteindex-1, eid);
+                    }
+                    else
+                        d->favorite_index.append(eid);
+                    favs_updated = true;
+                }
+
+                // Recursively check children
+                auto pi = d->parent_index.find(eid);
+                if(pi != d->parent_index.end()){
+                    for(const EntryId &cid : pi->second.children)
+                        restore_favorites(cid);
+                }
+            };
+            restore_favorites(e.GetId());
+
+            for(int k : favorites.keys())
+                d->favorite_index.insert(k, favorites[k]);
+        }
 
         if(d->parent_index.find(e.GetId()) == d->parent_index.end())
             d->parent_index[e.GetId()] = parent_cache();
@@ -1077,6 +1100,13 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 
     // Clear the file path so we don't add the same file twice
     e.SetFilePath(QString::null);
+
+    // New favorites must be unordered when added to the database
+    if(e.IsFavorite())
+        e.SetFavoriteIndex(0);
+
+    if(favs_updated)
+        emit NotifyFavoritesUpdated();
 }
 
 void PasswordDatabase::UpdateEntry(Entry &e)
@@ -1111,6 +1141,19 @@ void PasswordDatabase::UpdateEntry(Entry &e)
         emit NotifyFavoritesUpdated();
 }
 
+bool PasswordDatabase::_has_ancestor(const EntryId &child, const EntryId &ancestor)
+{
+    G_D;
+    if(child == ancestor)
+        return true;
+
+    auto i = d->index.find(child);
+    if(i == d->index.end())
+        return false;
+
+    return _has_ancestor(i->second.parentid, ancestor);
+}
+
 void PasswordDatabase::DeleteEntry(const EntryId &id)
 {
     FailIfNotOpen();
@@ -1119,23 +1162,29 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
         return;
 
     // Update the index
+    bool favs_updated = false;
     unique_lock<mutex> lkr(d->index_lock);
-    auto i = d->index.find(id);
-    if(i != d->index.end()){
-        auto pi = d->parent_index.find(i->second.parentid);
-        pi->second.children.RemoveAt(i->second.row);
+    auto iter = d->index.find(id);
+    if(iter != d->index.end()){
+        auto piter = d->parent_index.find(iter->second.parentid);
+        piter->second.children.RemoveAt(iter->second.row);
 
         // Update the siblings of the item we just removed
-        for(auto r = i->second.row; r < pi->second.children.Length(); ++r){
-            auto ci = d->index.find(pi->second.children[r]);
+        for(auto r = iter->second.row; r < piter->second.children.Length(); ++r){
+            auto ci = d->index.find(piter->second.children[r]);
             if(ci != d->index.end())
                 ci->second.row = r;
         }
 
-        int fi = d->favorite_index.indexOf(id);
-        if(fi != -1)
-            d->favorite_index.removeAt(fi);
-        d->index.erase(i);
+        // Remove this or any children from the favorites list
+        for(int i = d->favorite_index.length() - 1; i >= 0; i--){
+            if(_has_ancestor(d->favorite_index[i], iter->first)){
+                d->favorite_index.removeAt(i);
+                favs_updated = true;
+            }
+        }
+
+        d->index.erase(iter);
         d->deleted_entries.insert(id);
 
         // Don't remove from the parent index, because they may un-delete it
@@ -1146,6 +1195,9 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
 
     // Remove it from the database
     __queue_entry_command(d, new delete_entry_command(id));
+
+    if(favs_updated)
+        emit NotifyFavoritesUpdated();
 }
 
 void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_first, quint32 row_last,
@@ -1296,7 +1348,7 @@ void PasswordDatabase::AddFavoriteEntry(const EntryId &id)
     {
         auto iter = d->index.find(id);
         if(iter != d->index.end()){
-            d->favorite_index.prepend(id);
+            d->favorite_index.append(id);
             iter->second.favoriteindex = 0;
         }
     }

@@ -210,7 +210,8 @@ DatabaseModel::DatabaseModel(const char *f,
       m_timeFormat(true)
 {
     connect(&m_db, SIGNAL(NotifyFavoritesUpdated()),
-            this, SIGNAL(NotifyFavoritesUpdated()));
+            this, SIGNAL(NotifyFavoritesUpdated()),
+            Qt::QueuedConnection);
     connect(&m_db, SIGNAL(NotifyExceptionOnBackgroundThread(const std::shared_ptr<GUtil::Exception<>> &)),
             this, SLOT(_handle_database_worker_exception(const std::shared_ptr<GUtil::Exception<>> &)));
     connect(&m_db, SIGNAL(NotifyProgressUpdated(int, bool, QString)),

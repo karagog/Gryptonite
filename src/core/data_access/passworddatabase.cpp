@@ -2335,7 +2335,7 @@ void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
 }
 
 static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
-                                        QList<FileId> &file_references,
+                                        QSet<FileId> &file_references,
                                         const QMap<EntryId, int> &entry_mapping,
                                         const QMap<FileId, int> &file_mapping)
 {
@@ -2350,9 +2350,12 @@ static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
         sw.writeAttribute("f_id", QVariant(file_mapping[e.GetFileId()]).toString());
         sw.writeAttribute("f_name", e.GetFileName());
         if(file_mapping.contains(e.GetFileId()))
-            file_references.append(e.GetFileId());
+            file_references.insert(e.GetFileId());
     }
     sw.writeAttribute("id", QVariant(entry_mapping[e.GetId()]).toString());
+    if(!e.GetParentId().IsNull())
+        sw.writeAttribute("pid", QVariant(entry_mapping[e.GetParentId()]).toString());
+    sw.writeAttribute("row", QVariant(e.GetRow()).toString());
 
     if(0 < e.Values().length()){
         // Write the secret data key-value pairs
@@ -2371,29 +2374,6 @@ static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
     sw.writeEndElement();
 }
 
-static void __write_hierarchy_to_xml_writer(QXmlStreamWriter &sw,
-                                            unordered_map<EntryId, parent_cache> &parent_index,
-                                            const QMap<EntryId, int> &entry_mapping,
-                                            const EntryId &pid)
-{
-    if(0 < parent_index[pid].children.length()){
-        QQueue<EntryId> q;
-        sw.writeStartElement("p");
-        if(!pid.IsNull())
-            sw.writeAttribute("id", QVariant(entry_mapping[pid]).toString());
-        for(const EntryId &cid : parent_index[pid].children){
-            sw.writeStartElement("c");
-            sw.writeAttribute("id", QVariant(entry_mapping[cid]).toString());
-            sw.writeEndElement();
-            q.append(cid);
-        }
-        sw.writeEndElement();
-
-        for(const EntryId &eid : q)
-            __write_hierarchy_to_xml_writer(sw, parent_index, entry_mapping, eid);
-    }
-}
-
 void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoPP::Cryptor &my_cryptor, const QString &filepath)
 {
     G_D;
@@ -2405,13 +2385,6 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
     // Always notify that the task is complete, even if it's an error
     finally([&]{ emit NotifyProgressUpdated(100, false, m_curTaskString); });
 
-    QSqlDatabase db(QSqlDatabase::database(conn_str));
-    GASSERT(db.isValid());
-    QSqlQuery q(db);
-
-    // We export inside a database transaction. Even though we're reading only
-    //  this makes sure nobody changes anything while we're exporting
-    db.transaction();
     try{
         emit NotifyProgressUpdated(progress_counter+=5, true, m_curTaskString);
 
@@ -2429,21 +2402,31 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
         sw.writeStartElement("grypto_data");
         sw.writeAttribute("version", GRYPTO_XML_VERSION);
 
-        // Write all the entries in no particular order, without the hierarchy
-        sw.writeStartElement("entries");
         QMap<FileId, int> file_mapping;
         QMap<EntryId, int> entry_mapping;
-        QList<FileId> referenced_files;
+        QSet<FileId> referenced_files;
         QList<entry_cache> entries;
         unordered_map<EntryId, parent_cache> parent_index_cpy;
 
-        // We want to lock the index for the minimum time
-        d->index_lock.lock();
+        // Define a helper function for recursively adding entries
         int tmpid = 0;
-        for(auto p : d->index){
-            entries.append(p.second);
-            entry_mapping.insert(p.first, tmpid++);
-        }
+        function<void(const EntryId &)> add_children_to_index;
+        add_children_to_index = [&](const EntryId &pid)
+        {
+            if(!pid.IsNull())
+                entry_mapping.insert(pid, tmpid++);
+
+            for(const EntryId &cid : d->parent_index[pid].children){
+                entries.append(d->index[cid]);
+                add_children_to_index(cid);
+            }
+        };
+
+        // We want to lock the index for the minimum time while we prepare our indexes
+        d->index_lock.lock();
+
+        // Add all entries recursively starting from the root
+        add_children_to_index(EntryId::Null());
 
         tmpid = 0;
         for(auto p : d->file_index)
@@ -2451,24 +2434,18 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
         parent_index_cpy = d->parent_index;
         d->index_lock.unlock();
 
+        // Write all entries in no particular order
+        sw.writeStartElement("entries");
         for(auto ec : entries)
             __write_entry_to_xml_writer(sw, __convert_cache_to_entry(ec, my_cryptor),
                                         referenced_files, entry_mapping, file_mapping);
         sw.writeEndElement();
 
-        emit NotifyProgressUpdated(progress_counter+=33, true, m_curTaskString);
+        emit NotifyProgressUpdated(progress_counter+=50, true, m_curTaskString);
         _bw_fail_if_cancelled();
 
-        // Write the hierarchy for the entries
-        sw.writeStartElement("hierarchy");
-        __write_hierarchy_to_xml_writer(sw, parent_index_cpy, entry_mapping, FileId::Null());
-        sw.writeEndElement();
-
-        emit NotifyProgressUpdated(progress_counter+=33, true, m_curTaskString);
-        _bw_fail_if_cancelled();
-
-        // Lastly write the files
-        if(0 < referenced_files.length()){
+        // Write the files
+        if(0 < referenced_files.count()){
             sw.writeStartElement("files");
             for(const FileId &fid : referenced_files){
                 sw.writeStartElement("f");
@@ -2504,6 +2481,7 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
 
 static void __parse_xml_entries(QXmlStreamReader &sr,
                                 QMap<int, Entry> &entries,
+                                QMap<int, QList<int>> &hierarchy,
                                 QMap<int, FileId> &file_mapping)
 {
     int depth = 0;
@@ -2519,13 +2497,25 @@ static void __parse_xml_entries(QXmlStreamReader &sr,
                     tmp_entry.SetDescription(sr.attributes().value("desc").toString());
                 tmp_entry.SetModifyDate(QDateTime::fromString(sr.attributes().value("date").toString()));
                 if(sr.attributes().hasAttribute("f_id")){
-                    int fid_local = sr.attributes().value("f_id").toInt();
-                    FileId fid(true);
-                    file_mapping.insert(fid_local, fid);
-                    tmp_entry.SetFileId(fid);
                     tmp_entry.SetFileName(sr.attributes().value("f_name").toString());
+
+                    int fid_local = sr.attributes().value("f_id").toInt();
+                    if(file_mapping.contains(fid_local)){
+                        tmp_entry.SetFileId(file_mapping[fid_local]);
+                    }
+                    else{
+                        FileId fid(true);
+                        file_mapping.insert(fid_local, fid);
+                        tmp_entry.SetFileId(fid);
+                    }
                 }
                 cur_id = sr.attributes().value("id").toInt();
+                tmp_entry.SetRow(sr.attributes().value("row").toInt());
+
+                int pid = -1;
+                if(sr.attributes().hasAttribute("pid"))
+                    pid = sr.attributes().value("pid").toInt();
+                hierarchy[pid].append(cur_id);
             }
             else if(sr.name() == "s"){
                 SecretValue sv;
@@ -2545,38 +2535,6 @@ static void __parse_xml_entries(QXmlStreamReader &sr,
 
                 tmp_entry = Entry();
                 cur_id = -1;
-            }
-            break;
-        default:
-            break;
-        }
-    }
-}
-
-static void __parse_xml_hierarchy(QXmlStreamReader &sr, QMap<int, QList<int>> &hierarchy)
-{
-    int depth = 0;
-    int cur_parent = -1;
-    QList<int> tmplist;
-    while(0 <= depth){
-        switch(sr.readNext()){
-        case QXmlStreamReader::StartElement:
-            depth++;
-            if(sr.name() == "p"){
-                if(sr.attributes().hasAttribute("id"))
-                    cur_parent = sr.attributes().value("id").toInt();
-            }
-            else if(sr.name() == "c"){
-                tmplist.append(sr.attributes().value("id").toInt());
-            }
-            break;
-        case QXmlStreamReader::EndElement:
-            depth--;
-            if(0 == depth){
-                hierarchy.insert(cur_parent, tmplist);
-
-                cur_parent = -1;
-                tmplist.clear();
             }
             break;
         default:
@@ -2693,12 +2651,7 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
             else if(sr.name() == "entries"){
                 if(!xml_recognized)
                     throw_xml_format_error();
-                __parse_xml_entries(sr, entries, file_mapping);
-            }
-            else if(sr.name() == "hierarchy"){
-                if(!xml_recognized)
-                    throw_xml_format_error();
-                __parse_xml_hierarchy(sr, hierarchy);
+                __parse_xml_entries(sr, entries, hierarchy, file_mapping);
             }
             else if(sr.name() == "files"){
                 if(!xml_recognized)
@@ -2710,6 +2663,24 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
             break;
         }
     }
+
+    // The hierarchy index child lists are unsorted, so
+    //  sort them by the entrys' rows
+    for(int pid : hierarchy.keys()){
+        QList<int> &child_list = hierarchy[pid];
+        sort(child_list.begin(), child_list.end(),
+          [&](int lhs, int rhs) -> bool{
+            return entries[lhs].GetRow() < entries[rhs].GetRow();
+        });
+
+        // The parent id's could not be resolved earlier, due to the arbitrary
+        //  ordering of the entries in the XML, so set the parent id's now
+        if(-1 != pid){
+            for(int cid : child_list)
+                entries[cid].SetParentId(entries[pid].GetId());
+        }
+    }
+
 
     // Cleanup code should always execute, even in case of exception
     finally([&]{
@@ -2727,6 +2698,7 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
     Entry tmp_root;
     tmp_root.SetName(tr("Newly imported entries"));
     tmp_root.SetDescription(QString(tr("Imported from XML document: %1")).arg(file_name));
+    tmp_root.SetModifyDate(QDateTime::currentDateTime());
     AddEntry(tmp_root);
 
     _add_children_from_xml(entries, hierarchy, tmp_root.GetId(), -1);

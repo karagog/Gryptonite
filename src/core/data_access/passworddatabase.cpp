@@ -770,7 +770,7 @@ PasswordDatabase::~PasswordDatabase()
     G_D;
     if(IsOpen()){
         // Let's clean up any orphaned entries/files
-        _delete_orphans();
+        DeleteOrphans();
 
         d->thread_lock.lock();
         d->closing = true;
@@ -1418,7 +1418,7 @@ QList<EntryId> PasswordDatabase::FindFavoriteIds() const
     return d->favorite_index;
 }
 
-void PasswordDatabase::_delete_orphans()
+void PasswordDatabase::DeleteOrphans()
 {
     FailIfNotOpen();
     G_D;
@@ -1795,10 +1795,7 @@ void PasswordDatabase::_bw_remove_favorite(const QString &conn_str, const EntryI
 
 void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
 {
-    // Note: This function does not grab locks or update the index.
-    //  It was designed to be called only upon class destruction, so it
-    //  is optimized to not care about the index after cleanup.
-
+    G_D;
     QSqlDatabase db(QSqlDatabase::database(conn_str));
     db.transaction();
     try
@@ -1806,24 +1803,35 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
         struct entry_row{
             EntryId id;
             FileId file_id;
+            int favorite;
         };
 
         QMap<EntryId, entry_row> entries;
         QMap<EntryId, QSet<EntryId>> parent_index;
         QSet<FileId> all_files;
+        QSet<EntryId> favorites;
         QSet<EntryId> claimed_entries;
         QSet<FileId> claimed_files;
+        QList<EntryId> deleted_entries;
+        QList<FileId> deleted_files;
+        int max_fav = -1;
 
         // Populate an in-memory index of the hierarchy
-        QSqlQuery q("SELECT ID,ParentID,FileID FROM Entry", db);
+        QSqlQuery q("SELECT ID,ParentID,FileID,Favorite FROM Entry", db);
         while(q.next()){
             EntryId eid = q.value("ID").toByteArray();
             EntryId pid = q.value("ParentID").toByteArray();
             FileId  fid = q.value("FileID").toByteArray();
-            entries.insert(eid, {eid, fid});
+            int     fav = q.value("Favorite").toInt();
+            entries.insert(eid, {eid, fid, fav});
             parent_index[pid].insert(eid);
             if(!fid.IsNull())
                 all_files.insert(fid);
+            if(-1 != fav){
+                favorites.insert(eid);
+                if(fav > max_fav)
+                    max_fav = fav;
+            }
         }
 
         // Starting at the root, populate a set of entries that can be reached,
@@ -1842,33 +1850,72 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
         add_children_to_claimed_entries(EntryId::Null());
 
         // Now delete any entries that are orphaned:
-        int delete_cnt = 0;
         for(const EntryId &eid : entries.keys()){
             if(!claimed_entries.contains(eid)){
                 q.prepare("DELETE FROM Entry WHERE ID=?");
                 q.addBindValue((QByteArray)eid);
                 DatabaseUtils::ExecuteQuery(q);
-                delete_cnt++;
+                deleted_entries.append(eid);
+
+                if(0 < entries[eid].favorite)
+                    favorites.remove(eid);
             }
         }
 
-        if(0 < delete_cnt){
-            qDebug("Removed %d orphaned entries...", delete_cnt);
+        // Update the favorites now that some may have been removed
+        // Make a list of favorites sorted by their index
+        QList<EntryId> sorted_favorites = favorites.toList();
+        sort(sorted_favorites.begin(), sorted_favorites.end(),
+          [&](const EntryId &lhs, const EntryId &rhs){
+            return entries[lhs].favorite < entries[rhs].favorite;
+        });
+
+        int cur_fav = 1;
+        for(const EntryId &eid : sorted_favorites){
+            if(0 < entries[eid].favorite){
+                if(cur_fav != entries[eid].favorite){
+                    q.prepare("UPDATE Entry SET Favorite=? WHERE ID=?");
+                    q.addBindValue(cur_fav);
+                    q.addBindValue((QByteArray)eid);
+                    DatabaseUtils::ExecuteQuery(q);
+                }
+                cur_fav++;
+            }
         }
 
-        delete_cnt = 0;
+        if(0 < deleted_entries.count()){
+            qDebug("Removed %d orphaned entries...", deleted_entries.count());
+        }
+
         for(const FileId &fid : all_files){
             if(!claimed_files.contains(fid)){
                 q.prepare("DELETE FROM File WHERE ID=?");
                 q.addBindValue((QByteArray)fid);
                 DatabaseUtils::ExecuteQuery(q);
-                delete_cnt++;
+                deleted_files.append(fid);
             }
         }
 
-        if(0 < delete_cnt){
-            qDebug("Removed %d orphaned files...", delete_cnt);
+        if(0 < deleted_files.count()){
+            qDebug("Removed %d orphaned files...", deleted_files.count());
         }
+
+        // Update the index:
+        unique_lock<mutex> lkr(d->index_lock);
+        for(const EntryId &eid : deleted_entries){
+            d->index.erase(eid);
+            d->parent_index.erase(eid);
+        }
+        for(const FileId &fid : deleted_files){
+            d->file_index.erase(fid);
+        }
+        for(const EntryId &eid : d->deleted_entries){
+            // We delayed removing this from the parent index, but we can do it now
+            d->parent_index.erase(eid);
+        }
+        d->deleted_entries.clear();
+        d->favorite_index = sorted_favorites;
+        d->wc_index.notify_all();
     }
     catch(...)
     {

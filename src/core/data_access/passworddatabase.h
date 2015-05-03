@@ -242,6 +242,16 @@ public:
     */
     void ImportFromDatabase(const PasswordDatabase &);
 
+    /** Call this function to iterate through all entries, deleting
+     *  those that don't have parents. Afterwards it will iterate through
+     *  files and delete those that are not referenced by an entry.
+     *
+     *  \note The cache is updated at the very end of this operation on the
+     *      background thread. You should beware that if you depend on the
+     *      data being fresh you should call WaitForThreadIdle().
+    */
+    void DeleteOrphans();
+
 
 signals:
 
@@ -266,15 +276,6 @@ private:
     void _init_cryptor(const Credentials &, const byte *salt, GUINT32 salt_len);
     void _init_cryptor(const GUtil::CryptoPP::Cryptor &);
     void _open(std::function<void(byte const *)> init_cryptor);
-
-    /** Call this function to iterate through all entries, deleting
-     *  those that don't have parents. Afterwards it will iterate through
-     *  files and delete those that are not referenced by an entry.
-     *
-     *  This can only be called in the destructor, and should be the last command
-     *  the background thread executes!
-    */
-    void _delete_orphans();
 
     // Worker thread bodies
     void _background_worker(GUtil::CryptoPP::Cryptor *);

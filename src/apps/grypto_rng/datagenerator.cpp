@@ -196,12 +196,12 @@ void DataGenerator::_export_raw_data(GUINT32 num_bytes,
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
-    
+
     if(success)
         emit NotifyInfo(tr("Raw data exported"));
 }
 
-#define SMALL_BUFFER_SIZE 100
+#define SMALL_BUFFER_SIZE 500
 
 void DataGenerator::_gen_dist_uniform(GUINT32 N, double min, double max, bool discrete, const QString &fn)
 {
@@ -237,7 +237,7 @@ void DataGenerator::_gen_dist_uniform(GUINT32 N, double min, double max, bool di
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
-    
+
     if(success)
         emit NotifyInfo(tr("Uniform distribution generated"));
 }
@@ -250,7 +250,7 @@ void DataGenerator::_gen_dist_normal(GUINT32 N, double mean, double sigma, bool 
     GUINT32 progress_mem = progress_increment;
     try{
         CREATE_AND_OPEN_OUTPUT_FILE(fn);
-        
+
         GUINT32 i;
         int len;
         for(i = 0; i < N; i+=2){
@@ -284,7 +284,7 @@ void DataGenerator::_gen_dist_normal(GUINT32 N, double mean, double sigma, bool 
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
-    
+
     if(success)
         emit NotifyInfo(tr("Normal distribution generated"));
 }
@@ -316,7 +316,7 @@ void DataGenerator::_gen_dist_geometric(GUINT32 N, double E, const QString &fn)
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
-    
+
     if(success)
         emit NotifyInfo(tr("Geometric distribution generated"));
 }
@@ -336,8 +336,8 @@ void DataGenerator::_gen_dist_exponential(GUINT32 N, double lambda, const QStrin
             if(m_cancel)
                 throw CancelledOperationException<>();
 
-            const double X = m_rng.Exponential(lambda);
-            int len = sprintf(buf, "%f\n", X);
+            const GFLOAT64 X = m_rng.Exponential(lambda);
+            int len = sprintf(buf, "%.100f\n", X);
             outfile.Write(buf, len);
         }
         emit ProgressUpdated(100);
@@ -348,7 +348,7 @@ void DataGenerator::_gen_dist_exponential(GUINT32 N, double lambda, const QStrin
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
-    
+
     if(success)
         emit NotifyInfo(tr("Exponential distribution generated"));
 }
@@ -380,7 +380,7 @@ void DataGenerator::_gen_dist_poisson(GUINT32 N, double E, const QString &fn)
                              static_cast<std::exception*>((Exception<> *)ex.Clone()))
                          );
     }
-    
+
     if(success)
         emit NotifyInfo(tr("Poisson distribution generated"));
 }
@@ -531,27 +531,27 @@ void DataGenerator::SaveParameters(GUtil::Qt::Settings *s) const
 {
     s->SetValue(SETTING_DATAGEN_MODE, ui->cmb_mode->currentIndex());
     s->SetValue(SETTING_DATAGEN_OUTPUT_FILE, ui->le_outFile->text().trimmed());
-    
+
     // Get the raw data params
     s->SetValue(SETTING_DATAGEN_RAWDATA_AMOUNT, ui->spn_rawData_amount->value());
     s->SetValue(SETTING_DATAGEN_RAWDATA_UNIT, ui->cmb_rawData_units->currentIndex());
-    
+
     // Get the parameters common to all distributions
     s->SetValue(SETTING_DATAGEN_DISTTYPE, ui->cmb_distributionType->currentIndex());
     s->SetValue(SETTING_DATAGEN_DISTRIBUTION, ui->cmb_distribution->currentIndex());
     s->SetValue(SETTING_DATAGEN_NSAMPLES, ui->spn_n->value());
-    
+
     // Get the distribution-specific parameters
     s->SetValue(SETTING_DATAGEN_U_MIN, ui->spn_u_min->value());
     s->SetValue(SETTING_DATAGEN_U_MAX, ui->spn_u_max->value());
-    
+
     s->SetValue(SETTING_DATAGEN_N_MEAN, ui->spn_normal_mean->value());
     s->SetValue(SETTING_DATAGEN_N_STDEV, ui->spn_normal_sigma->value());
-    
+
     s->SetValue(SETTING_DATAGEN_GEO_E, ui->spn_geometric_e->value());
-    
+
     s->SetValue(SETTING_DATAGEN_EXP_LAMBDA, ui->spn_exponential_lambda->value());
-    
+
     s->SetValue(SETTING_DATAGEN_POISSON_E, ui->spn_poisson_e->value());
 }
 
@@ -561,13 +561,13 @@ void DataGenerator::RestoreParameters(GUtil::Qt::Settings *s)
         ui->cmb_mode->setCurrentIndex(s->Value(SETTING_DATAGEN_MODE).toInt());
     if(s->Contains(SETTING_DATAGEN_OUTPUT_FILE))
         ui->le_outFile->setText(s->Value(SETTING_DATAGEN_OUTPUT_FILE).toString());
-    
+
     // Raw data params
     if(s->Contains(SETTING_DATAGEN_RAWDATA_AMOUNT))
         ui->spn_rawData_amount->setValue(s->Value(SETTING_DATAGEN_RAWDATA_AMOUNT).toInt());
     if(s->Contains(SETTING_DATAGEN_RAWDATA_UNIT))
         ui->cmb_rawData_units->setCurrentIndex(s->Value(SETTING_DATAGEN_RAWDATA_UNIT).toInt());
-    
+
     // Common distribution params
     if(s->Contains(SETTING_DATAGEN_DISTTYPE))
         ui->cmb_distributionType->setCurrentIndex(s->Value(SETTING_DATAGEN_DISTTYPE).toInt());
@@ -575,24 +575,24 @@ void DataGenerator::RestoreParameters(GUtil::Qt::Settings *s)
         ui->cmb_distribution->setCurrentIndex(s->Value(SETTING_DATAGEN_DISTRIBUTION).toInt());
     if(s->Contains(SETTING_DATAGEN_NSAMPLES))
         ui->spn_n->setValue(s->Value(SETTING_DATAGEN_NSAMPLES).toInt());
-    
+
     // Distribution-specific params
     if(s->Contains(SETTING_DATAGEN_U_MIN))
         ui->spn_u_min->setValue(s->Value(SETTING_DATAGEN_U_MIN).toDouble());
     if(s->Contains(SETTING_DATAGEN_U_MAX))
         ui->spn_u_max->setValue(s->Value(SETTING_DATAGEN_U_MAX).toDouble());
-    
+
     if(s->Contains(SETTING_DATAGEN_N_MEAN))
         ui->spn_normal_mean->setValue(s->Value(SETTING_DATAGEN_N_MEAN).toDouble());
     if(s->Contains(SETTING_DATAGEN_N_STDEV))
         ui->spn_normal_sigma->setValue(s->Value(SETTING_DATAGEN_N_STDEV).toDouble());
-    
+
     if(s->Contains(SETTING_DATAGEN_GEO_E))
         ui->spn_geometric_e->setValue(s->Value(SETTING_DATAGEN_GEO_E).toDouble());
-    
+
     if(s->Contains(SETTING_DATAGEN_EXP_LAMBDA))
         ui->spn_exponential_lambda->setValue(s->Value(SETTING_DATAGEN_EXP_LAMBDA).toDouble());
-    
+
     if(s->Contains(SETTING_DATAGEN_POISSON_E))
         ui->spn_poisson_e->setValue(s->Value(SETTING_DATAGEN_POISSON_E).toDouble());
 }

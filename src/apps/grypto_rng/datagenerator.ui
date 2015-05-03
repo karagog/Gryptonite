@@ -23,7 +23,7 @@
    <item row="2" column="1">
     <widget class="QLineEdit" name="le_outFile">
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The output file will contain all data points, each on its own line. It can be loaded and analyzed easily with a tool like Matlab via the &amp;quot;load&amp;quot; and &amp;quot;hist&amp;quot; commands:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Matlab console:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;&amp;gt;&amp;gt; data = load('data_generator_output.txt');&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;&amp;gt;&amp;gt; hist(data, 1000);&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The output file will contain all data points, each on its own line. It can be loaded and analyzed easily with a tool like Matlab via the &amp;quot;load&amp;quot; and &amp;quot;hist&amp;quot; commands:&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Matlab console:&lt;/p&gt;&lt;p&gt;&amp;gt;&amp;gt; data = load('data_generator_output.txt');&lt;/p&gt;&lt;p&gt;&amp;gt;&amp;gt; hist(data, 1000);&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </item>
@@ -338,10 +338,10 @@
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Lambda controls the expected value of the exponential distribution like 1/L&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="decimals">
-                 <number>4</number>
+                 <number>21</number>
                 </property>
                 <property name="maximum">
-                 <double>1000000.000000000000000</double>
+                 <double>1000000000000000000000.000000000000000</double>
                 </property>
                 <property name="value">
                  <double>10.000000000000000</double>

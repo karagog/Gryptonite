@@ -309,15 +309,6 @@ private:
     int m_progressMin, m_progressMax;
     QString m_curTaskString;
 
-    void _add_children_from_xml(QMap<int, Entry> &entries,
-                                const QMap<int, QList<int>> &hierarchy,
-                                const EntryId &parent_id,
-                                int local_parent_id);
-    void _add_files_from_xml(const QString &,
-                             GUtil::CryptoPP::Cryptor&,
-                             const QMap<int, QString> &,
-                             const QMap<int, FileId> &);
-
 };
 
 

@@ -91,9 +91,11 @@ struct parent_cache{
 
 struct file_cache{
     Grypt::FileId id;
-    uint length;
+    int length;
 
-    file_cache() :length(0) {}
+    file_cache() :length(-1) {}
+    file_cache(const Grypt::FileId &fid, int len = -1)
+        :id(fid), length(len) {}
 };
 
 namespace
@@ -204,6 +206,22 @@ static Entry __convert_cache_to_entry(const entry_cache &er, Cryptor &cryptor)
     return ret;
 }
 
+static QByteArray __generate_crypttext(Cryptor &cryptor, const Entry &e)
+{
+    QByteArray crypttext;
+    QByteArrayInput i(XmlConverter::ToXmlString(e));
+    QByteArrayOutput o(crypttext);
+    cryptor.EncryptData(&o, &i);
+    return crypttext;
+}
+
+static entry_cache __convert_entry_to_cache(const Entry &e, Cryptor &cryptor)
+{
+    entry_cache ret(e);
+    ret.crypttext = __generate_crypttext(cryptor, e);
+    return ret;
+}
+
 static entry_cache __fetch_entry_row_by_id(QSqlQuery &q, const EntryId &id)
 {
     entry_cache ret;
@@ -245,12 +263,6 @@ static void __delete_file_by_id(const QString &conn_str, const FileId &id)
     q.prepare("DELETE FROM File WHERE ID=?");
     q.addBindValue((QByteArray)id);
     DatabaseUtils::ExecuteQuery(q);
-}
-
-// Generates a random nonce
-static void __get_nonce(byte nonce[NONCE_LENGTH])
-{
-    GlobalRNG()->Fill(nonce, NONCE_LENGTH);
 }
 
 
@@ -699,12 +711,10 @@ void PasswordDatabase::_open(function<void(byte const *)> init_cryptor)
 
             // Prepare the keycheck data
             QByteArray keycheck_ct;
-            byte nonce[NONCE_LENGTH];
-            __get_nonce(nonce);
             {
                 ByteArrayInput auth_in(__keycheck_string, strlen(__keycheck_string));
                 QByteArrayOutput ba_out(keycheck_ct);
-                d->cryptor->EncryptData(&ba_out, NULL, &auth_in, nonce);
+                d->cryptor->EncryptData(&ba_out, NULL, &auth_in);
             }
 
             Cryptor::DefaultKeyDerivation const &kdf =
@@ -799,6 +809,19 @@ static void __commit_transaction(QSqlDatabase &db)
         throw Exception<>(db.lastError().text().toUtf8().constData());
 }
 
+static void __insert_entry(const entry_cache &ec, QSqlQuery &q)
+{
+    q.prepare("INSERT INTO Entry (ID,ParentID,Row,Favorite,FileID,Data)"
+              " VALUES (?,?,?,?,?,?)");
+    q.addBindValue((QByteArray)ec.id);
+    q.addBindValue((QByteArray)ec.parentid);
+    q.addBindValue(ec.row);
+    q.addBindValue(ec.favoriteindex);
+    q.addBindValue((QByteArray)ec.file_id);
+    q.addBindValue(ec.crypttext);
+    DatabaseUtils::ExecuteQuery(q);
+}
+
 void PasswordDatabase::_bw_add_entry(const QString &conn_str, const Entry &e)
 {
     G_D;
@@ -841,28 +864,18 @@ void PasswordDatabase::_bw_add_entry(const QString &conn_str, const Entry &e)
 
         // Update the index immediately now that we have everything we need
         //  i.e. Do not wait to insert the actual entry
-        QByteArray crypttext;
-        {
-            lock_guard<mutex> lkr(d->index_lock);
+        d->index_lock.lock();
 
-            // If the index is not present, then it was already deleted
-            auto iter = d->index.find(e.GetId());
-            if(iter == d->index.end())
-                return;
+        // If the index is not present, then it was already deleted
+        auto iter = d->index.find(e.GetId());
+        if(iter == d->index.end())
+            return;
 
-            iter->second.row = row;
-            crypttext = iter->second.crypttext;
-        }
+        iter->second.row = row;
+        entry_cache const &ec = iter->second;
+        d->index_lock.unlock();
 
-        q.prepare("INSERT INTO Entry (ID,ParentID,Row,Favorite,FileID,Data)"
-                  " VALUES (?,?,?,?,?,?)");
-        q.addBindValue((QByteArray)e.GetId());
-        q.addBindValue((QByteArray)e.GetParentId());
-        q.addBindValue(row);
-        q.addBindValue(e.GetFavoriteIndex());
-        q.addBindValue((QByteArray)e.GetFileId());
-        q.addBindValue(crypttext);
-        DatabaseUtils::ExecuteQuery(q);
+        __insert_entry(ec, q);
 
         emit NotifyProgressUpdated(65, false, task_string);
         success = true;
@@ -1074,21 +1087,6 @@ void PasswordDatabase::_bw_move_entry(const QString &conn_str,
     }
 }
 
-static QByteArray __generate_crypttext(Cryptor &cryptor, const Entry &e)
-{
-    QByteArray crypttext;
-
-    // Get a fresh nonce
-    byte nonce[NONCE_LENGTH];
-    __get_nonce(nonce);
-
-    QByteArrayInput i(XmlConverter::ToXmlString(e));
-    QByteArrayOutput o(crypttext);
-    cryptor.EncryptData(&o, &i, NULL, nonce);
-
-    return crypttext;
-}
-
 void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 {
     FailIfNotOpen();
@@ -1097,8 +1095,8 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     if(gen_id)
         e.SetId(EntryId::NewId());
 
-    // Generate the crypttext
-    QByteArray crypttext = __generate_crypttext(*d->cryptor, e);
+    // Generate the entry cache
+    entry_cache ec(__convert_entry_to_cache(e, *d->cryptor));
 
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
@@ -1121,8 +1119,6 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
         if(e.IsFavorite())
             d->favorite_index.append(e.GetId());
 
-        entry_cache ec(e);
-        ec.crypttext = crypttext;
         d->index[e.GetId()] = ec;
         if(d->deleted_entries.contains(e.GetId()))
             d->deleted_entries.remove(e.GetId());
@@ -1304,8 +1300,10 @@ QList<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
     {
         unique_lock<mutex> lkr(d->index_lock);
 
-        foreach(const EntryId &child_id, d->parent_index[pid].children)
+        foreach(const EntryId &child_id, d->parent_index[pid].children){
+            GASSERT(d->index.find(child_id) != d->index.end());
             ret.append(__convert_cache_to_entry(d->index[child_id], *d->cryptor));
+        }
     }
     return ret;
 }
@@ -1579,6 +1577,7 @@ void PasswordDatabase::ImportFromXml(const QString &import_filename)
     __queue_command(d, new import_from_xml_command(import_filename));
 }
 
+/** Recursively counts all children of the parent. */
 static void __count_child_entries(QSqlDatabase &db, int &count, const EntryId &parent_id)
 {
     QSqlQuery q(db);
@@ -2153,14 +2152,10 @@ void PasswordDatabase::_bw_add_file(const QString &conn_str,
                 plaintext_length = data.length();
             }
 
-            // Get a fresh nonce
-            byte nonce[NONCE_LENGTH];
-            __get_nonce(nonce);
-
             m_progressMin = 0, m_progressMax = 75;
             m_curTaskString = QString("Download and encrypt file");
             d->thread_cancellable = true;
-            cryptor.EncryptData(&o, data_in, NULL, nonce, DEFAULT_CHUNK_SIZE,
+            cryptor.EncryptData(&o, data_in, NULL, NULL, DEFAULT_CHUNK_SIZE,
                                 [&](int p){ return _progress_callback(p); });
         }
 
@@ -2173,8 +2168,8 @@ void PasswordDatabase::_bw_add_file(const QString &conn_str,
         // Insert a new file
         q.prepare("INSERT INTO File (Length, Data, ID) VALUES (?,?,?)");
         q.addBindValue(plaintext_length);
-        q.addBindValue(encrypted_data, QSql::In | QSql::Binary);
-        q.addBindValue((QByteArray)id, QSql::In | QSql::Binary);
+        q.addBindValue(encrypted_data);
+        q.addBindValue((QByteArray)id);
         DatabaseUtils::ExecuteQuery(q);
 
         // One last chance before we commit
@@ -2533,7 +2528,7 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
 static void __parse_xml_entries(QXmlStreamReader &sr,
                                 QMap<int, Entry> &entries,
                                 QMap<int, QList<int>> &hierarchy,
-                                QMap<int, FileId> &file_mapping)
+                                QMap<int, file_cache> &file_mapping)
 {
     int depth = 0;
     int cur_id = -1;
@@ -2547,12 +2542,14 @@ static void __parse_xml_entries(QXmlStreamReader &sr,
                 if(sr.attributes().hasAttribute("desc"))
                     tmp_entry.SetDescription(sr.attributes().value("desc").toString());
                 tmp_entry.SetModifyDate(QDateTime::fromString(sr.attributes().value("date").toString()));
+                if(sr.attributes().hasAttribute("fav"))
+                    tmp_entry.SetFavoriteIndex(sr.attributes().value("fav").toInt());
                 if(sr.attributes().hasAttribute("f_id")){
                     tmp_entry.SetFileName(sr.attributes().value("f_name").toString());
 
                     int fid_local = sr.attributes().value("f_id").toInt();
                     if(file_mapping.contains(fid_local)){
-                        tmp_entry.SetFileId(file_mapping[fid_local]);
+                        tmp_entry.SetFileId(file_mapping[fid_local].id);
                     }
                     else{
                         FileId fid(true);
@@ -2632,29 +2629,58 @@ static void __parse_xml_files(QXmlStreamReader &sr, QMap<int, QString> &files)
     }
 }
 
-void PasswordDatabase::_add_children_from_xml(QMap<int, Entry> &entries,
-                                              const QMap<int, QList<int>> &hierarchy,
-                                              const EntryId &parent_id,
-                                              int local_parent_id)
+// Adds the children of the given parent to the database recursively
+static void __add_children_from_xml(
+        QMap<int, Entry> &entries,
+        QMap<int, entry_cache> &entry_caches,
+        const QMap<int, QList<int>> &hierarchy,
+        const EntryId &parent_id,
+        int local_parent_id,
+        GUtil::CryptoPP::Cryptor &cryptor,
+        QSqlQuery &q)
 {
     const QList<int> &child_ids = hierarchy[local_parent_id];
     for(int i = 0; i < child_ids.length(); ++i){
         Entry &e = entries[child_ids[i]];
+        e.SetId(EntryId::NewId());
         e.SetParentId(parent_id);
         e.SetRow(i);
-        AddEntry(e);
+        if(e.IsFavorite()){
+            // Imported favorites lose their ordering
+            e.SetFavoriteIndex(0);
+        }
 
-        _add_children_from_xml(entries, hierarchy, e.GetId(), child_ids[i]);
+        auto iter = entry_caches.insert(child_ids[i], __convert_entry_to_cache(e, cryptor));
+        __insert_entry(*iter, q);
+        __add_children_from_xml(entries, entry_caches,
+                                hierarchy,
+                                e.GetId(), child_ids[i],
+                                cryptor, q);
     }
 }
 
-void PasswordDatabase::_add_files_from_xml(const QString &conn_str,
-                                           GUtil::CryptoPP::Cryptor &cryptor,
-                                           const QMap<int, QString> &files,
-                                           const QMap<int, FileId> &file_mapping)
+static void __add_files_from_xml(const QMap<int, QString> &files,
+                                QMap<int, file_cache> &file_mapping,
+                                GUtil::CryptoPP::Cryptor &cryptor,
+                                QSqlQuery &q)
 {
     for(int fid_local : files.keys()){
-        _bw_add_file(conn_str, cryptor, file_mapping[fid_local], files[fid_local].toUtf8(), true);
+        QByteArray crypttext;
+        {
+            // Encrypt the file and move it into memory
+            File f(files[fid_local].toUtf8(), File::OpenRead);
+            QByteArrayOutput bao(crypttext);
+            cryptor.EncryptData(&bao, &f);
+        }
+
+        int pt_len = crypttext.length() - cryptor.GetCrypttextSizeDiff();
+        file_mapping[fid_local].length = pt_len;
+
+        q.prepare("INSERT INTO File (Length,Data,ID) VALUES (?,?,?)");
+        q.addBindValue(pt_len);
+        q.addBindValue(crypttext);
+        q.addBindValue((QByteArray)file_mapping[fid_local].id);
+        DatabaseUtils::ExecuteQuery(q);
     }
 }
 
@@ -2667,10 +2693,6 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
     m_curTaskString = QString(tr("Importing from XML: %1")).arg(file_name);
     emit NotifyProgressUpdated(progress_counter, true, m_curTaskString);
 
-    QSqlDatabase db(QSqlDatabase::database(conn_str));
-    GASSERT(db.isValid());
-    QSqlQuery q(db);
-
     QFile f(filepath);
     if(!f.open(QFile::ReadOnly))
         throw Exception<>(QString(tr("Cannot open \"%1\"\n%2"))
@@ -2678,9 +2700,10 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
                           .arg(f.errorString()).toUtf8());
 
     QMap<int, Entry> entries;
+    QMap<int, entry_cache> entry_caches;
     QMap<int, QList<int>> hierarchy;
     QMap<int, QString> files;
-    QMap<int, FileId> file_mapping;
+    QMap<int, file_cache> file_mapping;
     bool xml_recognized = false;
 
     auto throw_xml_format_error = []{
@@ -2726,10 +2749,8 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
 
         // The parent id's could not be resolved earlier, due to the arbitrary
         //  ordering of the entries in the XML, so set the parent id's now
-        if(-1 != pid){
-            for(int cid : child_list)
-                entries[cid].SetParentId(entries[pid].GetId());
-        }
+        for(int cid : child_list)
+            entries[cid].SetParentId(entries[pid].GetId());
     }
 
 
@@ -2745,15 +2766,69 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
     if(sr.hasError())
         throw Exception<>(QString(tr("XML has errors: %1").arg(sr.errorString())).toUtf8());
 
-    // Add a root node, under which to put the imported data
-    Entry tmp_root;
-    tmp_root.SetName(tr("Newly imported entries"));
-    tmp_root.SetDescription(QString(tr("Imported from XML document: %1")).arg(file_name));
-    tmp_root.SetModifyDate(QDateTime::currentDateTime());
-    AddEntry(tmp_root);
+    // Now update the database
+    QSqlDatabase db(QSqlDatabase::database(conn_str));
+    GASSERT(db.isValid());
 
-    _add_children_from_xml(entries, hierarchy, tmp_root.GetId(), -1);
-    _add_files_from_xml(conn_str, my_cryptor, files, file_mapping);
+    db.transaction();
+    try
+    {
+        QSqlQuery q(db);
+
+        // Add a root node, under which to put the imported data
+        Entry tmp_root;
+        tmp_root.SetId(EntryId::NewId());
+        tmp_root.SetName(tr("Newly imported entries"));
+        tmp_root.SetDescription(QString(tr("Imported from XML document: %1")).arg(file_name));
+        tmp_root.SetModifyDate(QDateTime::currentDateTime());
+        tmp_root.SetRow(__count_entries_by_parent_id(q, EntryId::Null()));
+
+        auto iter = entry_caches.insert(-1, __convert_entry_to_cache(tmp_root, my_cryptor));
+        __insert_entry(*iter, q);
+
+        __add_children_from_xml(entries, entry_caches, hierarchy, tmp_root.GetId(), -1, my_cryptor, q);
+        __add_files_from_xml(files, file_mapping, my_cryptor, q);
+    }
+    catch(...)
+    {
+        db.rollback();
+        throw;
+    }
+    db.commit();
+
+    // Now update the index
+    G_D;
+    unique_lock<mutex> lkr(d->index_lock);
+    for(const entry_cache &ec : entry_caches.values()){
+        GASSERT(d->index.find(ec.id) == d->index.end());
+        d->index.emplace(ec.id, ec);
+
+        // We should have cleared the ordering of imported favorites
+        GASSERT(0 >= ec.favoriteindex);
+        if(0 <= ec.favoriteindex)
+            d->favorite_index.append(ec.id);
+    }
+
+    // Populate the parent index now that all keys are inserted
+    function<void(int)> populate_parent_index;
+    populate_parent_index = [&](int local_pid){
+        for(int cid : hierarchy[local_pid])
+        {
+            d->parent_index[entry_caches[local_pid].id]
+                    .children.append(entry_caches[cid].id);
+
+            if(hierarchy.contains(cid))
+                populate_parent_index(cid);
+        }
+    };
+    d->parent_index[EntryId::Null()].children.append(entry_caches[-1].id);
+    populate_parent_index(-1);
+
+    // Finally update the file index
+    for(const file_cache &fc : file_mapping.values())
+        d->file_index.emplace(fc.id, fc);
+
+    d->wc_index.notify_all();
 }
 
 

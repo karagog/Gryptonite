@@ -552,41 +552,34 @@ static void __initialize_cache(d_t *d)
 {
     QSqlQuery q(QSqlDatabase::database(d->dbString));
 
-    // First load all entries in bulk
-    q.prepare("SELECT * FROM Entry");
-    DatabaseUtils::ExecuteQuery(q);
+    // Load all entries connected to the root
+    function<void(const EntryId &)> parse_child_entries;
+    parse_child_entries = [&](const EntryId &pid){
+        QList<EntryId> &child_list =
+                d->parent_index.emplace(pid, parent_cache()).first->second.children;
 
-    d->parent_index.emplace(EntryId::Null(), parent_cache());
+        q.prepare(QString("SELECT * FROM Entry WHERE ParentID%1 ORDER BY Row ASC")
+                  .arg(pid.IsNull() ? " IS NULL" : "=?"));
+        if(!pid.IsNull())
+            q.addBindValue((QByteArray)pid);
+        DatabaseUtils::ExecuteQuery(q);
 
-    while(q.next()){
-        entry_cache ec = __convert_record_to_entry_cache(q.record());
+        while(q.next()){
+            entry_cache ec = __convert_record_to_entry_cache(q.record());
+            child_list.append(ec.id);
 
-        // Add the entry to the cache
-        d->index.emplace(ec.id, ec);
-        d->parent_index.emplace(ec.id, parent_cache());
+            // Add the entry to the cache
+            d->index.emplace(ec.id, ec);
 
-        // We'll sort the favorites at the end
-        if(0 <= ec.favoriteindex)
-            d->favorite_index.append(ec.id);
-    }
+            // We'll sort the favorites at the end
+            if(0 <= ec.favoriteindex)
+                d->favorite_index.append(ec.id);
+        }
 
-    // Append each entry to its parent's child list
-    for(const pair<EntryId, entry_cache> &ec : d->index){
-        auto piter = d->parent_index.find(ec.second.parentid);
-        if(piter != d->parent_index.end())
-            piter->second.children.PushBack(ec.first);
-    }
-
-    // Sort each parent's child list
-    for(auto tmp : d->parent_index){
-        d->parent_index[tmp.first].children.Sort(
-             [&](const EntryId &lhs, const EntryId &rhs) -> int{
-                 int lhs_v = d->index[lhs].row;
-                 int rhs_v = d->index[rhs].row;
-                 return lhs_v < rhs_v ? -1 : 1;
-             }
-        );
-    }
+        for(const EntryId &cid : child_list)
+            parse_child_entries(cid);
+    };
+    parse_child_entries(EntryId::Null());
 
     // Then cache the file ID's
     q.prepare("SELECT ID,Length FROM File");

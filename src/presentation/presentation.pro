@@ -18,6 +18,7 @@ CONFIG(debug, debug|release) {
 }
 else {
     #message(Preparing release build)
+    DEFINES += QT_NO_DEBUG_OUTPUT
     unix: QMAKE_RPATHDIR =
 }
 

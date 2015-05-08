@@ -866,8 +866,9 @@ void PasswordDatabase::SaveAs(const QString &filename, const Credentials &creds)
             for(const FileId &fid : file_list){
                 q.prepare("SELECT Length,Data FROM File WHERE Id=?");
                 q.addBindValue((QByteArray)fid);
+                DatabaseUtils::ExecuteQuery(q);
 
-                if(q.exec() && q.next()){
+                if(q.next()){
                     QByteArray crypttext = q.value("Data").toByteArray();
                     QByteArray tmp;
                     {

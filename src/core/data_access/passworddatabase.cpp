@@ -616,8 +616,8 @@ static void __initialize_cache(d_t *d)
     QSqlQuery q("SELECT * FROM Entry ORDER BY ParentId,Row ASC",
                 QSqlDatabase::database(d->dbString));
     {
-        QMap<EntryId, QList<EntryId>> hierarchy;
-        QMap<EntryId, entry_cache> entries;
+        QHash<EntryId, QList<EntryId>> hierarchy;
+        QHash<EntryId, entry_cache> entries;
         while(q.next()){
             entry_cache ec = __convert_record_to_entry_cache(q.record());
             hierarchy[ec.parentid].append(ec.id);
@@ -1994,8 +1994,8 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
             int favorite;
         };
 
-        QMap<EntryId, entry_row> entries;
-        QMap<EntryId, QSet<EntryId>> parent_index;
+        QHash<EntryId, entry_row> entries;
+        QHash<EntryId, QSet<EntryId>> parent_index;
         QSet<FileId> all_files;
         QSet<EntryId> favorites;
         QSet<EntryId> claimed_entries;
@@ -2571,8 +2571,8 @@ void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
 
 static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
                                         QSet<FileId> &file_references,
-                                        const QMap<EntryId, int> &entry_mapping,
-                                        const QMap<FileId, int> &file_mapping)
+                                        const QHash<EntryId, int> &entry_mapping,
+                                        const QHash<FileId, int> &file_mapping)
 {
     sw.writeStartElement("e");
     sw.writeAttribute("name", e.GetName());
@@ -2637,8 +2637,8 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
         sw.writeStartElement("grypto_data");
         sw.writeAttribute("version", GRYPTO_XML_VERSION);
 
-        QMap<FileId, int> file_mapping;
-        QMap<EntryId, int> entry_mapping;
+        QHash<FileId, int> file_mapping;
+        QHash<EntryId, int> entry_mapping;
         QSet<FileId> referenced_files;
         QList<entry_cache> entries;
         unordered_map<EntryId, parent_cache> parent_index_cpy;
@@ -2715,9 +2715,9 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
 }
 
 static void __parse_xml_entries(QXmlStreamReader &sr,
-                                QMap<int, Entry> &entries,
-                                QMap<int, QList<int>> &hierarchy,
-                                QMap<int, file_cache> &file_mapping)
+                                QHash<int, Entry> &entries,
+                                QHash<int, QList<int>> &hierarchy,
+                                QHash<int, file_cache> &file_mapping)
 {
     int depth = 0;
     int cur_id = -1;
@@ -2780,7 +2780,7 @@ static void __parse_xml_entries(QXmlStreamReader &sr,
     }
 }
 
-static void __parse_xml_files(QXmlStreamReader &sr, QMap<int, QString> &files)
+static void __parse_xml_files(QXmlStreamReader &sr, QHash<int, QString> &files)
 {
     int depth = 0;
     int cur_id = -1;
@@ -2820,9 +2820,9 @@ static void __parse_xml_files(QXmlStreamReader &sr, QMap<int, QString> &files)
 
 // Adds the children of the given parent to the database recursively
 static void __add_children_from_xml(
-        QMap<int, Entry> &entries,
-        QMap<int, entry_cache> &entry_caches,
-        const QMap<int, QList<int>> &hierarchy,
+        QHash<int, Entry> &entries,
+        QHash<int, entry_cache> &entry_caches,
+        const QHash<int, QList<int>> &hierarchy,
         const EntryId &parent_id,
         int local_parent_id,
         GUtil::CryptoPP::Cryptor &cryptor,
@@ -2848,10 +2848,10 @@ static void __add_children_from_xml(
     }
 }
 
-static void __add_files_from_xml(const QMap<int, QString> &files,
-                                QMap<int, file_cache> &file_mapping,
-                                GUtil::CryptoPP::Cryptor &cryptor,
-                                QSqlQuery &q)
+static void __add_files_from_xml(const QHash<int, QString> &files,
+                                 QHash<int, file_cache> &file_mapping,
+                                 GUtil::CryptoPP::Cryptor &cryptor,
+                                 QSqlQuery &q)
 {
     for(int fid_local : files.keys()){
         QByteArray crypttext;
@@ -2888,11 +2888,11 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
                           .arg(QFileInfo(filepath).absoluteFilePath())
                           .arg(f.errorString()).toUtf8());
 
-    QMap<int, Entry> entries;
-    QMap<int, entry_cache> entry_caches;
-    QMap<int, QList<int>> hierarchy;
-    QMap<int, QString> files;
-    QMap<int, file_cache> file_mapping;
+    QHash<int, Entry> entries;
+    QHash<int, entry_cache> entry_caches;
+    QHash<int, QList<int>> hierarchy;
+    QHash<int, QString> files;
+    QHash<int, file_cache> file_mapping;
     bool xml_recognized = false;
 
     auto throw_xml_format_error = []{

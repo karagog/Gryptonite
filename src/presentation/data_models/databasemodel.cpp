@@ -238,6 +238,15 @@ void DatabaseModel::Open(const GUtil::CryptoPP::Cryptor &cryptor)
     fetchMore(QModelIndex());
 }
 
+void DatabaseModel::SaveAs(const QString &filename, const Credentials &creds)
+{
+    if(IsOpen()){
+        ClearUndoStack();
+        m_db.SaveAs(filename, creds);
+        _reset_model();
+    }
+}
+
 GUtil::CryptoPP::Cryptor const &DatabaseModel::Cryptor() const
 {
     return m_db.Cryptor();
@@ -747,7 +756,7 @@ void DatabaseModel::ImportFromPortableSafe(const QString &import_filename,
 {
     ClearUndoStack();
     m_db.ImportFromPortableSafe(import_filename, creds);
-    connect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_database_import_finished()));
+    connect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_thread_finished_reset_model()));
 }
 
 void DatabaseModel::ExportToXml(const QString &export_filename)
@@ -759,13 +768,11 @@ void DatabaseModel::ImportFromXml(const QString &import_filename)
 {
     ClearUndoStack();
     m_db.ImportFromXml(import_filename);
-    connect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_database_import_finished()));
+    connect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_thread_finished_reset_model()));
 }
 
-void DatabaseModel::_database_import_finished()
+void DatabaseModel::_reset_model()
 {
-    disconnect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_database_import_finished()));
-
     beginResetModel();
     __cleanup_entry_list(m_root);
     m_index.clear();
@@ -773,21 +780,13 @@ void DatabaseModel::_database_import_finished()
 
     fetchMore();
     FetchAllEntries();
+}
 
+void DatabaseModel::_thread_finished_reset_model()
+{
+    disconnect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_thread_finished_reset_model()));
+    _reset_model();
     emit NotifyImportFinished();
-}
-
-void DatabaseModel::ImportFromDatabase(const DatabaseModel &other)
-{
-    beginResetModel();
-    m_db.ImportFromDatabase(other.m_db);
-    __cleanup_entry_list(m_root);
-    m_index.clear();
-    endResetModel();
-
-    // re-fetch the model
-    fetchMore();
-    FetchAllEntries();
 }
 
 void DatabaseModel::CancelAllBackgroundOperations()

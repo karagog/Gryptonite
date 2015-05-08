@@ -58,6 +58,8 @@ public:
     /** Returns true if the database has been opened. */
     bool IsOpen() const{ return m_db.IsOpen(); }
 
+    void SaveAs(const QString &filename, const Credentials &);
+
     /** The path to the database on disk. */
     const QString &FilePath() const;
 
@@ -147,12 +149,6 @@ public:
     /** Imports the plaintext XML. */
     void ImportFromXml(const QString &import_filename);
 
-    /** Imports the contents from the other database model.
-     *  All Entry and File ID's will be new. Both databases
-     *  must already be open.
-    */
-    void ImportFromDatabase(const DatabaseModel &);
-
     /** Loads all entries from the database. */
     void FetchAllEntries();
 
@@ -209,7 +205,7 @@ private slots:
 
     void _handle_database_worker_exception(const std::shared_ptr<std::exception> &);
 
-    void _database_import_finished();
+    void _thread_finished_reset_model();
 
 private:
 
@@ -233,6 +229,7 @@ private:
     void _set_favs(const QList<EntryId> &);
     void _add_fav(const EntryId &);
     void _del_fav(const EntryId &);
+    void _reset_model();
 
     void _emit_row_changed(const QModelIndex &);
 

@@ -495,10 +495,18 @@ static void __init_cryptor(d_t *d, GUtil::CryptoPP::Cryptor *ctor)
     d->cryptor.reset(ctor);
 }
 
+static GUtil::CryptoPP::Cryptor *__produce_cryptor(const Credentials &creds,
+                                                   const byte *salt,
+                                                   GUINT32 salt_len)
+{
+    return new GUtil::CryptoPP::Cryptor(creds, NONCE_LENGTH,
+                                        new Cryptor::DefaultKeyDerivation(salt, salt_len));
+}
+
 void PasswordDatabase::_init_cryptor(const Credentials &creds, const byte *s, GUINT32 s_l)
 {
     G_D;
-    __init_cryptor(d, new GUtil::CryptoPP::Cryptor(creds, NONCE_LENGTH, new Cryptor::DefaultKeyDerivation(s, s_l)));
+    __init_cryptor(d, __produce_cryptor(creds, s, s_l));
 }
 
 void PasswordDatabase::_init_cryptor(const GUtil::CryptoPP::Cryptor &cryptor)
@@ -558,6 +566,15 @@ void PasswordDatabase::ValidateDatabase(const char *filepath)
     QSqlDatabase::removeDatabase(dbstring);
 }
 
+bool PasswordDatabase::_try_lock_file()
+{
+    QFileInfo fi(m_filepath);
+    m_lockfile.reset(new QLockFile(QString("%1.LOCKFILE")
+                                   .arg(fi.absoluteFilePath())));
+    m_lockfile->setStaleLockTime(0);
+    return m_lockfile->tryLock(0);
+}
+
 PasswordDatabase::PasswordDatabase(const QString &file_path,
                                    function<bool(const ProcessInfo &)> ask_for_lock_override,
                                    QObject *par)
@@ -570,11 +587,7 @@ PasswordDatabase::PasswordDatabase(const QString &file_path,
     //  but we can still lock the future location of the file path so it's ready when we want to create it.
 
     // Attempt to lock the database
-    QFileInfo fi(file_path);
-    m_lockfile.reset(new QLockFile(QString("%1.LOCKFILE")
-                                   .arg(fi.absoluteFilePath())));
-    m_lockfile->setStaleLockTime(0);
-    if(!m_lockfile->tryLock(0)){
+    if(!_try_lock_file()){
         if(QLockFile::LockFailedError == m_lockfile->error()){
             // The file is locked by another process. Ask the user if they want to override it.
             ProcessInfo pi;
@@ -681,6 +694,54 @@ void PasswordDatabase::Open(const GUtil::CryptoPP::Cryptor &c)
     });
 }
 
+static void __insert_entry(const entry_cache &ec, QSqlQuery &q)
+{
+    q.prepare("INSERT INTO Entry (ID,ParentID,Row,Favorite,FileID,Data)"
+              " VALUES (?,?,?,?,?,?)");
+    q.addBindValue((QByteArray)ec.id);
+    q.addBindValue((QByteArray)ec.parentid);
+    q.addBindValue(ec.row);
+    q.addBindValue(ec.favoriteindex);
+    q.addBindValue((QByteArray)ec.file_id);
+    q.addBindValue(ec.crypttext);
+    DatabaseUtils::ExecuteQuery(q);
+}
+
+static void __create_new_database(QSqlDatabase &db,
+                                  GUtil::CryptoPP::Cryptor &cryptor)
+{
+    __init_sql_resources();
+    QResource rs(":/grypto/sql/create_db.sql");
+    GASSERT(rs.isValid());
+
+    QByteArray sql;
+    if(rs.isCompressed())
+        sql = qUncompress(rs.data(), rs.size());
+    else
+        sql = QByteArray((const char *)rs.data(), rs.size());
+    DatabaseUtils::ExecuteScript(db, sql);
+
+    // Prepare the keycheck data
+    QByteArray keycheck_ct;
+    {
+        ByteArrayInput auth_in(__keycheck_string, strlen(__keycheck_string));
+        QByteArrayOutput ba_out(keycheck_ct);
+        cryptor.EncryptData(&ba_out, NULL, &auth_in);
+    }
+
+    Cryptor::DefaultKeyDerivation const &kdf =
+        (const Cryptor::DefaultKeyDerivation &)cryptor.GetKeyDerivationFunction();
+
+    // Insert a version record
+    QSqlQuery q(db);
+    q.prepare("INSERT INTO Version (Version,Salt,KeyCheck)"
+                " VALUES (?,?,?)");
+    q.addBindValue(GRYPTO_DATABASE_VERSION);
+    q.addBindValue(QByteArray((const char *)kdf.Salt(), kdf.SaltLength()));
+    q.addBindValue(keycheck_ct);
+    DatabaseUtils::ExecuteQuery(q);
+}
+
 void PasswordDatabase::_open(function<void(byte const *)> init_cryptor)
 {
     if(IsOpen())
@@ -696,37 +757,8 @@ void PasswordDatabase::_open(function<void(byte const *)> init_cryptor)
 
         if(!file_exists){
             // Initialize the new database if it doesn't exist
-            __init_sql_resources();
-            QResource rs(":/grypto/sql/create_db.sql");
-            GASSERT(rs.isValid());
-
-            QByteArray sql;
-            if(rs.isCompressed())
-                sql = qUncompress(rs.data(), rs.size());
-            else
-                sql = QByteArray((const char *)rs.data(), rs.size());
-            DatabaseUtils::ExecuteScript(db, sql);
-
             init_cryptor(NULL);
-
-            // Prepare the keycheck data
-            QByteArray keycheck_ct;
-            {
-                ByteArrayInput auth_in(__keycheck_string, strlen(__keycheck_string));
-                QByteArrayOutput ba_out(keycheck_ct);
-                d->cryptor->EncryptData(&ba_out, NULL, &auth_in);
-            }
-
-            Cryptor::DefaultKeyDerivation const &kdf =
-                (const Cryptor::DefaultKeyDerivation &)d->cryptor->GetKeyDerivationFunction();
-
-            // Insert a version record
-            q.prepare("INSERT INTO Version (Version,Salt,KeyCheck)"
-                        " VALUES (?,?,?)");
-            q.addBindValue(GRYPTO_DATABASE_VERSION);
-            q.addBindValue(QByteArray((const char *)kdf.Salt(), kdf.SaltLength()));
-            q.addBindValue(keycheck_ct);
-            DatabaseUtils::ExecuteQuery(q);
+            __create_new_database(db, *d->cryptor);
         }
 
         // Check the version record to see if it is valid
@@ -775,7 +807,117 @@ bool PasswordDatabase::IsOpen() const
     return !d->dbString.isEmpty();
 }
 
-PasswordDatabase::~PasswordDatabase()
+void PasswordDatabase::SaveAs(const QString &filename, const Credentials &creds)
+{
+    G_D;
+    QString file_path = QFileInfo(filename).absoluteFilePath();
+    if(file_path == QFileInfo(m_filepath).absoluteFilePath())
+        throw Exception<>("Cannot save as current file");
+
+    {
+        QFile f(filename);
+        if(f.exists()){
+            if(!f.remove())
+                throw Exception<>(QString(tr("Unable to remove existing file: %1"))
+                                  .arg(f.errorString()).toUtf8());
+        }
+    }
+
+    // Make sure the background thread has finished whatever it's working on
+    WaitForThreadIdle();
+
+    byte salt[SALT_LENGTH];
+    GUtil::CryptoPP::RNG().Fill(salt, SALT_LENGTH);
+    unique_ptr<GUtil::CryptoPP::Cryptor> cryptor(__produce_cryptor(creds, salt, SALT_LENGTH));
+
+    QString dbString = __create_connection(file_path);
+    try
+    {
+        QSqlDatabase db = QSqlDatabase::database(dbString);
+        QSqlQuery q(QSqlDatabase::database(d->dbString));
+        QSqlQuery q_new(db);
+
+        // Create a blank new database
+        __create_new_database(db, *cryptor);
+
+        db.transaction();
+        try{
+            unique_lock<mutex> lkr(d->index_lock);
+
+            // Write all the entries and files from the cache to the new database
+            QList<FileId> file_list;
+            function<void(const EntryId &)> write_child_entries;
+            write_child_entries = [&](const EntryId &pid){
+                for(const EntryId &cid : d->parent_index[pid].children){
+                    // Decrypt the entry with the old cryptor
+                    Entry e = __convert_cache_to_entry(d->index[cid], *d->cryptor);
+
+                    // Encrypt the entry with the new cryptor and insert
+                    __insert_entry(__convert_entry_to_cache(e, *cryptor), q_new);
+
+                    if(!e.GetFileId().IsNull())
+                        file_list.append(e.GetFileId());
+                    write_child_entries(cid);
+                }
+            };
+            write_child_entries(EntryId::Null());
+
+            // Select each file one at a time and insert it into the new database
+            for(const FileId &fid : file_list){
+                q.prepare("SELECT Length,Data FROM File WHERE Id=?");
+                q.addBindValue((QByteArray)fid);
+
+                if(q.exec() && q.next()){
+                    QByteArray crypttext = q.value("Data").toByteArray();
+                    QByteArray tmp;
+                    {
+                        // First decrypt the data with the original cryptor
+                        QByteArrayInput bai(crypttext);
+                        QByteArrayOutput bao(tmp);
+                        d->cryptor->DecryptData(&bao, &bai);
+                    }
+                    crypttext.clear();
+                    {
+                        // Then encrypt it with the new cryptor
+                        QByteArrayInput bai(tmp);
+                        QByteArrayOutput bao(crypttext);
+                        cryptor->EncryptData(&bao, &bai);
+                    }
+                    tmp.clear();
+
+                    q_new.prepare("INSERT INTO File (Id,Length,Data) VALUES (?,?,?)");
+                    q_new.addBindValue((QByteArray)fid);
+                    q_new.addBindValue(q.value("Length").toInt());
+                    q_new.addBindValue(crypttext);
+                    DatabaseUtils::ExecuteQuery(q_new);
+                }
+            }
+        } catch(...) {
+            db.rollback();
+            throw;
+        }
+        db.commit();
+    }
+    catch(...)
+    {
+        QSqlDatabase::removeDatabase(dbString);
+        throw;
+    }
+    QSqlDatabase::removeDatabase(dbString);
+
+    // These commands completely close out and reset the state
+    //  of this object. It's as if calling the destructor and constructor.
+    _close();
+    G_D_INIT();
+
+    m_filepath = file_path;
+    if(!_try_lock_file())
+        throw Exception<>("Unable to lock newly saved file??");
+
+    Open(*cryptor);
+}
+
+void PasswordDatabase::_close()
 {
     G_D;
     if(IsOpen()){
@@ -791,9 +933,13 @@ PasswordDatabase::~PasswordDatabase()
 
         QSqlDatabase::removeDatabase(d->dbString);
     }
-
     m_lockfile->unlock();
     G_D_UNINIT();
+}
+
+PasswordDatabase::~PasswordDatabase()
+{
+    _close();
 }
 
 bool PasswordDatabase::CheckCredentials(const Credentials &creds) const
@@ -814,19 +960,6 @@ static void __commit_transaction(QSqlDatabase &db)
 {
     if(!db.commit())
         throw Exception<>(db.lastError().text().toUtf8().constData());
-}
-
-static void __insert_entry(const entry_cache &ec, QSqlQuery &q)
-{
-    q.prepare("INSERT INTO Entry (ID,ParentID,Row,Favorite,FileID,Data)"
-              " VALUES (?,?,?,?,?,?)");
-    q.addBindValue((QByteArray)ec.id);
-    q.addBindValue((QByteArray)ec.parentid);
-    q.addBindValue(ec.row);
-    q.addBindValue(ec.favoriteindex);
-    q.addBindValue((QByteArray)ec.file_id);
-    q.addBindValue(ec.crypttext);
-    DatabaseUtils::ExecuteQuery(q);
 }
 
 void PasswordDatabase::_bw_add_entry(const QString &conn_str, const Entry &e)

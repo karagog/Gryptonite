@@ -749,10 +749,14 @@ static QString __get_new_database_filename(QWidget *parent,
                                            const QString &title,
                                            bool confirm_overwrite)
 {
-    return QFileDialog::getSaveFileName(parent, title,
-                                        QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-                                        "Grypto DB (*.gdb *.GPdb);;All Files (*)", 0,
-                                        confirm_overwrite ? (QFileDialog::Option)0 : QFileDialog::DontConfirmOverwrite);
+    QString ret = QFileDialog::getSaveFileName(parent, title,
+                                               QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
+                                               "Grypto DB (*.gdb *.GPdb);;All Files (*)", 0,
+                                               confirm_overwrite ? (QFileDialog::Option)0 : QFileDialog::DontConfirmOverwrite);
+    QFileInfo fi(ret);
+    if(!fi.exists() && fi.suffix().isEmpty())
+        ret.append(".gdb");
+    return ret;
 }
 
 void MainWindow::_new_open_database()
@@ -760,12 +764,7 @@ void MainWindow::_new_open_database()
     modal_dialog_helper_t mh(this);
     QString path = __get_new_database_filename(this, tr("File Location"), false);
     if(!path.isEmpty())
-    {
-        QFileInfo fi(path);
-        if(!fi.exists() && fi.suffix() != "gdb")
-            path.append(".gdb");
         _new_open_database(path);
-    }
 }
 
 void MainWindow::_open_recent_database(QAction *a)
@@ -869,35 +868,19 @@ void MainWindow::_save_as()
     QString fn = __get_new_database_filename(this, tr("Save as file"), true);
     if(fn.isEmpty())
         return;
-    else if(QFileInfo(fn).absoluteFilePath() ==
-            QFileInfo(_get_database_model()->FilePath()).absoluteFilePath())
-        throw Exception<>("Cannot save to the same path as the original");
-
-    // Create the database object, which only reserves a lock on the new database
-    SmartPointer<DatabaseModel> dbm(new DatabaseModel(fn.toUtf8().constData()));
 
     NewPasswordDialog dlg(m_settings, fn, this);
     if(QDialog::Accepted != dlg.exec())
         return;
 
-    if(QFile::exists(fn))
-        if(!QFile::remove(fn))
-            throw Exception<>("Save as file already exists and I couldn't remove it");
-
-    // Initialize the new database
-    dbm->Open(dlg.GetCredentials());
-
-    // Close the old database and install the new one on the main window
-    DatabaseModel *old_model = _get_database_model();
-    _close_database(false);     // Don't delete the old database model!
-
-    // Copy the old database to the new one
-    dbm->ImportFromDatabase(*old_model);
-
-    _install_new_database_model(dbm);
-
-    dbm.Relinquish();
-    delete old_model;
+    _get_database_model()->SaveAs(fn, dlg.GetCredentials());
+    RecoverFromReadOnly();
+    _update_ui_file_opened(true);
+    _update_recent_files(fn);
+    _update_available_actions();
+    ui->statusbar->showMessage(QString(tr("Successfully saved as %1"))
+                               .arg(QFileInfo(fn).fileName()), STATUSBAR_MSG_TIMEOUT);
+    m_fileLabel->setText(fn);
 }
 
 void MainWindow::_export_to_portable_safe()

@@ -40,7 +40,7 @@ class PasswordDatabase :
 {
     Q_OBJECT
     void *d;
-    const QString m_filepath;
+    QString m_filepath;
     std::unique_ptr<QLockFile> m_lockfile;
 public:
 
@@ -97,6 +97,14 @@ public:
 
     /** Returns true if the database was already opened. */
     bool IsOpen() const;
+
+    /** Saves the database to the new file location and with new credentials.
+     *  (existing files will be overwritten). It works on the main thread
+     *  so it will block until finished. Upon finishing
+     *  the PasswordDatabase object will be pointing to the new file location
+     *  and all subsequent updates will go there.
+    */
+    void SaveAs(const QString &filename, const Credentials &);
 
     /** Throws an exception if the database is not opened. */
     void FailIfNotOpen() const{ if(!IsOpen()) throw GUtil::Exception<>("Database not open"); }
@@ -255,7 +263,6 @@ public:
     */
     void DeleteOrphans();
 
-
 signals:
 
     /** Notifies when the favorites have changed, either the order or the set of them. */
@@ -278,7 +285,9 @@ private:
     // Main thread methods
     void _init_cryptor(const Credentials &, const byte *salt, GUINT32 salt_len);
     void _init_cryptor(const GUtil::CryptoPP::Cryptor &);
+    bool _try_lock_file();
     void _open(std::function<void(byte const *)> init_cryptor);
+    void _close();
 
     // Worker thread bodies
     void _background_worker(GUtil::CryptoPP::Cryptor *);

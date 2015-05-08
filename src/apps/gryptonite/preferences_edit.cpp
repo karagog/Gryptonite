@@ -29,6 +29,7 @@ PreferencesEdit::PreferencesEdit(Settings *s, QWidget *p)
         ui.autoLaunch->setChecked(m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool());
         ui.autoload->setChecked(m_settings->Value(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE).toBool());
         ui.minimize_on_close->setChecked(m_settings->Value(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY).toBool());
+        ui.keyfileLocation->setChecked(m_settings->Value(GRYPTONITE_SETTING_REMEMBER_KEYFILE).toBool());
         ui.timeFrmt->setChecked(m_settings->Value(GRYPTONITE_SETTING_TIME_FORMAT_24HR).toBool());
         ui.checkUpdates->setChecked(m_settings->Value(GRYPTONITE_SETTING_CHECK_FOR_UPDATES).toBool());
 
@@ -50,6 +51,7 @@ void PreferencesEdit::accept()
     m_settings->SetValue(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE, ui.autoload->isChecked());
     m_settings->SetValue(GRYPTONITE_SETTING_AUTOLAUNCH_URLS, ui.autoLaunch->isChecked());
     m_settings->SetValue(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY, ui.minimize_on_close->isChecked());
+    m_settings->SetValue(GRYPTONITE_SETTING_REMEMBER_KEYFILE, ui.keyfileLocation->isChecked());
     m_settings->SetValue(GRYPTONITE_SETTING_TIME_FORMAT_24HR, ui.timeFrmt->isChecked());
     m_settings->SetValue(GRYPTONITE_SETTING_CHECK_FOR_UPDATES, ui.checkUpdates->isChecked());
 

@@ -17,6 +17,7 @@ limitations under the License.*/
 #include "ui_getpassworddialog.h"
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QStandardPaths>
 USING_NAMESPACE_GUTIL1(Qt);
 
 #define SETTING_LAST_CB_INDEX "gp_dlg_last_cb_index"
@@ -26,7 +27,10 @@ NAMESPACE_GRYPTO;
 
 GetPasswordDialog::GetPasswordDialog(
         Settings *settings,
-        const QString &filename, QWidget *parent)
+        const QString &filename,
+        Credentials::TypeEnum creds_type,
+        const QString &keyfile_loc,
+        QWidget *parent)
     :QDialog(parent),
       ui(new Ui::GetPasswordDialog),
       m_settings(settings)
@@ -36,17 +40,32 @@ GetPasswordDialog::GetPasswordDialog(
     else
         setWindowTitle(QString(tr("Enter Key Info for %1")).arg(filename));
     setWindowModality(Qt::WindowModal);
-
     ui->setupUi(this);
-    if(settings->Contains(SETTING_LAST_CB_INDEX)){
-        int old_index = ui->comboBox->currentIndex();
-        ui->comboBox->setCurrentIndex(settings->Value(SETTING_LAST_CB_INDEX).toInt());
-        if(old_index == ui->comboBox->currentIndex())
-            _combobox_indexchanged(old_index);
-    }
-    else
-        _combobox_indexchanged(ui->comboBox->currentIndex());
 
+    if(!keyfile_loc.isEmpty())
+        ui->le_keyfile->setText(keyfile_loc);
+
+    int old_index = ui->comboBox->currentIndex();
+    switch(creds_type)
+    {
+    case Credentials::PasswordType:
+        ui->comboBox->setCurrentIndex(0);
+        break;
+    case Credentials::KeyfileType:
+        ui->comboBox->setCurrentIndex(1);
+        break;
+    case Credentials::PasswordAndKeyfileType:
+        ui->comboBox->setCurrentIndex(2);
+        break;
+    case Credentials::NoType:
+    default:
+        if(settings->Contains(SETTING_LAST_CB_INDEX))
+            ui->comboBox->setCurrentIndex(settings->Value(SETTING_LAST_CB_INDEX).toInt());
+        break;
+    }
+
+    if(old_index == ui->comboBox->currentIndex())
+        _combobox_indexchanged(old_index);
     ui->le_password->setFocus();
 }
 
@@ -107,7 +126,13 @@ void GetPasswordDialog::accept()
 
 void GetPasswordDialog::_select_keyfile()
 {
-    QString fn = QFileDialog::getOpenFileName(this, tr("Select Keyfile"));
+    QString dir = GetKeyfileLocation();
+
+    // Open the dialog in the user's home directory if no path is given
+    if(dir.isEmpty())
+        dir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+
+    QString fn = QFileDialog::getOpenFileName(this, tr("Select Keyfile"), dir);
     if(fn.isEmpty())
         return;
 
@@ -135,6 +160,11 @@ void GetPasswordDialog::_combobox_indexchanged(int ind)
     default:
         break;
     }
+}
+
+QString GetPasswordDialog::GetKeyfileLocation() const
+{
+    return ui->le_keyfile->text();
 }
 
 

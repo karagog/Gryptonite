@@ -178,6 +178,7 @@ private:
     bool m_isLocked;
     QByteArray m_lockedState;
     QByteArray m_savedState;
+    QString m_keyfileLocation;
     QProcess m_grypto_transforms;
     QProcess m_grypto_rng;
     bool m_grypto_transforms_visible;
@@ -201,6 +202,7 @@ private:
     Grypt::FilteredDatabaseModel *_get_proxy_model() const;
     Grypt::DatabaseModel *_get_database_model() const;
     bool _verify_credentials();
+    QString _get_keyfile_location() const;
 
     void _select_entry(const Grypt::EntryId &);
     Grypt::Entry const *_get_currently_selected_entry() const;

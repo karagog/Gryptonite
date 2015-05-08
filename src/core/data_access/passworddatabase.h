@@ -107,6 +107,9 @@ public:
     /** Returns true if the password and keyfile are correct. */
     bool CheckCredentials(const Credentials &) const;
 
+    /** Returns the credentials used to unlock the database. */
+    Credentials::TypeEnum GetCredentialsType() const;
+
     /** Returns a reference to the cryptor for you to use (but not change). */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
 

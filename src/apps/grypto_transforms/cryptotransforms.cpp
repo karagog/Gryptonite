@@ -147,7 +147,7 @@ void CryptoTransforms::_change_password()
 
 void CryptoTransforms::_test_password()
 {
-    GetPasswordDialog dlg(m_settings, QString(), this);
+    GetPasswordDialog dlg(m_settings, QString(), Credentials::NoType, QString(), this);
     if(QDialog::Accepted == dlg.exec()){
         if(!m_cryptor)
             QMessageBox::critical(this, tr("No Key"), tr("No key has been set"));

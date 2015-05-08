@@ -37,11 +37,15 @@ class GetPasswordDialog :
 public:
     explicit GetPasswordDialog(
             GUtil::Qt::Settings *,
-            const QString &title = QString(),
+            const QString &title_filename = QString(),
+            Credentials::TypeEnum creds_type = Credentials::NoType,
+            const QString &keyfile_location = QString(),
             QWidget *parent = 0);
     ~GetPasswordDialog();
 
     Credentials const &GetCredentials() const{ return m_creds; }
+
+    QString GetKeyfileLocation() const;
 
     virtual void accept();
 

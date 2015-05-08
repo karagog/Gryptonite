@@ -711,6 +711,11 @@ bool DatabaseModel::CheckCredentials(const Credentials &creds) const
     return m_db.CheckCredentials(creds);
 }
 
+Credentials::TypeEnum DatabaseModel::GetCredentialsType() const
+{
+    return m_db.GetCredentialsType();
+}
+
 void DatabaseModel::AddFile(const FileId &id, const char *filepath)
 {
     m_db.AddFile(id, filepath);

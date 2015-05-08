@@ -803,6 +803,13 @@ bool PasswordDatabase::CheckCredentials(const Credentials &creds) const
     return d->cryptor->CheckCredentials(creds);
 }
 
+Credentials::TypeEnum PasswordDatabase::GetCredentialsType() const
+{
+    G_D;
+    FailIfNotOpen();
+    return d->cryptor->GetCredentialsType();
+}
+
 static void __commit_transaction(QSqlDatabase &db)
 {
     if(!db.commit())

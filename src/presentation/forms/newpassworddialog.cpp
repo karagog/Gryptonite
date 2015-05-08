@@ -19,6 +19,7 @@ limitations under the License.*/
 #include <QMessageBox>
 #include <QKeyEvent>
 #include <QFileDialog>
+#include <QStandardPaths>
 USING_NAMESPACE_GUTIL1(Qt);
 
 // It doesn't make sense for this to be any larger than
@@ -164,7 +165,13 @@ void NewPasswordDialog::accept()
 
 void NewPasswordDialog::_select_keyfile()
 {
-    QString fn = QFileDialog::getOpenFileName(this, tr("Select Keyfile"));
+    QString dir = GetKeyfileLocation();
+
+    // Open the dialog in the user's home directory if no path is given
+    if(dir.isEmpty())
+        dir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+
+    QString fn = QFileDialog::getOpenFileName(this, tr("Select Keyfile"), dir);
     if(fn.isEmpty())
         return;
 
@@ -223,6 +230,11 @@ void NewPasswordDialog::_combobox_indexchanged(int ind)
     default:
         break;
     }
+}
+
+QString NewPasswordDialog::GetKeyfileLocation() const
+{
+    return ui->le_filePath->text();
 }
 
 

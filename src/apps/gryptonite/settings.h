@@ -29,6 +29,8 @@ limitations under the License.*/
 
 #define GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY  "gryptonite_close_minimizes"
 
+#define GRYPTONITE_SETTING_REMEMBER_KEYFILE         "gryptonite_remember_keyfile"
+
 #define GRYPTONITE_SETTING_TIME_FORMAT_24HR         "gryptonite_time_format"
 
 #define GRYPTONITE_SETTING_LOCKOUT_TIMEOUT          "gryptonite_lockout_timeout"

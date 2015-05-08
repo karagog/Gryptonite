@@ -61,7 +61,8 @@ QString LegacyPlugin::UpgradeDatabase(const QString &path,
 
         Credentials creds;
         {
-            GetPasswordDialog dlg(settings, QFileInfo(path).fileName(), parent);
+            GetPasswordDialog dlg(settings, QFileInfo(path).fileName(),
+                                  Credentials::NoType, QString(), parent);
             if(QDialog::Rejected == dlg.exec())
                 return QString::null;
             creds = dlg.GetCredentials();

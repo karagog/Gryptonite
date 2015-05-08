@@ -624,6 +624,7 @@ void MainWindow::_new_open_database(const QString &path)
 {
     Credentials creds;
     QString open_path = path;
+    QString keyfile_loc;
     SmartPointer<DatabaseModel> dbm;
     ui->statusbar->showMessage(QString(tr("Opening %1...")).arg(path));
     {
@@ -708,13 +709,23 @@ void MainWindow::_new_open_database(const QString &path)
             if(QDialog::Rejected == dlg.exec())
                 return;
             creds = dlg.GetCredentials();
+
+            if(creds.Type == Credentials::KeyfileType ||
+                    creds.Type == Credentials::PasswordAndKeyfileType){
+                keyfile_loc = dlg.GetKeyfileLocation();
+            }
         }
         else if(!file_updated){
             modal_dialog_helper_t mh(this);
-            GetPasswordDialog dlg(m_settings, filename, this);
+            GetPasswordDialog dlg(m_settings, filename, Credentials::NoType, QString(), this);
             if(QDialog::Rejected == dlg.exec())
                 return;
             creds = dlg.GetCredentials();
+
+            if(creds.Type == Credentials::KeyfileType ||
+                    creds.Type == Credentials::PasswordAndKeyfileType){
+                keyfile_loc = dlg.GetKeyfileLocation();
+            }
         }
 
         // Close the database (if one was open)
@@ -730,6 +741,7 @@ void MainWindow::_new_open_database(const QString &path)
     }
 
     _install_new_database_model(dbm.Data());
+    m_keyfileLocation = keyfile_loc;
     dbm.Relinquish();
 }
 
@@ -794,6 +806,7 @@ void MainWindow::_close_database(bool delete_model)
         if(delete_model)
             delete old_model;
 
+        m_keyfileLocation.clear();
         m_readonly = false;
         setWindowTitle(GRYPTO_APP_NAME);
         _lock_unlock_interface(false);
@@ -804,17 +817,41 @@ void MainWindow::_close_database(bool delete_model)
 bool MainWindow::_verify_credentials()
 {
     bool ret = false;
-    GetPasswordDialog dlg(m_settings,
-                          QFileInfo(_get_database_model()->FilePath()).fileName(),
-                          this);
-    if(QDialog::Accepted == dlg.exec()){
-        if(_get_database_model()->CheckCredentials(dlg.GetCredentials())){
-            ret = true;
+    QString keyfile_loc = _get_keyfile_location();
+    DatabaseModel *dbm = _get_database_model();
+    GASSERT(dbm);
+
+    Credentials creds;
+    if(!keyfile_loc.isEmpty() &&
+            dbm->GetCredentialsType() == Credentials::KeyfileType)
+    {
+        creds.Type = Credentials::KeyfileType;
+        creds.Keyfile = keyfile_loc;
+        if(!(ret = dbm->CheckCredentials(creds))){
+            QMessageBox::warning(this, tr("Keyfile Incorrect"),
+                                 QString(tr("The keyfile at %1 is incorrect or missing"))
+                                 .arg(keyfile_loc));
         }
-        else{
-            QMessageBox::information(this,
+    }
+
+    if(!ret){
+        modal_dialog_helper_t mh(this);
+        GetPasswordDialog dlg(m_settings,
+                              QFileInfo(dbm->FilePath()).fileName(),
+                              dbm->GetCredentialsType(),
+                              keyfile_loc,
+                              this);
+
+        if(QDialog::Accepted == dlg.exec()){
+            if((ret = dbm->CheckCredentials(dlg.GetCredentials()))){
+                // Update the keyfile location because it may have changed
+                m_keyfileLocation = dlg.GetKeyfileLocation();
+            }
+            else{
+                QMessageBox::warning(this,
                                      tr("Password Incorrect"),
-                                     tr("The password you entered is incorrect"));
+                                     tr("The credentials you entered are incorrect"));
+            }
         }
     }
     return ret;
@@ -897,7 +934,8 @@ void MainWindow::_import_from_portable_safe()
     if(fn.isEmpty() || !QFile::exists(fn))
         return;
 
-    GetPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
+    GetPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(),
+                          Credentials::NoType, QString(), this);
     {
         modal_dialog_helper_t mh(this);
         if(QDialog::Accepted != dlg.exec())
@@ -1044,7 +1082,7 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->menu_Import->setEnabled(b);
 
     if(b){
-        ui->statusbar->showMessage(tr("Database Opened Successfully"), STATUSBAR_MSG_TIMEOUT);
+        ui->statusbar->showMessage(tr("Database opened successfully"), STATUSBAR_MSG_TIMEOUT);
     }
     else
     {
@@ -1517,6 +1555,8 @@ void MainWindow::_lock_unlock_interface(bool lock)
         int minutes = m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt();
         if(minutes > 0)
             m_lockoutTimer.StartLockoutTimer(minutes);
+
+        ui->statusbar->showMessage(tr("Unlocked"), STATUSBAR_MSG_TIMEOUT);
     }
 
     _update_available_actions();
@@ -1565,26 +1605,24 @@ void MainWindow::_action_lock_unlock_interface()
     }
 }
 
+// Only returns the keyfile location if it's relevant
+QString MainWindow::_get_keyfile_location() const
+{
+    QString ret;
+    DatabaseModel *dbm = _get_database_model();
+    if(dbm &&
+            (dbm->GetCredentialsType() == Credentials::KeyfileType ||
+             dbm->GetCredentialsType() == Credentials::PasswordAndKeyfileType) &&
+            m_settings->Value(GRYPTONITE_SETTING_REMEMBER_KEYFILE).toBool()){
+        ret = m_keyfileLocation;
+    }
+    return ret;
+}
+
 void MainWindow::RequestUnlock()
 {
-    {
-        bool unlock = false;
-        modal_dialog_helper_t mh(this);
-        GetPasswordDialog dlg(m_settings,
-                              QFileInfo(_get_database_model()->FilePath()).fileName(),
-                              this);
-        if(QDialog::Accepted == dlg.exec()){
-            if(_get_database_model()->CheckCredentials(dlg.GetCredentials()))
-                unlock = true;
-            else
-                __show_access_denied(this, tr("Invalid Password"));
-        }
-
-        if(!unlock)
-            return;
-    }
-
-    _lock_unlock_interface(false);
+    if(_verify_credentials())
+        _lock_unlock_interface(false);
 }
 
 bool MainWindow::event(QEvent *e)

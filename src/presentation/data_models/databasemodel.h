@@ -64,6 +64,9 @@ public:
     /** Returns true if this is the correct password for the database. */
     bool CheckCredentials(const Credentials &) const;
 
+    /** Returns the credentials used to unlock the database. */
+    Credentials::TypeEnum GetCredentialsType() const;
+
     /** Returns a reference to the cryptor used by the database object. */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
 

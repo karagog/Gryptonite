@@ -40,6 +40,8 @@ public:
 
     Credentials const &GetCredentials() const{ return m_creds; }
 
+    QString GetKeyfileLocation() const;
+
     virtual void accept();
 
 

@@ -1,6 +1,6 @@
 #! /bin/bash
 
-VERSION=3.0.7
+VERSION=3.0.8
 
 TOP_DIR=../..
 ICONS_DIR=$TOP_DIR/src/presentation/icons

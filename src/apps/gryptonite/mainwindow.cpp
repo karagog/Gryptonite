@@ -879,7 +879,14 @@ void MainWindow::_save_as()
     if(QDialog::Accepted != dlg.exec())
         return;
 
-    _get_database_model()->SaveAs(fn, dlg.GetCredentials());
+    DatabaseModel *dbm = _get_database_model();
+    dbm->SaveAs(fn, dlg.GetCredentials());
+    if(dbm->GetCredentialsType() == Credentials::KeyfileType ||
+            dbm->GetCredentialsType() == Credentials::PasswordAndKeyfileType)
+        m_keyfileLocation = dlg.GetKeyfileLocation();
+    else
+        m_keyfileLocation.clear();
+
     RecoverFromReadOnly();
     _update_ui_file_opened(true);
     _update_recent_files(fn);

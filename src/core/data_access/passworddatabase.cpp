@@ -555,7 +555,7 @@ static void __initialize_cache(d_t *d)
     // Load all entries connected to the root
     function<void(const EntryId &)> parse_child_entries;
     parse_child_entries = [&](const EntryId &pid){
-        QList<EntryId> &child_list =
+        Vector<EntryId> &child_list =
                 d->parent_index.emplace(pid, parent_cache()).first->second.children;
 
         q.prepare(QString("SELECT * FROM Entry WHERE ParentID%1 ORDER BY Row ASC")
@@ -566,7 +566,7 @@ static void __initialize_cache(d_t *d)
 
         while(q.next()){
             entry_cache ec = __convert_record_to_entry_cache(q.record());
-            child_list.append(ec.id);
+            child_list.PushBack(ec.id);
 
             // Add the entry to the cache
             d->index.emplace(ec.id, ec);

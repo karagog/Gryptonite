@@ -113,6 +113,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget
       m_action_new_child(tr("New &Child"), this),
       m_btn_pop_out(tr("Pop Out")),
       m_isLocked(true),
+      m_importing(false),
       m_grypto_transforms_visible(false),
       m_minimize_msg_shown(false),
       m_canHide(true),
@@ -625,11 +626,15 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
             this, SLOT(_entries_moved(QModelIndex, int, int, QModelIndex)));
     connect(dbm, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
             this, SLOT(_entries_updated(QModelIndex,QModelIndex)));
-    connect(dbm, SIGNAL(NotifyImportFinished()), this, SLOT(RecoverFromReadOnly()));
+    connect(dbm, SIGNAL(NotifyImportFinished()),
+            this, SLOT(DatabaseImportFinished()));
 }
 
 void MainWindow::_entries_added_or_removed(const QModelIndex &parent_index)
 {
+    if(m_importing)
+        return;
+
     ui->treeView->ResizeColumnsToContents();
 
     DatabaseModel *dbm = _get_database_model();
@@ -651,6 +656,9 @@ void MainWindow::_entries_added_or_removed(const QModelIndex &parent_index)
 void MainWindow::_entries_moved(const QModelIndex &par_src, int, int,
                                 const QModelIndex &par_dest)
 {
+    if(m_importing)
+        return;
+
     ui->treeView->ResizeColumnsToContents();
 
     DatabaseModel *dbm = _get_database_model();
@@ -673,6 +681,9 @@ void MainWindow::_entries_moved(const QModelIndex &par_src, int, int,
 void MainWindow::_entries_updated(const QModelIndex &top_left,
                                   const QModelIndex &bottom_right)
 {
+    if(m_importing)
+        return;
+
     if(!top_left.isValid() || !bottom_right.isValid())
         return;
 
@@ -1048,6 +1059,7 @@ void MainWindow::_export_to_xml()
 
 void MainWindow::_prepare_ui_for_import()
 {
+    m_importing = true;
     DropToReadOnly();
     ui->actionNewOpenDB->setEnabled(false);
     ui->action_Save_As->setEnabled(false);
@@ -1062,12 +1074,16 @@ void MainWindow::_import_from_xml()
     if(!IsFileOpen())
         return;
 
-    QString fn = QFileDialog::getOpenFileName(this, tr("Import from XML"),
-                                              QString(),
-                                              "XML (*.xml)"
-                                              ";;All Files(*)");
-    if(fn.isEmpty() || !QFile::exists(fn))
-        return;
+    QString fn;
+    {
+        modal_dialog_helper_t mh(this);
+        fn = QFileDialog::getOpenFileName(this, tr("Import from XML"),
+                                          QString(),
+                                          "XML (*.xml)"
+                                          ";;All Files(*)");
+        if(fn.isEmpty() || !QFile::exists(fn))
+            return;
+    }
 
 //    QMessageBox *mb = new QMessageBox(this);
 //    mb->setWindowTitle("Importing from XML");
@@ -1873,4 +1889,11 @@ void MainWindow::RecoverFromReadOnly()
         _update_available_actions();
         ui->treeView->ResizeColumnsToContents();
     }
+}
+
+void MainWindow::DatabaseImportFinished()
+{
+    RecoverFromReadOnly();
+    m_importing = false;
+    _update_trayIcon_menu();
 }

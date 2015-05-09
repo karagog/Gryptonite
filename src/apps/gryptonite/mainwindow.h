@@ -88,6 +88,9 @@ public slots:
     /** If the interface was in read-only mode, this puts it back in editable mode. */
     void RecoverFromReadOnly();
 
+    /** This slot is called when a database import operation is finished. */
+    void DatabaseImportFinished();
+
     /** Locks the interface. (true = lock)*/
     void Lock();
 
@@ -180,6 +183,7 @@ private:
     Grypt::ClipboardAccess m_clipboard;
     Grypt::Lockout m_lockoutTimer;
     bool m_isLocked;
+    bool m_importing;
     QByteArray m_lockedState;
     QByteArray m_savedState;
     QString m_keyfileLocation;

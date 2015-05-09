@@ -550,41 +550,44 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
 
 static void __initialize_cache(d_t *d)
 {
-    QSqlQuery q(QSqlDatabase::database(d->dbString));
-
-    // Load all entries connected to the root
-    function<void(const EntryId &)> parse_child_entries;
-    parse_child_entries = [&](const EntryId &pid){
-        Vector<EntryId> &child_list =
-                d->parent_index.emplace(pid, parent_cache()).first->second.children;
-
-        q.prepare(QString("SELECT * FROM Entry WHERE ParentID%1 ORDER BY Row ASC")
-                  .arg(pid.IsNull() ? " IS NULL" : "=?"));
-        if(!pid.IsNull())
-            q.addBindValue((QByteArray)pid);
-        DatabaseUtils::ExecuteQuery(q);
-
+    // Cache the entire entry table in one query
+    QSqlQuery q("SELECT * FROM Entry ORDER BY ParentId,Row ASC",
+                QSqlDatabase::database(d->dbString));
+    {
+        QMap<EntryId, QList<EntryId>> hierarchy;
+        QMap<EntryId, entry_cache> entries;
         while(q.next()){
             entry_cache ec = __convert_record_to_entry_cache(q.record());
-            child_list.PushBack(ec.id);
-
-            // Add the entry to the cache
-            d->index.emplace(ec.id, ec);
-
-            // We'll sort the favorites at the end
-            if(0 <= ec.favoriteindex)
-                d->favorite_index.append(ec.id);
+            hierarchy[ec.parentid].append(ec.id);
+            entries[ec.id] = ec;
         }
 
-        for(const EntryId &cid : child_list)
-            parse_child_entries(cid);
-    };
-    parse_child_entries(EntryId::Null());
+        // Load all entries connected to the root
+        function<void(const EntryId &)> parse_child_entries;
+        parse_child_entries = [&](const EntryId &pid){
+            Vector<EntryId> &child_list =
+                    d->parent_index.emplace(pid, parent_cache()).first->second.children;
+
+            for(const EntryId &cid : hierarchy[pid]){
+                child_list.PushBack(cid);
+
+                // Add the entry to the cache
+                const entry_cache &ec = entries[cid];
+                d->index.emplace(cid, ec);
+
+                // We'll sort the favorites at the end
+                if(0 <= ec.favoriteindex)
+                    d->favorite_index.append(cid);
+            }
+
+            for(const EntryId &cid : child_list)
+                parse_child_entries(cid);
+        };
+        parse_child_entries(EntryId::Null());
+    }
 
     // Then cache the file ID's
-    q.prepare("SELECT ID,Length FROM File");
-    DatabaseUtils::ExecuteQuery(q);
-
+    q.exec("SELECT ID,Length FROM File");
     while(q.next()){
         file_cache fc;
         fc.id = q.record().value("ID").toByteArray();

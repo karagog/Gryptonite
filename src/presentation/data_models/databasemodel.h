@@ -96,6 +96,11 @@ public:
     */
     Entry const *GetEntryFromIndex(const QModelIndex &) const;
 
+    /** Returns true if "ancestor" is an ancestor of "child". It also
+     *  returns true if the child is same as the ancestor.
+    */
+    bool HasAncestor(const EntryId &child, const EntryId &ancestor) const;
+
     /** Blocks the current thread until the background thread goes idle. Use
      *  this to guarantee that your operation has completed before proceeding.
     */

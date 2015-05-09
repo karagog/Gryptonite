@@ -1335,7 +1335,14 @@ void PasswordDatabase::UpdateEntry(Entry &e)
         emit NotifyFavoritesUpdated();
 }
 
-bool PasswordDatabase::_has_ancestor(const EntryId &child, const EntryId &ancestor)
+bool PasswordDatabase::HasAncestor(const EntryId &child, const EntryId &ancestor) const
+{
+    G_D;
+    lock_guard<mutex> lkr(d->index_lock);
+    return _has_ancestor(child, ancestor);
+}
+
+bool PasswordDatabase::_has_ancestor(const EntryId &child, const EntryId &ancestor) const
 {
     G_D;
     if(child == ancestor)

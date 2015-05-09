@@ -160,6 +160,10 @@ private slots:
 
     void _reset_lockout_timer();
 
+    void _entries_added_or_removed(const QModelIndex &);
+    void _entries_moved(const QModelIndex &, int, int, const QModelIndex &);
+    void _entries_updated(const QModelIndex &, const QModelIndex &);
+
 
 private:
     Ui::MainWindow *ui;

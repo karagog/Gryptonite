@@ -618,12 +618,88 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
     connect(dbm, SIGNAL(NotifyProgressUpdated(int, bool, QString)),
             this, SLOT(_progress_updated(int, bool, QString)));
     connect(dbm, SIGNAL(rowsInserted(QModelIndex,int,int)),
-            ui->treeView, SLOT(ResizeColumnsToContents()));
+            this, SLOT(_entries_added_or_removed(QModelIndex)));
     connect(dbm, SIGNAL(rowsRemoved(QModelIndex,int,int)),
-            ui->treeView, SLOT(ResizeColumnsToContents()));
+            this, SLOT(_entries_added_or_removed(QModelIndex)));
+    connect(dbm, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
+            this, SLOT(_entries_moved(QModelIndex, int, int, QModelIndex)));
     connect(dbm, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
-            ui->treeView, SLOT(ResizeColumnsToContents()));
+            this, SLOT(_entries_updated(QModelIndex,QModelIndex)));
     connect(dbm, SIGNAL(NotifyImportFinished()), this, SLOT(RecoverFromReadOnly()));
+}
+
+void MainWindow::_entries_added_or_removed(const QModelIndex &parent_index)
+{
+    ui->treeView->ResizeColumnsToContents();
+
+    DatabaseModel *dbm = _get_database_model();
+    const EntryId pid = parent_index.data(DatabaseModel::EntryIdRole).value<EntryId>();
+
+    // If the changed parent is a child of a favorite, then update the tray icon menu
+    bool favorites_affected = false;
+    for(const EntryId &fid : dbm->FindFavoriteIds()){
+        if(dbm->HasAncestor(pid, fid)){
+            favorites_affected = true;
+            break;
+        }
+    }
+
+    if(favorites_affected)
+        _update_trayIcon_menu();
+}
+
+void MainWindow::_entries_moved(const QModelIndex &par_src, int, int,
+                                const QModelIndex &par_dest)
+{
+    ui->treeView->ResizeColumnsToContents();
+
+    DatabaseModel *dbm = _get_database_model();
+    const EntryId pid_src  = par_src.data(DatabaseModel::EntryIdRole).value<EntryId>();
+    const EntryId pid_dest = par_dest.data(DatabaseModel::EntryIdRole).value<EntryId>();
+
+    // If the changed parent is a child of a favorite, then update the tray icon menu
+    bool favorites_affected = false;
+    for(const EntryId &fid : dbm->FindFavoriteIds()){
+        if(dbm->HasAncestor(pid_src, fid) || dbm->HasAncestor(pid_dest, fid)){
+            favorites_affected = true;
+            break;
+        }
+    }
+
+    if(favorites_affected)
+        _update_trayIcon_menu();
+}
+
+void MainWindow::_entries_updated(const QModelIndex &top_left,
+                                  const QModelIndex &bottom_right)
+{
+    if(!top_left.isValid() || !bottom_right.isValid())
+        return;
+
+    ui->treeView->ResizeColumnsToContents();
+
+    // If any rows that changed are favorites, then update the tray icon menu
+    DatabaseModel *dbm = _get_database_model();
+    QModelIndex par = top_left.parent();
+    GASSERT(par == bottom_right.parent());
+    bool favorites_affected = false;
+
+    // If the parent has a favorite ancestor...
+    for(const EntryId &fid : dbm->FindFavoriteIds()){
+        if(dbm->HasAncestor(par.data(DatabaseModel::EntryIdRole).value<EntryId>(), fid)){
+            favorites_affected = true;
+            break;
+        }
+    }
+
+    // Or if any of the changed rows are favorites...
+    for(int r = top_left.row(); !favorites_affected && r <= bottom_right.row(); r++){
+        if(dbm->GetEntryFromIndex(dbm->index(r, 0, par))->IsFavorite())
+            favorites_affected = true;
+    }
+
+    if(favorites_affected)
+        _update_trayIcon_menu();
 }
 
 void MainWindow::_new_open_database(const QString &path)

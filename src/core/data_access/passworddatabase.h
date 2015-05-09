@@ -253,6 +253,11 @@ public:
     */
     void ImportFromDatabase(const PasswordDatabase &);
 
+    /** Returns true if "ancestor" is an ancestor of "child". It also
+     *  returns true if the child is same as the ancestor.
+    */
+    bool HasAncestor(const EntryId &child, const EntryId &ancestor) const;
+
     /** Call this function to iterate through all entries, deleting
      *  those that don't have parents. Afterwards it will iterate through
      *  files and delete those that are not referenced by an entry.
@@ -299,7 +304,7 @@ private:
 
     // These util functions can only be called if you possess the index lock
     // Returns true if the second id is an ancestor of the first
-    bool _has_ancestor(const EntryId &child, const EntryId &ancestor);
+    bool _has_ancestor(const EntryId &child, const EntryId &ancestor) const;
 
     // Background worker methods
     void _bw_add_entry(const QString &, const Entry &);

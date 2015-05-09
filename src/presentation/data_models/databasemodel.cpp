@@ -285,6 +285,11 @@ Entry const *DatabaseModel::GetEntryFromIndex(const QModelIndex &ind) const
     return ec  && !ec->deleted ? &ec->entry : NULL;
 }
 
+bool DatabaseModel::HasAncestor(const EntryId &child, const EntryId &ancestor) const
+{
+    return m_db.HasAncestor(child, ancestor);
+}
+
 QModelIndex DatabaseModel::index(int row, int col, const QModelIndex &parent) const
 {
     QModelIndex ret;

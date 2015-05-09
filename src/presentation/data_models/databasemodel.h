@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef GRYPTO_DATABASEMODEL_H
 #define GRYPTO_DATABASEMODEL_H
 
-#include <grypto_passworddatabase.h>
+#include <grypto/passworddatabase.h>
 #include <gutil/undostack.h>
 #include <QAbstractItemModel>
 
@@ -50,14 +50,24 @@ public:
     */
     void Open(const Credentials &);
 
+    /** Opens the database using the given cryptor for credentials. With this function, you don't
+        require knowledge of the password or keyfile, only the actual key used for encryption/decryption.
+    */
+    void Open(const GUtil::CryptoPP::Cryptor &);
+
     /** Returns true if the database has been opened. */
     bool IsOpen() const{ return m_db.IsOpen(); }
 
+    void SaveAs(const QString &filename, const Credentials &);
+
     /** The path to the database on disk. */
-    const char *FilePath() const;
+    const QString &FilePath() const;
 
     /** Returns true if this is the correct password for the database. */
     bool CheckCredentials(const Credentials &) const;
+
+    /** Returns the credentials used to unlock the database. */
+    Credentials::TypeEnum GetCredentialsType() const;
 
     /** Returns a reference to the cryptor used by the database object. */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
@@ -108,8 +118,8 @@ public:
 
     inline bool CanUndo() const{ return m_undostack.CanUndo(); }
     inline bool CanRedo() const{ return m_undostack.CanRedo(); }
-    inline GUtil::String UndoText() const{ return m_undostack.GetUndoText(); }
-    inline GUtil::String RedoText() const{ return m_undostack.GetRedoText(); }
+    inline QString UndoText() const{ return m_undostack.GetUndoText().ToQString(); }
+    inline QString RedoText() const{ return m_undostack.GetRedoText().ToQString(); }
     inline void ClearUndoStack(){ m_undostack.Clear(); }
 
 
@@ -122,34 +132,22 @@ public:
     /** Returns true if the file id is present in the database. */
     bool FileExists(const FileId &);
 
-    /** Returns the complete list of files in the database, along with their sizes. */
-    QHash<FileId, PasswordDatabase::FileInfo_t> GetFileSummary();
-
-    /** Returns a set of all file ids which are not referenced by any entry id. */
-    QHash<FileId, PasswordDatabase::FileInfo_t> GetOrphanedFiles();
-
-    /** Returns the complete list of file ids that are referenced by entries. */
-    QSet<FileId> GetReferencedFiles();
-
     /** Decrypts and exports the file. */
     void ExportFile(const FileId &, const char *export_file_path);
 
     /** Exports the entire database in the portable safe format. */
-    void ExportToPortableSafe(const char *export_filename,
+    void ExportToPortableSafe(const QString &export_filename,
                               const Credentials &);
 
     /** Imports data from the portable safe file. */
-    void ImportFromPortableSafe(const char *export_filename,
+    void ImportFromPortableSafe(const QString &import_filename,
                                 const Credentials &);
 
-    /** Imports the contents from the other database model.
-     *  All Entry and File ID's will be new. Both databases
-     *  must already be open.
-    */
-    void ImportFromDatabase(const DatabaseModel &);
+    /** Exports the secrets in plaintext to the given XML file. */
+    void ExportToXml(const QString &export_filename);
 
-    /** Cleans up orphan entries and files. */
-    void DeleteOrphans();
+    /** Imports the plaintext XML. */
+    void ImportFromXml(const QString &import_filename);
 
     /** Loads all entries from the database. */
     void FetchAllEntries();
@@ -199,11 +197,15 @@ signals:
     void NotifyProgressUpdated(int, bool, const QString &);
     void NotifyUndoStackChanged();
 
+    /** This signal notifies that the last import operation was finished. */
+    void NotifyImportFinished();
+
 
 private slots:
 
-    void _handle_database_worker_exception(const std::shared_ptr<GUtil::Exception<>> &);
+    void _handle_database_worker_exception(const std::shared_ptr<std::exception> &);
 
+    void _thread_finished_reset_model();
 
 private:
 
@@ -227,6 +229,7 @@ private:
     void _set_favs(const QList<EntryId> &);
     void _add_fav(const EntryId &);
     void _del_fav(const EntryId &);
+    void _reset_model();
 
     void _emit_row_changed(const QModelIndex &);
 

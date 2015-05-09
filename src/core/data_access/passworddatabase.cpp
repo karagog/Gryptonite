@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,14 +14,12 @@ limitations under the License.*/
 
 #include "passworddatabase.h"
 #include "xmlconverter.h"
-#include <grypto_entry.h>
+#include <grypto/entry.h>
 #include <gutil/cryptopp_rng.h>
 #include <gutil/gpsutils.h>
 #include <gutil/databaseutils.h>
 #include <gutil/sourcesandsinks.h>
 #include <gutil/qtsourcesandsinks.h>
-#include <gutil/smartpointer.h>
-#include <gutil/file.h>
 #include <queue>
 #include <unordered_map>
 #include <thread>
@@ -29,6 +27,7 @@ limitations under the License.*/
 #include <condition_variable>
 #include <QString>
 #include <QSet>
+#include <QQueue>
 #include <QFileInfo>
 #include <QResource>
 #include <QSqlDatabase>
@@ -37,6 +36,9 @@ limitations under the License.*/
 #include <QSqlError>
 #include <QDomDocument>
 #include <QLockFile>
+#include <QXmlStreamWriter>
+#include <QXmlStreamReader>
+#include <QTemporaryFile>
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL1(CryptoPP);
 USING_NAMESPACE_GUTIL;
@@ -53,6 +55,8 @@ using namespace std;
 
 #define GRYPTO_DATABASE_VERSION "3.0.0"
 
+#define GRYPTO_XML_VERSION  "3.0"
+
 #define MAX_TRY_COUNT 20
 
 namespace Grypt{
@@ -63,7 +67,7 @@ class bg_worker_command;
 struct entry_cache{
     Grypt::EntryId id, parentid;
     Grypt::FileId file_id;
-    uint row;
+    int row;
     int favoriteindex;
     QByteArray crypttext;
     bool exists = true;
@@ -82,14 +86,16 @@ struct entry_cache{
 
 // Cached parent information
 struct parent_cache{
-    Vector<Grypt::EntryId> children;
+    QList<Grypt::EntryId> children;
 };
 
 struct file_cache{
     Grypt::FileId id;
-    uint length;
+    int length;
 
-    file_cache() :length(0) {}
+    file_cache() :length(-1) {}
+    file_cache(const Grypt::FileId &fid, int len = -1)
+        :id(fid), length(len) {}
 };
 
 namespace
@@ -98,7 +104,7 @@ struct d_t
 {
     // Main thread member variables
     QString dbString;
-    GUtil::SmartPointer<GUtil::CryptoPP::Cryptor> cryptor;
+    unique_ptr<GUtil::CryptoPP::Cryptor> cryptor;
 
     // Background thread
     thread worker;
@@ -200,6 +206,22 @@ static Entry __convert_cache_to_entry(const entry_cache &er, Cryptor &cryptor)
     return ret;
 }
 
+static QByteArray __generate_crypttext(Cryptor &cryptor, const Entry &e)
+{
+    QByteArray crypttext;
+    QByteArrayInput i(XmlConverter::ToXmlString(e));
+    QByteArrayOutput o(crypttext);
+    cryptor.EncryptData(&o, &i);
+    return crypttext;
+}
+
+static entry_cache __convert_entry_to_cache(const Entry &e, Cryptor &cryptor)
+{
+    entry_cache ret(e);
+    ret.crypttext = __generate_crypttext(cryptor, e);
+    return ret;
+}
+
 static entry_cache __fetch_entry_row_by_id(QSqlQuery &q, const EntryId &id)
 {
     entry_cache ret;
@@ -211,9 +233,9 @@ static entry_cache __fetch_entry_row_by_id(QSqlQuery &q, const EntryId &id)
     return ret;
 }
 
-static vector<entry_cache> __fetch_entry_rows_by_parentid(QSqlQuery &q, const EntryId &id)
+static QList<entry_cache> __fetch_entry_rows_by_parentid(QSqlQuery &q, const EntryId &id)
 {
-    vector<entry_cache> ret;
+    QList<entry_cache> ret;
     bool isnull = id.IsNull();
     q.prepare(QString("SELECT * FROM Entry WHERE ParentID%1 ORDER BY Row ASC")
               .arg(isnull ? " IS NULL" : "=?"));
@@ -221,17 +243,17 @@ static vector<entry_cache> __fetch_entry_rows_by_parentid(QSqlQuery &q, const En
         q.addBindValue((QByteArray)id);
     DatabaseUtils::ExecuteQuery(q);
     while(q.next())
-        ret.emplace_back(__convert_record_to_entry_cache(q.record()));
+        ret.append(__convert_record_to_entry_cache(q.record()));
     return ret;
 }
 
-static Vector<Entry> __find_entries_by_parent_id(QSqlQuery &q,
+static QList<Entry> __find_entries_by_parent_id(QSqlQuery &q,
                                                 GUtil::CryptoPP::Cryptor &cryptor,
                                                 const EntryId &id)
 {
-    Vector<Entry> ret;
+    QList<Entry> ret;
     foreach(const entry_cache &er, __fetch_entry_rows_by_parentid(q, id))
-        ret.PushBack(__convert_cache_to_entry(er, cryptor));
+        ret.append(__convert_cache_to_entry(er, cryptor));
     return ret;
 }
 
@@ -241,12 +263,6 @@ static void __delete_file_by_id(const QString &conn_str, const FileId &id)
     q.prepare("DELETE FROM File WHERE ID=?");
     q.addBindValue((QByteArray)id);
     DatabaseUtils::ExecuteQuery(q);
-}
-
-// Generates a random nonce
-static void __get_nonce(byte nonce[NONCE_LENGTH])
-{
-    GlobalRNG()->Fill(nonce, NONCE_LENGTH);
 }
 
 
@@ -271,6 +287,8 @@ public:
         ExportFile,
         ExportToPS,
         ImportFromPS,
+        ExportToXML,
+        ImportFromXML,
 
         // Misc commands
         DispatchOrphans
@@ -412,30 +430,50 @@ public:
 class export_to_ps_command : public bg_worker_command
 {
 public:
-    export_to_ps_command(const char *filepath, const Credentials &creds)
+    export_to_ps_command(const QString &filepath, const Credentials &creds)
         :bg_worker_command(ExportToPS),
           FilePath(filepath),
           Creds(creds)
     {}
-    const QByteArray FilePath;
+    const QString FilePath;
     Credentials Creds;
 };
 
 class import_from_ps_command : public bg_worker_command
 {
 public:
-    import_from_ps_command(const char *filepath, const Credentials &creds)
+    import_from_ps_command(const QString &filepath, const Credentials &creds)
         :bg_worker_command(ImportFromPS),
           FilePath(filepath),
           Creds(creds)
     {}
-    const QByteArray FilePath;
+    const QString FilePath;
     Credentials Creds;
+};
+
+class export_to_xml_command : public bg_worker_command
+{
+public:
+    export_to_xml_command(const QString &filepath)
+        :bg_worker_command(ExportToXML),
+          FilePath(filepath)
+    {}
+    const QString FilePath;
+};
+
+class import_from_xml_command : public bg_worker_command
+{
+public:
+    import_from_xml_command(const QString &filepath)
+        :bg_worker_command(ImportFromXML),
+          FilePath(filepath)
+    {}
+    const QString FilePath;
 };
 
 
 // Creates a database connection and returns the qt connection string
-static QString __create_connection(const char *file_path, const QString &force_conn_str = QString())
+static QString __create_connection(const QString &file_path, const QString &force_conn_str = QString())
 {
     QString conn_str(force_conn_str.isEmpty() ? Id<10>::NewId().ToString16().ToQString() :
                                                 force_conn_str);
@@ -451,14 +489,33 @@ static QString __create_connection(const char *file_path, const QString &force_c
     return conn_str;
 }
 
+static void __init_cryptor(d_t *d, GUtil::CryptoPP::Cryptor *ctor)
+{
+    GASSERT(!d->cryptor);
+    d->cryptor.reset(ctor);
+}
+
+static GUtil::CryptoPP::Cryptor *__produce_cryptor(const Credentials &creds,
+                                                   const byte *salt,
+                                                   GUINT32 salt_len)
+{
+    return new GUtil::CryptoPP::Cryptor(creds, NONCE_LENGTH,
+                                        new Cryptor::DefaultKeyDerivation(salt, salt_len));
+}
+
 void PasswordDatabase::_init_cryptor(const Credentials &creds, const byte *s, GUINT32 s_l)
 {
     G_D;
-    GASSERT(!d->cryptor);
-    d->cryptor = new GUtil::CryptoPP::Cryptor(creds, NONCE_LENGTH, new Cryptor::DefaultKeyDerivation(s, s_l));
+    __init_cryptor(d, __produce_cryptor(creds, s, s_l));
 }
 
-static void __queue_entry_command(d_t *d, bg_worker_command *cmd)
+void PasswordDatabase::_init_cryptor(const GUtil::CryptoPP::Cryptor &cryptor)
+{
+    G_D;
+    __init_cryptor(d, new GUtil::CryptoPP::Cryptor(cryptor));
+}
+
+static void __queue_command(d_t *d, bg_worker_command *cmd)
 {
     unique_lock<mutex> lkr(d->thread_lock);
     d->thread_commands.push(cmd);
@@ -509,7 +566,16 @@ void PasswordDatabase::ValidateDatabase(const char *filepath)
     QSqlDatabase::removeDatabase(dbstring);
 }
 
-PasswordDatabase::PasswordDatabase(const char *file_path,
+bool PasswordDatabase::_try_lock_file()
+{
+    QFileInfo fi(m_filepath);
+    m_lockfile.reset(new QLockFile(QString("%1.LOCKFILE")
+                                   .arg(fi.absoluteFilePath())));
+    m_lockfile->setStaleLockTime(0);
+    return m_lockfile->tryLock(0);
+}
+
+PasswordDatabase::PasswordDatabase(const QString &file_path,
                                    function<bool(const ProcessInfo &)> ask_for_lock_override,
                                    QObject *par)
     :QObject(par),
@@ -521,11 +587,7 @@ PasswordDatabase::PasswordDatabase(const char *file_path,
     //  but we can still lock the future location of the file path so it's ready when we want to create it.
 
     // Attempt to lock the database
-    QFileInfo fi(file_path);
-    m_lockfile = new QLockFile(QString("%1.LOCKFILE")
-                                   .arg(fi.absoluteFilePath()));
-    m_lockfile->setStaleLockTime(0);
-    if(!m_lockfile->tryLock(0)){
+    if(!_try_lock_file()){
         if(QLockFile::LockFailedError == m_lockfile->error()){
             // The file is locked by another process. Ask the user if they want to override it.
             ProcessInfo pi;
@@ -565,11 +627,11 @@ static void __initialize_cache(d_t *d)
         // Load all entries connected to the root
         function<void(const EntryId &)> parse_child_entries;
         parse_child_entries = [&](const EntryId &pid){
-            Vector<EntryId> &child_list =
+            QList<EntryId> &child_list =
                     d->parent_index.emplace(pid, parent_cache()).first->second.children;
 
             for(const EntryId &cid : hierarchy[pid]){
-                child_list.PushBack(cid);
+                child_list.append(cid);
 
                 // Add the entry to the cache
                 const entry_cache &ec = entries[cid];
@@ -608,11 +670,83 @@ static void __initialize_cache(d_t *d)
 
 void PasswordDatabase::Open(const Credentials &creds)
 {
+    _open([&](byte const *salt){
+        vector<byte> s(SALT_LENGTH);
+        if(salt){
+            // Use the salt we were given
+            memcpy(s.data(), salt, SALT_LENGTH);
+        }
+        else{
+            // Generate new random salt
+            GUtil::CryptoPP::RNG().Fill(s.data(), SALT_LENGTH);
+        }
+        _init_cryptor(creds, s.data(), s.size());
+    });
+}
+
+void PasswordDatabase::Open(const GUtil::CryptoPP::Cryptor &c)
+{
+    _open([&](byte const *){
+        // Initialize the cryptor as a copy of the input (the salt is ignored)
+        _init_cryptor(c);
+    });
+}
+
+static void __insert_entry(const entry_cache &ec, QSqlQuery &q)
+{
+    q.prepare("INSERT INTO Entry (ID,ParentID,Row,Favorite,FileID,Data)"
+              " VALUES (?,?,?,?,?,?)");
+    q.addBindValue((QByteArray)ec.id);
+    q.addBindValue((QByteArray)ec.parentid);
+    q.addBindValue(ec.row);
+    q.addBindValue(ec.favoriteindex);
+    q.addBindValue((QByteArray)ec.file_id);
+    q.addBindValue(ec.crypttext);
+    DatabaseUtils::ExecuteQuery(q);
+}
+
+static void __create_new_database(QSqlDatabase &db,
+                                  GUtil::CryptoPP::Cryptor &cryptor)
+{
+    __init_sql_resources();
+    QResource rs(":/grypto/sql/create_db.sql");
+    GASSERT(rs.isValid());
+
+    QByteArray sql;
+    if(rs.isCompressed())
+        sql = qUncompress(rs.data(), rs.size());
+    else
+        sql = QByteArray((const char *)rs.data(), rs.size());
+    DatabaseUtils::ExecuteScript(db, sql);
+
+    // Prepare the keycheck data
+    QByteArray keycheck_ct;
+    {
+        ByteArrayInput auth_in(__keycheck_string, strlen(__keycheck_string));
+        QByteArrayOutput ba_out(keycheck_ct);
+        cryptor.EncryptData(&ba_out, NULL, &auth_in);
+    }
+
+    Cryptor::DefaultKeyDerivation const &kdf =
+        (const Cryptor::DefaultKeyDerivation &)cryptor.GetKeyDerivationFunction();
+
+    // Insert a version record
+    QSqlQuery q(db);
+    q.prepare("INSERT INTO Version (Version,Salt,KeyCheck)"
+                " VALUES (?,?,?)");
+    q.addBindValue(GRYPTO_DATABASE_VERSION);
+    q.addBindValue(QByteArray((const char *)kdf.Salt(), kdf.SaltLength()));
+    q.addBindValue(keycheck_ct);
+    DatabaseUtils::ExecuteQuery(q);
+}
+
+void PasswordDatabase::_open(function<void(byte const *)> init_cryptor)
+{
     if(IsOpen())
         throw Exception<>("Database already opened");
 
     G_D;
-    bool file_exists = File::Exists(m_filepath);
+    bool file_exists = QFile::exists(m_filepath);
     QString dbstring = __create_connection(m_filepath);   // After we check if the file exists
     try
     {
@@ -621,39 +755,8 @@ void PasswordDatabase::Open(const Credentials &creds)
 
         if(!file_exists){
             // Initialize the new database if it doesn't exist
-            __init_sql_resources();
-            QResource rs(":/grypto/sql/create_db.sql");
-            GASSERT(rs.isValid());
-
-            QByteArray sql;
-            if(rs.isCompressed())
-                sql = qUncompress(rs.data(), rs.size());
-            else
-                sql = QByteArray((const char *)rs.data(), rs.size());
-            DatabaseUtils::ExecuteScript(db, sql);
-
-            // Prepare some salt and create the cryptor
-            byte salt[SALT_LENGTH];
-            GUtil::CryptoPP::RNG().Fill(salt, SALT_LENGTH);
-            _init_cryptor(creds, salt, SALT_LENGTH);
-
-            // Prepare the keycheck data
-            QByteArray keycheck_ct;
-            byte nonce[NONCE_LENGTH];
-            __get_nonce(nonce);
-            {
-                ByteArrayInput auth_in(__keycheck_string, strlen(__keycheck_string));
-                QByteArrayOutput ba_out(keycheck_ct);
-                d->cryptor->EncryptData(&ba_out, NULL, &auth_in, nonce);
-            }
-
-            // Insert a version record
-            q.prepare("INSERT INTO Version (Version,Salt,KeyCheck)"
-                        " VALUES (?,?,?)");
-            q.addBindValue(GRYPTO_DATABASE_VERSION);
-            q.addBindValue(QByteArray((const char *)salt, sizeof(salt)));
-            q.addBindValue(keycheck_ct);
-            DatabaseUtils::ExecuteQuery(q);
+            init_cryptor(NULL);
+            __create_new_database(db, *d->cryptor);
         }
 
         // Check the version record to see if it is valid
@@ -666,7 +769,7 @@ void PasswordDatabase::Open(const Credentials &creds)
         if(q.next()){
             if(!d->cryptor){
                 QByteArray salt_ba = q.record().value("Salt").toByteArray();
-                _init_cryptor(creds, (byte const *)salt_ba.constData(), salt_ba.length());
+                init_cryptor((byte const *)salt_ba.constData());
             }
 
             QByteArrayInput bai_ct(q.record().value("KeyCheck").toByteArray());
@@ -679,7 +782,7 @@ void PasswordDatabase::Open(const Credentials &creds)
     catch(...)
     {
         QSqlDatabase::removeDatabase(dbstring);
-        d->cryptor.Clear();
+        d->cryptor.reset(NULL);
         throw;
     }
 
@@ -702,7 +805,118 @@ bool PasswordDatabase::IsOpen() const
     return !d->dbString.isEmpty();
 }
 
-PasswordDatabase::~PasswordDatabase()
+void PasswordDatabase::SaveAs(const QString &filename, const Credentials &creds)
+{
+    G_D;
+    QString file_path = QFileInfo(filename).absoluteFilePath();
+    if(file_path == QFileInfo(m_filepath).absoluteFilePath())
+        throw Exception<>("Cannot save as current file");
+
+    {
+        QFile f(filename);
+        if(f.exists()){
+            if(!f.remove())
+                throw Exception<>(QString(tr("Unable to remove existing file: %1"))
+                                  .arg(f.errorString()).toUtf8());
+        }
+    }
+
+    // Make sure the background thread has finished whatever it's working on
+    WaitForThreadIdle();
+
+    byte salt[SALT_LENGTH];
+    GUtil::CryptoPP::RNG().Fill(salt, SALT_LENGTH);
+    unique_ptr<GUtil::CryptoPP::Cryptor> cryptor(__produce_cryptor(creds, salt, SALT_LENGTH));
+
+    QString dbString = __create_connection(file_path);
+    try
+    {
+        QSqlDatabase db = QSqlDatabase::database(dbString);
+        QSqlQuery q(QSqlDatabase::database(d->dbString));
+        QSqlQuery q_new(db);
+
+        // Create a blank new database
+        __create_new_database(db, *cryptor);
+
+        db.transaction();
+        try{
+            unique_lock<mutex> lkr(d->index_lock);
+
+            // Write all the entries and files from the cache to the new database
+            QList<FileId> file_list;
+            function<void(const EntryId &)> write_child_entries;
+            write_child_entries = [&](const EntryId &pid){
+                for(const EntryId &cid : d->parent_index[pid].children){
+                    // Decrypt the entry with the old cryptor
+                    Entry e = __convert_cache_to_entry(d->index[cid], *d->cryptor);
+
+                    // Encrypt the entry with the new cryptor and insert
+                    __insert_entry(__convert_entry_to_cache(e, *cryptor), q_new);
+
+                    if(!e.GetFileId().IsNull())
+                        file_list.append(e.GetFileId());
+                    write_child_entries(cid);
+                }
+            };
+            write_child_entries(EntryId::Null());
+
+            // Select each file one at a time and insert it into the new database
+            for(const FileId &fid : file_list){
+                q.prepare("SELECT Length,Data FROM File WHERE Id=?");
+                q.addBindValue((QByteArray)fid);
+                DatabaseUtils::ExecuteQuery(q);
+
+                if(q.next()){
+                    QByteArray crypttext = q.value("Data").toByteArray();
+                    QByteArray tmp;
+                    {
+                        // First decrypt the data with the original cryptor
+                        QByteArrayInput bai(crypttext);
+                        QByteArrayOutput bao(tmp);
+                        d->cryptor->DecryptData(&bao, &bai);
+                    }
+                    crypttext.clear();
+                    {
+                        // Then encrypt it with the new cryptor
+                        QByteArrayInput bai(tmp);
+                        QByteArrayOutput bao(crypttext);
+                        cryptor->EncryptData(&bao, &bai);
+                    }
+                    tmp.clear();
+
+                    q_new.prepare("INSERT INTO File (Id,Length,Data) VALUES (?,?,?)");
+                    q_new.addBindValue((QByteArray)fid);
+                    q_new.addBindValue(q.value("Length").toInt());
+                    q_new.addBindValue(crypttext);
+                    DatabaseUtils::ExecuteQuery(q_new);
+                }
+            }
+        } catch(...) {
+            db.rollback();
+            throw;
+        }
+        db.commit();
+    }
+    catch(...)
+    {
+        QSqlDatabase::removeDatabase(dbString);
+        throw;
+    }
+    QSqlDatabase::removeDatabase(dbString);
+
+    // These commands completely close out and reset the state
+    //  of this object. It's as if calling the destructor and constructor.
+    _close();
+    G_D_INIT();
+
+    m_filepath = file_path;
+    if(!_try_lock_file())
+        throw Exception<>("Unable to lock newly saved file??");
+
+    Open(*cryptor);
+}
+
+void PasswordDatabase::_close()
 {
     G_D;
     if(IsOpen()){
@@ -718,9 +932,13 @@ PasswordDatabase::~PasswordDatabase()
 
         QSqlDatabase::removeDatabase(d->dbString);
     }
-
     m_lockfile->unlock();
     G_D_UNINIT();
+}
+
+PasswordDatabase::~PasswordDatabase()
+{
+    _close();
 }
 
 bool PasswordDatabase::CheckCredentials(const Credentials &creds) const
@@ -728,6 +946,13 @@ bool PasswordDatabase::CheckCredentials(const Credentials &creds) const
     G_D;
     FailIfNotOpen();
     return d->cryptor->CheckCredentials(creds);
+}
+
+Credentials::TypeEnum PasswordDatabase::GetCredentialsType() const
+{
+    G_D;
+    FailIfNotOpen();
+    return d->cryptor->GetCredentialsType();
 }
 
 static void __commit_transaction(QSqlDatabase &db)
@@ -778,28 +1003,18 @@ void PasswordDatabase::_bw_add_entry(const QString &conn_str, const Entry &e)
 
         // Update the index immediately now that we have everything we need
         //  i.e. Do not wait to insert the actual entry
-        QByteArray crypttext;
-        {
-            lock_guard<mutex> lkr(d->index_lock);
+        d->index_lock.lock();
 
-            // If the index is not present, then it was already deleted
-            auto iter = d->index.find(e.GetId());
-            if(iter == d->index.end())
-                return;
+        // If the index is not present, then it was already deleted
+        auto iter = d->index.find(e.GetId());
+        if(iter == d->index.end())
+            return;
 
-            iter->second.row = row;
-            crypttext = iter->second.crypttext;
-        }
+        iter->second.row = row;
+        entry_cache const &ec = iter->second;
+        d->index_lock.unlock();
 
-        q.prepare("INSERT INTO Entry (ID,ParentID,Row,Favorite,FileID,Data)"
-                  " VALUES (?,?,?,?,?,?)");
-        q.addBindValue((QByteArray)e.GetId());
-        q.addBindValue((QByteArray)e.GetParentId());
-        q.addBindValue(row);
-        q.addBindValue(e.GetFavoriteIndex());
-        q.addBindValue((QByteArray)e.GetFileId());
-        q.addBindValue(crypttext);
-        DatabaseUtils::ExecuteQuery(q);
+        __insert_entry(ec, q);
 
         emit NotifyProgressUpdated(65, false, task_string);
         success = true;
@@ -1003,21 +1218,6 @@ void PasswordDatabase::_bw_move_entry(const QString &conn_str,
     }
 }
 
-static QByteArray __generate_crypttext(Cryptor &cryptor, const Entry &e)
-{
-    QByteArray crypttext;
-
-    // Get a fresh nonce
-    byte nonce[NONCE_LENGTH];
-    __get_nonce(nonce);
-
-    QByteArrayInput i(XmlConverter::ToXmlString(e));
-    QByteArrayOutput o(crypttext);
-    cryptor.EncryptData(&o, &i, NULL, nonce);
-
-    return crypttext;
-}
-
 void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
 {
     FailIfNotOpen();
@@ -1026,8 +1226,8 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     if(gen_id)
         e.SetId(EntryId::NewId());
 
-    // Generate the crypttext
-    QByteArray crypttext = __generate_crypttext(*d->cryptor, e);
+    // Generate the entry cache
+    entry_cache ec(__convert_entry_to_cache(e, *d->cryptor));
 
     // Update the index
     bool favs_updated = false;
@@ -1035,21 +1235,19 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     {
         // Add to the appropriate parent
         auto pi = d->parent_index.find(e.GetParentId());
-        Vector<EntryId> &child_ids = pi->second.children;
-        if((uint)e.GetRow() > child_ids.Length())
-            e.SetRow(child_ids.Length());
+        QList<EntryId> &child_ids = pi->second.children;
+        if(0 > e.GetRow() || e.GetRow() > child_ids.length())
+            e.SetRow(child_ids.length());
 
-        child_ids.Insert(e.GetId(), e.GetRow());
+        child_ids.insert(e.GetRow(), e.GetId());
 
         // Adjust the siblings
-        for(uint i = e.GetRow() + 1; i < child_ids.Length(); ++i){
+        for(int i = e.GetRow() + 1; i < child_ids.length(); ++i){
             auto iter = d->index.find(child_ids[i]);
             if(iter != d->index.end())
                 iter->second.row = i;
         }
 
-        entry_cache ec(e);
-        ec.crypttext = crypttext;
         d->index[e.GetId()] = ec;
         if(d->deleted_entries.contains(e.GetId())){
             d->deleted_entries.remove(e.GetId());
@@ -1092,7 +1290,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     d->wc_index.notify_all();
 
     // Tell the worker thread to add it to the database
-    __queue_entry_command(d, new add_entry_command(e));
+    __queue_command(d, new add_entry_command(e));
 
     // Clear the file path so we don't add the same file twice
     e.SetFilePath(QString::null);
@@ -1128,7 +1326,7 @@ void PasswordDatabase::UpdateEntry(Entry &e)
         }
     }
 
-    __queue_entry_command(d, new update_entry_command(e));
+    __queue_command(d, new update_entry_command(e));
 
     // Clear the file path so we don't add the same file twice
     e.SetFilePath(QString::null);
@@ -1163,10 +1361,10 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
     auto iter = d->index.find(id);
     if(iter != d->index.end()){
         auto piter = d->parent_index.find(iter->second.parentid);
-        piter->second.children.RemoveAt(iter->second.row);
+        piter->second.children.removeAt(iter->second.row);
 
         // Update the siblings of the item we just removed
-        for(auto r = iter->second.row; r < piter->second.children.Length(); ++r){
+        for(auto r = iter->second.row; r < piter->second.children.length(); ++r){
             auto ci = d->index.find(piter->second.children[r]);
             if(ci != d->index.end())
                 ci->second.row = r;
@@ -1190,7 +1388,7 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
     d->wc_index.notify_all();
 
     // Remove it from the database
-    __queue_entry_command(d, new delete_entry_command(id));
+    __queue_command(d, new delete_entry_command(id));
 
     if(favs_updated)
         emit NotifyFavoritesUpdated();
@@ -1211,23 +1409,24 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
 
-    Vector<EntryId> &src = d->parent_index.find(parentId_src)->second.children;
-    Vector<EntryId> &dest = d->parent_index.find(parentId_dest)->second.children;
-    Vector<EntryId> moving_rows(move_cnt);
+    QList<EntryId> &src = d->parent_index.find(parentId_src)->second.children;
+    QList<EntryId> &dest = d->parent_index.find(parentId_dest)->second.children;
+    QList<EntryId> moving_rows;
+    moving_rows.reserve(move_cnt);
 
-    if(row_first >= src.Length() || row_last >= src.Length() ||
-            (same_parents && row_dest > dest.Length()) ||
-            (!same_parents && row_dest > dest.Length()))
+    if((int)row_first >= src.length() || (int)row_last >= src.length() ||
+            (same_parents && (int)row_dest > dest.length()) ||
+            (!same_parents && (int)row_dest > dest.length()))
         throw Exception<>("Invalid move parameters");
 
     // Extract the rows from the source parent
-    for(quint32 i = row_first; i <= row_last; ++i){
-        moving_rows.PushBack(src[row_first]);
-        src.RemoveAt(row_first);
+    for(uint i = row_first; i <= row_last; ++i){
+        moving_rows.append(src[row_first]);
+        src.removeAt(row_first);
     }
 
     // Update the siblings at the source
-    for(quint32 i = row_first; i < src.Length(); ++i)
+    for(int i = row_first; i < src.length(); ++i)
         d->index.find(src[i])->second.row = i;
 
     // Insert the rows at the dest parent
@@ -1235,17 +1434,17 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
         row_dest -= move_cnt;
 
     for(int i = 0; i < move_cnt; ++i){
-        dest.Insert(moving_rows[i], row_dest + i);
+        dest.insert(row_dest + i, moving_rows[i]);
         d->index.find(moving_rows[i])->second.parentid = parentId_dest;
     }
 
     // Update the siblings at the dest
-    for(quint32 i = row_dest; i < dest.Length(); ++i)
+    for(int i = row_dest; i < dest.length(); ++i)
         d->index.find(dest[i])->second.row = i;
     lkr.unlock();
 
     // Update the database
-    __queue_entry_command(d, new move_entry_command(parentId_src, row_first, row_last, parentId_dest, row_dest_orig));
+    __queue_command(d, new move_entry_command(parentId_src, row_first, row_last, parentId_dest, row_dest_orig));
 }
 
 Entry PasswordDatabase::FindEntry(const EntryId &id) const
@@ -1277,7 +1476,7 @@ int PasswordDatabase::CountEntriesByParentId(const EntryId &id) const
     int ret = 0;
     auto pi = d->parent_index.find(id);
     if(pi != d->parent_index.end())
-        ret = pi->second.children.Length();
+        ret = pi->second.children.length();
     return ret;
 }
 
@@ -1290,8 +1489,10 @@ QList<Entry> PasswordDatabase::FindEntriesByParentId(const EntryId &pid) const
     {
         unique_lock<mutex> lkr(d->index_lock);
 
-        foreach(const EntryId &child_id, d->parent_index[pid].children)
+        foreach(const EntryId &child_id, d->parent_index[pid].children){
+            GASSERT(d->index.find(child_id) != d->index.end());
             ret.append(__convert_cache_to_entry(d->index[child_id], *d->cryptor));
+        }
     }
     return ret;
 }
@@ -1300,14 +1501,14 @@ void PasswordDatabase::RefreshFavorites()
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new refresh_favorite_entries_command);
+    __queue_command(d, new refresh_favorite_entries_command);
 }
 
 void PasswordDatabase::SetFavoriteEntries(const QList<EntryId> &favs)
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new set_favorite_entries_command(favs));
+    __queue_command(d, new set_favorite_entries_command(favs));
 
     d->index_lock.lock();
     {
@@ -1338,7 +1539,7 @@ void PasswordDatabase::AddFavoriteEntry(const EntryId &id)
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new add_favorite_entry(id));
+    __queue_command(d, new add_favorite_entry(id));
 
     d->index_lock.lock();
     {
@@ -1357,7 +1558,7 @@ void PasswordDatabase::RemoveFavoriteEntry(const EntryId &id)
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new remove_favorite_entry(id));
+    __queue_command(d, new remove_favorite_entry(id));
 
     unique_lock<mutex> lkr(d->index_lock);
     {
@@ -1408,7 +1609,7 @@ void PasswordDatabase::DeleteOrphans()
 {
     FailIfNotOpen();
     G_D;
-    __queue_entry_command(d, new dispatch_orphans_command);
+    __queue_command(d, new dispatch_orphans_command);
 }
 
 bool PasswordDatabase::FileExists(const FileId &id) const
@@ -1437,7 +1638,7 @@ void PasswordDatabase::CancelFileTasks()
     d->wc_thread.notify_one();
 }
 
-QHash<FileId, PasswordDatabase::FileInfo_t> PasswordDatabase::GetFileSummary() const
+QHash<FileId, PasswordDatabase::FileInfo_t> PasswordDatabase::QueryFileSummary() const
 {
     FailIfNotOpen();
     G_D;
@@ -1452,20 +1653,6 @@ QHash<FileId, PasswordDatabase::FileInfo_t> PasswordDatabase::GetFileSummary() c
             FileInfo_t finfo(q.record().value("Length").toInt());
             ret.insert(fid, finfo);
         }
-    }
-    return ret;
-}
-
-QHash<FileId, PasswordDatabase::FileInfo_t> PasswordDatabase::GetOrphanedFiles() const
-{
-    FailIfNotOpen();
-    const QSet<FileId> referenced_fids( GetReferencedFileIds() );
-    const QHash<FileId, FileInfo_t> files( GetFileSummary() );
-    QHash<FileId, FileInfo_t> ret;
-
-    for(auto k : files.keys()){
-        if(referenced_fids.contains(k))
-            ret.insert(k, files[k]);
     }
     return ret;
 }
@@ -1503,18 +1690,14 @@ void PasswordDatabase::AddFile(const FileId &id, const char *filename)
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new add_file_command(id, filename));
-    d->wc_thread.notify_one();
+    __queue_command(d, new add_file_command(id, filename));
 }
 
 void PasswordDatabase::AddFile(const FileId &id, const QByteArray &contents)
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new add_file_command(id, contents));
-    d->wc_thread.notify_one();
+    __queue_command(d, new add_file_command(id, contents));
 }
 
 void PasswordDatabase::DeleteFile(const FileId &id)
@@ -1525,18 +1708,14 @@ void PasswordDatabase::DeleteFile(const FileId &id)
     d->file_index.erase(id);
     d->index_lock.unlock();
 
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new delete_file_command(id));
-    d->wc_thread.notify_one();
+    __queue_command(d, new delete_file_command(id));
 }
 
 void PasswordDatabase::ExportFile(const FileId &id, const char *export_path) const
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new export_file_command(id, export_path));
-    d->wc_thread.notify_one();
+    __queue_command(d, new export_file_command(id, export_path));
 }
 
 QByteArray PasswordDatabase::GetFile(const FileId &id) const
@@ -1557,26 +1736,37 @@ QByteArray PasswordDatabase::GetFile(const FileId &id) const
     return ret;
 }
 
-void PasswordDatabase::ExportToPortableSafe(const char *export_filename,
+void PasswordDatabase::ExportToPortableSafe(const QString &export_filename,
                                             const Credentials &creds) const
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new export_to_ps_command(export_filename, creds));
-    d->wc_thread.notify_one();
+    __queue_command(d, new export_to_ps_command(export_filename, creds));
 }
 
-void PasswordDatabase::ImportFromPortableSafe(const char *import_filename,
+void PasswordDatabase::ImportFromPortableSafe(const QString &import_filename,
                                               const Credentials &creds)
 {
     FailIfNotOpen();
     G_D;
-    unique_lock<mutex> lkr(d->thread_lock);
-    d->thread_commands.push(new import_from_ps_command(import_filename, creds));
-    d->wc_thread.notify_one();
+    __queue_command(d, new import_from_ps_command(import_filename, creds));
 }
 
+void PasswordDatabase::ExportToXml(const QString &export_filename)
+{
+    FailIfNotOpen();
+    G_D;
+    __queue_command(d, new export_to_xml_command(export_filename));
+}
+
+void PasswordDatabase::ImportFromXml(const QString &import_filename)
+{
+    FailIfNotOpen();
+    G_D;
+    __queue_command(d, new import_from_xml_command(import_filename));
+}
+
+/** Recursively counts all children of the parent. */
 static void __count_child_entries(QSqlDatabase &db, int &count, const EntryId &parent_id)
 {
     QSqlQuery q(db);
@@ -1795,81 +1985,132 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
 {
     G_D;
     QSqlDatabase db(QSqlDatabase::database(conn_str));
-    QSqlQuery q("SELECT ID,ParentID,FileID FROM Entry", db);
+    db.transaction();
+    try
+    {
+        struct entry_row{
+            EntryId id;
+            FileId file_id;
+            int favorite;
+        };
 
-    Vector<tuple<EntryId, EntryId, FileId>> ids;
-    QSet<EntryId> entry_ids;
-    while(q.next()){
-        EntryId cur_id = q.value("ID").toByteArray();
+        QMap<EntryId, entry_row> entries;
+        QMap<EntryId, QSet<EntryId>> parent_index;
+        QSet<FileId> all_files;
+        QSet<EntryId> favorites;
+        QSet<EntryId> claimed_entries;
+        QSet<FileId> claimed_files;
+        QList<EntryId> deleted_entries;
+        QList<FileId> deleted_files;
+        int max_fav = -1;
 
-        if(!entry_ids.contains(cur_id))
-            entry_ids.insert(cur_id);
-
-        ids.PushBack(tuple<EntryId, EntryId, FileId>(
-                          cur_id,
-                          q.value("ParentID").toByteArray(),
-                          q.value("FileID").toByteArray()));
-    }
-
-    // Delete all entries whose parent ids are missing
-    vector<EntryId> delete_list_e;
-    bool recheck = true;
-    while(recheck){
-        recheck = false;
-        for(int i = ids.Length() - 1; i >= 0; --i){
-            const tuple<EntryId, EntryId, FileId> &t = ids[i];
-            if(!get<1>(t).IsNull() && entry_ids.find(get<1>(t)) == entry_ids.end()){
-                delete_list_e.push_back(get<0>(t));
-                _bw_delete_entry(conn_str, get<0>(t));
-
-                // Every time we remove an id, we need to recheck the list
-                //  because that id could have been someone's parent
-                recheck = true;
-                entry_ids.remove(get<0>(t));
-                ids.RemoveAt(i);
+        // Populate an in-memory index of the hierarchy
+        QSqlQuery q("SELECT ID,ParentID,FileID,Favorite FROM Entry", db);
+        while(q.next()){
+            EntryId eid = q.value("ID").toByteArray();
+            EntryId pid = q.value("ParentID").toByteArray();
+            FileId  fid = q.value("FileID").toByteArray();
+            int     fav = q.value("Favorite").toInt();
+            entries.insert(eid, {eid, fid, fav});
+            parent_index[pid].insert(eid);
+            if(!fid.IsNull())
+                all_files.insert(fid);
+            if(-1 != fav){
+                favorites.insert(eid);
+                if(fav > max_fav)
+                    max_fav = fav;
             }
         }
+
+        // Starting at the root, populate a set of entries that can be reached,
+        //  and remember any files that were referenced along the way
+        function<void(const EntryId &)> add_children_to_claimed_entries;
+        add_children_to_claimed_entries = [&](const EntryId &eid){
+            if(parent_index.contains(eid)){
+                claimed_entries.unite(parent_index[eid]);
+                for(const EntryId &cid : parent_index[eid]){
+                    if(!entries[cid].file_id.IsNull())
+                        claimed_files.insert(entries[cid].file_id);
+                    add_children_to_claimed_entries(cid);
+                }
+            }
+        };
+        add_children_to_claimed_entries(EntryId::Null());
+
+        // Now delete any entries that are orphaned:
+        for(const EntryId &eid : entries.keys()){
+            if(!claimed_entries.contains(eid)){
+                q.prepare("DELETE FROM Entry WHERE ID=?");
+                q.addBindValue((QByteArray)eid);
+                DatabaseUtils::ExecuteQuery(q);
+                deleted_entries.append(eid);
+
+                if(0 < entries[eid].favorite)
+                    favorites.remove(eid);
+            }
+        }
+
+        // Update the favorites now that some may have been removed
+        // Make a list of favorites sorted by their index
+        QList<EntryId> sorted_favorites = favorites.toList();
+        sort(sorted_favorites.begin(), sorted_favorites.end(),
+          [&](const EntryId &lhs, const EntryId &rhs){
+            return entries[lhs].favorite < entries[rhs].favorite;
+        });
+
+        int cur_fav = 1;
+        for(const EntryId &eid : sorted_favorites){
+            if(0 < entries[eid].favorite){
+                if(cur_fav != entries[eid].favorite){
+                    q.prepare("UPDATE Entry SET Favorite=? WHERE ID=?");
+                    q.addBindValue(cur_fav);
+                    q.addBindValue((QByteArray)eid);
+                    DatabaseUtils::ExecuteQuery(q);
+                }
+                cur_fav++;
+            }
+        }
+
+        if(0 < deleted_entries.count()){
+            qDebug("Removed %d orphaned entries...", deleted_entries.count());
+        }
+
+        for(const FileId &fid : all_files){
+            if(!claimed_files.contains(fid)){
+                q.prepare("DELETE FROM File WHERE ID=?");
+                q.addBindValue((QByteArray)fid);
+                DatabaseUtils::ExecuteQuery(q);
+                deleted_files.append(fid);
+            }
+        }
+
+        if(0 < deleted_files.count()){
+            qDebug("Removed %d orphaned files...", deleted_files.count());
+        }
+
+        // Update the index:
+        unique_lock<mutex> lkr(d->index_lock);
+        for(const EntryId &eid : deleted_entries){
+            d->index.erase(eid);
+            d->parent_index.erase(eid);
+        }
+        for(const FileId &fid : deleted_files){
+            d->file_index.erase(fid);
+        }
+        for(const EntryId &eid : d->deleted_entries){
+            // We delayed removing this from the parent index, but we can do it now
+            d->parent_index.erase(eid);
+        }
+        d->deleted_entries.clear();
+        d->favorite_index = sorted_favorites;
+        d->wc_index.notify_all();
     }
-
-    if(0 < delete_list_e.size()){
-        qDebug("Removed %d orphaned entries...", (int)delete_list_e.size());
-    }
-
-    // Update the index before removing the files (because it affects our calculation)
-    d->index_lock.lock();
-    for(const EntryId &eid : delete_list_e){
-        d->index.erase(eid);
-        d->parent_index.erase(eid);
-    }
-    d->index_lock.unlock();
-    d->wc_index.notify_all();
-
-    // Get the set of referenced file ids
-    QSet<FileId> all_file_ids;
-    for(const tuple<EntryId, EntryId, FileId> &t : ids){
-        if(entry_ids.find(get<0>(t)) != entry_ids.end())
-            all_file_ids.insert(get<2>(t));
-    }
-
-
-    // Now delete all the orphan files
-    q.prepare("SELECT ID FROM File");
-    DatabaseUtils::ExecuteQuery(q);
+    catch(...)
     {
-        vector<FileId> delete_list_f;
-        while(q.next()){
-            FileId cur = q.value("ID").toByteArray();
-            if(!all_file_ids.contains(cur))
-                delete_list_f.push_back(cur);
-        }
-
-        for(FileId const &fid : delete_list_f)
-            _bw_del_file(conn_str, fid);
-
-        if(0 < delete_list_f.size()){
-            qDebug("Removed %d orphaned files...", (int)delete_list_f.size());
-        }
+        db.rollback();
+        throw;
     }
+    db.commit();
 }
 
 
@@ -1883,6 +2124,9 @@ void PasswordDatabase::_background_worker(GUtil::CryptoPP::Cryptor *c)
     unique_lock<mutex> lkr(d->thread_lock);
     while(!d->closing)
     {
+        if(!d->thread_idle)
+            emit NotifyThreadIdle();
+
         // Tell everyone who's waiting that we're going idle
         d->thread_idle = true;
         d->wc_thread.notify_all();
@@ -1997,6 +2241,18 @@ void PasswordDatabase::_background_worker(GUtil::CryptoPP::Cryptor *c)
                     _bw_import_from_gps(conn_str, *bgCryptor, ifps->FilePath, ifps->Creds);
                 }
                     break;
+                case bg_worker_command::ExportToXML:
+                {
+                    export_to_xml_command *e2x = static_cast<export_to_xml_command *>(cmd.Data());
+                    _bw_export_to_xml(conn_str, *bgCryptor, e2x->FilePath);
+                }
+                    break;
+                case bg_worker_command::ImportFromXML:
+                {
+                    import_from_xml_command *ifx = static_cast<import_from_xml_command *>(cmd.Data());
+                    _bw_import_from_xml(conn_str, *bgCryptor, ifx->FilePath);
+                }
+                    break;
                 default:
                     break;
                 }
@@ -2034,7 +2290,7 @@ void PasswordDatabase::_convert_to_readonly_exception_and_notify(const GUtil::Ex
     else{
         ex = (Exception<>*)ex_rx.Clone();
     }
-    emit NotifyExceptionOnBackgroundThread(shared_ptr<Exception<>>((Exception<> *)ex));
+    emit NotifyExceptionOnBackgroundThread(shared_ptr<exception>((exception*)ex));
 }
 
 void PasswordDatabase::_bw_add_file(const QString &conn_str,
@@ -2085,14 +2341,11 @@ void PasswordDatabase::_bw_add_file(const QString &conn_str,
                 plaintext_length = data.length();
             }
 
-            // Get a fresh nonce
-            byte nonce[NONCE_LENGTH];
-            __get_nonce(nonce);
-
             m_progressMin = 0, m_progressMax = 75;
             m_curTaskString = QString("Download and encrypt file");
             d->thread_cancellable = true;
-            cryptor.EncryptData(&o, data_in, NULL, nonce, DEFAULT_CHUNK_SIZE, this);
+            cryptor.EncryptData(&o, data_in, NULL, NULL, DEFAULT_CHUNK_SIZE,
+                                [&](int p){ return _progress_callback(p); });
         }
 
         _bw_fail_if_cancelled();
@@ -2104,8 +2357,8 @@ void PasswordDatabase::_bw_add_file(const QString &conn_str,
         // Insert a new file
         q.prepare("INSERT INTO File (Length, Data, ID) VALUES (?,?,?)");
         q.addBindValue(plaintext_length);
-        q.addBindValue(encrypted_data, QSql::In | QSql::Binary);
-        q.addBindValue((QByteArray)id, QSql::In | QSql::Binary);
+        q.addBindValue(encrypted_data);
+        q.addBindValue((QByteArray)id);
         DatabaseUtils::ExecuteQuery(q);
 
         // One last chance before we commit
@@ -2162,7 +2415,8 @@ void PasswordDatabase::_bw_exp_file(const QString &conn_str,
 
         m_progressMin = 35, m_progressMax = 100;
         d->thread_cancellable = true;
-        cryptor.DecryptData(&f, &i, NULL, DEFAULT_CHUNK_SIZE, this);
+        cryptor.DecryptData(&f, &i, NULL, DEFAULT_CHUNK_SIZE,
+                            [&](int p){ return _progress_callback(p); });
     }
 }
 
@@ -2177,7 +2431,7 @@ static void __append_children_to_xml(QDomDocument &xdoc, QDomNode &n,
                                      const EntryId &eid)
 {
     // Find my children and add them to xml
-    Vector<Entry> child_list = __find_entries_by_parent_id(q, cryptor, eid);
+    QList<Entry> child_list = __find_entries_by_parent_id(q, cryptor, eid);
     foreach(const Entry &e, child_list){
         QDomNode new_node = XmlConverter::AppendToXmlNode(e, n, xdoc, true);
         __append_children_to_xml(xdoc, new_node, q, cryptor, e.GetId());
@@ -2186,7 +2440,7 @@ static void __append_children_to_xml(QDomDocument &xdoc, QDomNode &n,
 
 void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
                                          GUtil::CryptoPP::Cryptor &my_cryptor,
-                                         const char *ps_filepath,
+                                         const QString &ps_filepath,
                                          const Credentials &creds)
 {
     int progress_counter = 0;
@@ -2216,7 +2470,7 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
         _bw_fail_if_cancelled();
 
         // Open the target file
-        GPSFile_Export gps_file(ps_filepath, creds);
+        GPSFile_Export gps_file(ps_filepath.toUtf8(), creds, FileId::Size);
         emit NotifyProgressUpdated(progress_counter+=5, true, m_curTaskString);
         _bw_fail_if_cancelled();
 
@@ -2232,12 +2486,12 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
         // Now let's export all the files as attachments
         int file_cnt = 0;
         const int remaining_progress = 100 - progress_counter;
-        const QHash<FileId, FileInfo_t> files = GetFileSummary();
-        for(const FileId &k : files.keys())
+        const QHash<FileId, FileInfo_t> files = QueryFileSummary();
+        for(const FileId &fid : files.keys())
         {
             // Select a file from the database
             q.prepare("SELECT Data FROM File WHERE ID=?");
-            q.addBindValue((QByteArray)k);
+            q.addBindValue((QByteArray)fid);
             DatabaseUtils::ExecuteQuery(q);
             _bw_fail_if_cancelled();
 
@@ -2259,7 +2513,7 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
 
             // Write it to the GPS, with the file ID in the metadata
             gps_file.AppendPayload((byte const *)pt.ConstData(), pt.Length(),
-                                   (byte const *)k.ConstData(), k.Size);
+                                   (byte const *)fid.ConstData(), fid.Size);
 
             ++file_cnt;
             emit NotifyProgressUpdated(
@@ -2276,29 +2530,498 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
     __commit_transaction(db);    // Nothing should have changed, is a rollback better here?
 }
 
-void PasswordDatabase::_bw_import_from_gps(const QString &,
-                                           GUtil::CryptoPP::Cryptor &,
-                                           const char *,
-                                           const Credentials &)
+void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
+                                           GUtil::CryptoPP::Cryptor &my_cryptor,
+                                           const QString &ps_filepath,
+                                           const Credentials &creds)
 {
+    int progress_counter = 0;
+    m_curTaskString = QString(tr("Importing from Portable Safe: %1"))
+                            .arg(QFileInfo(ps_filepath).fileName());
+    emit NotifyProgressUpdated(progress_counter, true, m_curTaskString);
+
     // Always notify that the task is complete, even if it's an error
-    //finally([&]{ emit NotifyProgressUpdated(100, m_curTaskString); });
+    finally([&]{ emit NotifyProgressUpdated(100, false, m_curTaskString); });
 
-    throw NotImplementedException<>();
+    QSqlDatabase db(QSqlDatabase::database(conn_str));
+    GASSERT(db.isValid());
+    QSqlQuery q(db);
+
+    GPSFile_Import gps_import(ps_filepath.toUtf8(), creds, true);
+    if(!gps_import.NextPayload())
+        throw Exception<>("GPS file is empty");
+
+    // Get the main payload, which has all the entries
+    QByteArray ba;
+    ba.resize(gps_import.CurrentPayloadSize());
+    gps_import.GetCurrentPayload((byte *)ba.data());
+
+    // Decompress the xml data
+    ba = qUncompress(ba);
+
+    QDomDocument xdoc;
+    xdoc.setContent(ba);
+
+    // Add a root node, under which to put the imported data
+    Entry tmp_root;
+    tmp_root.SetName(tr("Newly imported entries"));
+    tmp_root.SetDescription(QString(tr("Imported from GPS file: %1")).arg(ps_filepath));
+    AddEntry(tmp_root);
 }
 
-
-// This function belongs to the background thread and will always execute there
-void PasswordDatabase::ProgressUpdated(int prg)
+static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
+                                        QSet<FileId> &file_references,
+                                        const QMap<EntryId, int> &entry_mapping,
+                                        const QMap<FileId, int> &file_mapping)
 {
-    // prg is between 0 and 100, so scale it to m_progressMax-m_progressMin
-    G_D;
-    emit NotifyProgressUpdated(m_progressMin + ((float)prg*(m_progressMax-m_progressMin))/100,
-                               d->thread_cancellable,
-                               m_curTaskString);
+    sw.writeStartElement("e");
+    sw.writeAttribute("name", e.GetName());
+    if(!e.GetDescription().isEmpty())
+        sw.writeAttribute("desc", e.GetDescription());
+    sw.writeAttribute("date", e.GetModifyDate().toString());
+    if(e.IsFavorite())
+        sw.writeAttribute("fav", QVariant(e.GetFavoriteIndex()).toString());
+    if(!e.GetFileId().IsNull()){
+        sw.writeAttribute("f_id", QVariant(file_mapping[e.GetFileId()]).toString());
+        sw.writeAttribute("f_name", e.GetFileName());
+        if(file_mapping.contains(e.GetFileId()))
+            file_references.insert(e.GetFileId());
+    }
+    sw.writeAttribute("id", QVariant(entry_mapping[e.GetId()]).toString());
+    if(!e.GetParentId().IsNull())
+        sw.writeAttribute("pid", QVariant(entry_mapping[e.GetParentId()]).toString());
+    sw.writeAttribute("row", QVariant(e.GetRow()).toString());
+
+    if(0 < e.Values().length()){
+        // Write the secret data key-value pairs
+        for(const SecretValue &v : e.Values()){
+            sw.writeStartElement("s");
+            sw.writeAttribute("key", v.GetName());
+            sw.writeAttribute("val", v.GetValue());
+            if(!v.GetNotes().isEmpty())
+                sw.writeAttribute("note", v.GetNotes());
+            if(v.GetIsHidden())
+                sw.writeAttribute("hide", "1");
+            sw.writeEndElement();
+        }
+    }
+
+    sw.writeEndElement();
 }
 
-bool PasswordDatabase::ShouldOperationCancel()
+void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoPP::Cryptor &my_cryptor, const QString &filepath)
+{
+    G_D;
+    int progress_counter = 0;
+    m_curTaskString = QString(tr("Exporting to XML: %1"))
+                            .arg(QFileInfo(filepath).fileName());
+    emit NotifyProgressUpdated(progress_counter, true, m_curTaskString);
+
+    // Always notify that the task is complete, even if it's an error
+    finally([&]{ emit NotifyProgressUpdated(100, false, m_curTaskString); });
+
+    try{
+        emit NotifyProgressUpdated(progress_counter+=5, true, m_curTaskString);
+
+        QFile f(filepath);
+        if(!f.open(QFile::ReadWrite | QFile::Truncate))
+            throw Exception<>(QString(tr("Cannot open \"%1\"\n%2"))
+                              .arg(QFileInfo(filepath).absoluteFilePath())
+                              .arg(f.errorString()).toUtf8());
+
+        QXmlStreamWriter sw(&f);
+        sw.setAutoFormatting(true);
+
+        // Start the XML document
+        sw.writeStartDocument();
+        sw.writeStartElement("grypto_data");
+        sw.writeAttribute("version", GRYPTO_XML_VERSION);
+
+        QMap<FileId, int> file_mapping;
+        QMap<EntryId, int> entry_mapping;
+        QSet<FileId> referenced_files;
+        QList<entry_cache> entries;
+        unordered_map<EntryId, parent_cache> parent_index_cpy;
+
+        // Define a helper function for recursively adding entries
+        int tmpid = 0;
+        function<void(const EntryId &)> add_children_to_index;
+        add_children_to_index = [&](const EntryId &pid)
+        {
+            if(!pid.IsNull())
+                entry_mapping.insert(pid, tmpid++);
+
+            for(const EntryId &cid : d->parent_index[pid].children){
+                entries.append(d->index[cid]);
+                add_children_to_index(cid);
+            }
+        };
+
+        // We want to lock the index for the minimum time while we prepare our indexes
+        d->index_lock.lock();
+
+        // Add all entries recursively starting from the root
+        add_children_to_index(EntryId::Null());
+
+        tmpid = 0;
+        for(auto p : d->file_index)
+            file_mapping.insert(p.first, tmpid++);
+        parent_index_cpy = d->parent_index;
+        d->index_lock.unlock();
+
+        // Write all entries in no particular order
+        sw.writeStartElement("entries");
+        for(auto ec : entries)
+            __write_entry_to_xml_writer(sw, __convert_cache_to_entry(ec, my_cryptor),
+                                        referenced_files, entry_mapping, file_mapping);
+        sw.writeEndElement();
+
+        emit NotifyProgressUpdated(progress_counter+=50, true, m_curTaskString);
+        _bw_fail_if_cancelled();
+
+        // Write the files
+        if(0 < referenced_files.count()){
+            sw.writeStartElement("files");
+            for(const FileId &fid : referenced_files){
+                sw.writeStartElement("f");
+                sw.writeAttribute("id", QVariant(file_mapping[fid]).toString());
+
+                // Export the file to a temp file, then read in the temp file and add it to xml
+                QTemporaryFile tf;
+                if(!tf.open())
+                    throw Exception<>(QString(tr("Cannot open temp file: %1")).arg(tf.errorString()).toUtf8());
+
+                _bw_exp_file(conn_str, my_cryptor, fid, tf.fileName().toUtf8());
+                QByteArray file_data;
+                {
+                    QFile f(tf.fileName());
+                    f.open(QFile::ReadOnly);
+                    file_data = f.readAll();
+                }
+                tf.remove();
+
+                sw.writeCharacters(file_data.toBase64());
+                sw.writeEndElement();
+            }
+            sw.writeEndElement();
+        }
+
+        sw.writeEndElement();
+        sw.writeEndDocument();
+    }
+    catch(...){
+        throw;
+    }
+}
+
+static void __parse_xml_entries(QXmlStreamReader &sr,
+                                QMap<int, Entry> &entries,
+                                QMap<int, QList<int>> &hierarchy,
+                                QMap<int, file_cache> &file_mapping)
+{
+    int depth = 0;
+    int cur_id = -1;
+    Entry tmp_entry;
+    while(0 <= depth){
+        switch(sr.readNext()){
+        case QXmlStreamReader::StartElement:
+            depth++;
+            if(sr.name() == "e"){
+                tmp_entry.SetName(sr.attributes().value("name").toString());
+                if(sr.attributes().hasAttribute("desc"))
+                    tmp_entry.SetDescription(sr.attributes().value("desc").toString());
+                tmp_entry.SetModifyDate(QDateTime::fromString(sr.attributes().value("date").toString()));
+                if(sr.attributes().hasAttribute("fav"))
+                    tmp_entry.SetFavoriteIndex(sr.attributes().value("fav").toInt());
+                if(sr.attributes().hasAttribute("f_id")){
+                    tmp_entry.SetFileName(sr.attributes().value("f_name").toString());
+
+                    int fid_local = sr.attributes().value("f_id").toInt();
+                    if(file_mapping.contains(fid_local)){
+                        tmp_entry.SetFileId(file_mapping[fid_local].id);
+                    }
+                    else{
+                        FileId fid(true);
+                        file_mapping.insert(fid_local, fid);
+                        tmp_entry.SetFileId(fid);
+                    }
+                }
+                cur_id = sr.attributes().value("id").toInt();
+                tmp_entry.SetRow(sr.attributes().value("row").toInt());
+
+                int pid = -1;
+                if(sr.attributes().hasAttribute("pid"))
+                    pid = sr.attributes().value("pid").toInt();
+                hierarchy[pid].append(cur_id);
+            }
+            else if(sr.name() == "s"){
+                SecretValue sv;
+                sv.SetName(sr.attributes().value("key").toString());
+                sv.SetValue(sr.attributes().value("val").toString());
+                if(sr.attributes().hasAttribute("note"))
+                    sv.SetNotes(sr.attributes().value("note").toString());
+                if(sr.attributes().hasAttribute("hide"))
+                    sv.SetIsHidden(0 != sr.attributes().value("hide").toInt());
+                tmp_entry.Values().append(sv);
+            }
+            break;
+        case QXmlStreamReader::EndElement:
+            depth--;
+            if(0 == depth){
+                entries.insert(cur_id, tmp_entry);
+
+                tmp_entry = Entry();
+                cur_id = -1;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+static void __parse_xml_files(QXmlStreamReader &sr, QMap<int, QString> &files)
+{
+    int depth = 0;
+    int cur_id = -1;
+    QString cur_path;
+    while(0 <= depth){
+        switch(sr.readNext()){
+        case QXmlStreamReader::StartElement:
+            depth++;
+            if(sr.name() == "f")
+                cur_id = sr.attributes().value("id").toInt();
+            break;
+        case QXmlStreamReader::Characters:
+            if(cur_id != -1)
+            {
+                QTemporaryFile tf;
+                tf.setAutoRemove(false);
+                if(!tf.open())
+                    throw Exception<>("Cannot open temporary file");
+
+                cur_path = tf.fileName();
+                tf.write(QByteArray::fromBase64(sr.text().toLatin1()));
+            }
+            break;
+        case QXmlStreamReader::EndElement:
+            depth--;
+            if(0 == depth){
+                files.insert(cur_id, cur_path);
+                cur_id = -1;
+                cur_path.clear();
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+// Adds the children of the given parent to the database recursively
+static void __add_children_from_xml(
+        QMap<int, Entry> &entries,
+        QMap<int, entry_cache> &entry_caches,
+        const QMap<int, QList<int>> &hierarchy,
+        const EntryId &parent_id,
+        int local_parent_id,
+        GUtil::CryptoPP::Cryptor &cryptor,
+        QSqlQuery &q)
+{
+    const QList<int> &child_ids = hierarchy[local_parent_id];
+    for(int i = 0; i < child_ids.length(); ++i){
+        Entry &e = entries[child_ids[i]];
+        e.SetId(EntryId::NewId());
+        e.SetParentId(parent_id);
+        e.SetRow(i);
+        if(e.IsFavorite()){
+            // Imported favorites lose their ordering
+            e.SetFavoriteIndex(0);
+        }
+
+        auto iter = entry_caches.insert(child_ids[i], __convert_entry_to_cache(e, cryptor));
+        __insert_entry(*iter, q);
+        __add_children_from_xml(entries, entry_caches,
+                                hierarchy,
+                                e.GetId(), child_ids[i],
+                                cryptor, q);
+    }
+}
+
+static void __add_files_from_xml(const QMap<int, QString> &files,
+                                QMap<int, file_cache> &file_mapping,
+                                GUtil::CryptoPP::Cryptor &cryptor,
+                                QSqlQuery &q)
+{
+    for(int fid_local : files.keys()){
+        QByteArray crypttext;
+        {
+            // Encrypt the file and move it into memory
+            File f(files[fid_local].toUtf8(), File::OpenRead);
+            QByteArrayOutput bao(crypttext);
+            cryptor.EncryptData(&bao, &f);
+        }
+
+        int pt_len = crypttext.length() - cryptor.GetCrypttextSizeDiff();
+        file_mapping[fid_local].length = pt_len;
+
+        q.prepare("INSERT INTO File (Length,Data,ID) VALUES (?,?,?)");
+        q.addBindValue(pt_len);
+        q.addBindValue(crypttext);
+        q.addBindValue((QByteArray)file_mapping[fid_local].id);
+        DatabaseUtils::ExecuteQuery(q);
+    }
+}
+
+void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
+                                           GUtil::CryptoPP::Cryptor &my_cryptor,
+                                           const QString &filepath)
+{
+    int progress_counter = 0;
+    const QString file_name = QFileInfo(filepath).fileName();
+    m_curTaskString = QString(tr("Importing from XML: %1")).arg(file_name);
+    emit NotifyProgressUpdated(progress_counter, true, m_curTaskString);
+
+    QFile f(filepath);
+    if(!f.open(QFile::ReadOnly))
+        throw Exception<>(QString(tr("Cannot open \"%1\"\n%2"))
+                          .arg(QFileInfo(filepath).absoluteFilePath())
+                          .arg(f.errorString()).toUtf8());
+
+    QMap<int, Entry> entries;
+    QMap<int, entry_cache> entry_caches;
+    QMap<int, QList<int>> hierarchy;
+    QMap<int, QString> files;
+    QMap<int, file_cache> file_mapping;
+    bool xml_recognized = false;
+
+    auto throw_xml_format_error = []{
+        throw Exception<>("Unknown XML format");
+    };
+
+    QXmlStreamReader sr(&f);
+    while(!sr.atEnd()){
+        switch(sr.readNext()){
+        case QXmlStreamReader::StartElement:
+            if(sr.name() == "grypto_data"){
+                if(sr.attributes().at(0).value() == GRYPTO_XML_VERSION)
+                    xml_recognized = true;
+                else{
+                    emit NotifyProgressUpdated(100, true, m_curTaskString);
+                    throw_xml_format_error();
+                }
+            }
+            else if(sr.name() == "entries"){
+                if(!xml_recognized)
+                    throw_xml_format_error();
+                __parse_xml_entries(sr, entries, hierarchy, file_mapping);
+            }
+            else if(sr.name() == "files"){
+                if(!xml_recognized)
+                    throw_xml_format_error();
+                __parse_xml_files(sr, files);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    // The hierarchy index child lists are unsorted, so
+    //  sort them by the entrys' rows
+    for(int pid : hierarchy.keys()){
+        QList<int> &child_list = hierarchy[pid];
+        sort(child_list.begin(), child_list.end(),
+          [&](int lhs, int rhs) -> bool{
+            return entries[lhs].GetRow() < entries[rhs].GetRow();
+        });
+
+        // The parent id's could not be resolved earlier, due to the arbitrary
+        //  ordering of the entries in the XML, so set the parent id's now
+        for(int cid : child_list)
+            entries[cid].SetParentId(entries[pid].GetId());
+    }
+
+
+    // Cleanup code should always execute, even in case of exception
+    finally([&]{
+        // Make sure the temp files are cleaned up (no plaintext data left in /tmp)
+        for(const QString &f : files.values())
+            QFile::remove(f);
+
+        emit NotifyProgressUpdated(100, false, m_curTaskString);
+    });
+
+    if(sr.hasError())
+        throw Exception<>(QString(tr("XML has errors: %1").arg(sr.errorString())).toUtf8());
+
+    // Now update the database
+    QSqlDatabase db(QSqlDatabase::database(conn_str));
+    GASSERT(db.isValid());
+
+    db.transaction();
+    try
+    {
+        QSqlQuery q(db);
+
+        // Add a root node, under which to put the imported data
+        Entry tmp_root;
+        tmp_root.SetId(EntryId::NewId());
+        tmp_root.SetName(tr("Newly imported entries"));
+        tmp_root.SetDescription(QString(tr("Imported from XML document: %1")).arg(file_name));
+        tmp_root.SetModifyDate(QDateTime::currentDateTime());
+        tmp_root.SetRow(__count_entries_by_parent_id(q, EntryId::Null()));
+
+        auto iter = entry_caches.insert(-1, __convert_entry_to_cache(tmp_root, my_cryptor));
+        __insert_entry(*iter, q);
+
+        __add_children_from_xml(entries, entry_caches, hierarchy, tmp_root.GetId(), -1, my_cryptor, q);
+        __add_files_from_xml(files, file_mapping, my_cryptor, q);
+    }
+    catch(...)
+    {
+        db.rollback();
+        throw;
+    }
+    db.commit();
+
+    // Now update the index
+    G_D;
+    unique_lock<mutex> lkr(d->index_lock);
+    for(const entry_cache &ec : entry_caches.values()){
+        GASSERT(d->index.find(ec.id) == d->index.end());
+        d->index.emplace(ec.id, ec);
+
+        // We should have cleared the ordering of imported favorites
+        GASSERT(0 >= ec.favoriteindex);
+        if(0 <= ec.favoriteindex)
+            d->favorite_index.append(ec.id);
+    }
+
+    // Populate the parent index now that all keys are inserted
+    function<void(int)> populate_parent_index;
+    populate_parent_index = [&](int local_pid){
+        for(int cid : hierarchy[local_pid])
+        {
+            d->parent_index[entry_caches[local_pid].id]
+                    .children.append(entry_caches[cid].id);
+
+            if(hierarchy.contains(cid))
+                populate_parent_index(cid);
+        }
+    };
+    d->parent_index[EntryId::Null()].children.append(entry_caches[-1].id);
+    populate_parent_index(-1);
+
+    // Finally update the file index
+    for(const file_cache &fc : file_mapping.values())
+        d->file_index.emplace(fc.id, fc);
+
+    d->wc_index.notify_all();
+}
+
+
+bool PasswordDatabase::_should_operation_cancel()
 {
     G_D;
     d->thread_lock.lock();
@@ -2307,9 +3030,19 @@ bool PasswordDatabase::ShouldOperationCancel()
     return ret;
 }
 
+bool PasswordDatabase::_progress_callback(int prg)
+{
+    // prg is between 0 and 100, so scale it to m_progressMax-m_progressMin
+    G_D;
+    emit NotifyProgressUpdated(m_progressMin + ((float)prg*(m_progressMax-m_progressMin))/100,
+                               d->thread_cancellable,
+                               m_curTaskString);
+    return _should_operation_cancel();
+}
+
 void PasswordDatabase::_bw_fail_if_cancelled()
 {
-    if(ShouldOperationCancel())
+    if(_should_operation_cancel())
         throw CancelledOperationException<>();
 }
 

@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@ limitations under the License.*/
 
 #include "searchwidget.h"
 #include "ui_searchwidget.h"
-#include <grypto_common.h>
-#include <grypto_lockout.h>
+#include <grypto/common.h>
+#include <grypto/lockout.h>
 #include <QKeyEvent>
 
 NAMESPACE_GRYPTO;

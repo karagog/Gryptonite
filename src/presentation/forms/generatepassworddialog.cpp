@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "generatepassworddialog.h"
 #include "ui_generatepassworddialog.h"
-#include "grypto_common.h"
+#include <grypto/common.h>
 #include <gutil/cryptopp_rng.h>
 #include <cmath>
 USING_NAMESPACE_GUTIL;

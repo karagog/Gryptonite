@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,15 +13,14 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "databasemodel.h"
-#include "grypto_passworddatabase.h"
-#include <grypto_entry.h>
+#include <grypto/passworddatabase.h>
+#include <grypto/entry.h>
 #include <QFont>
 #include <QSet>
 #include <QMimeData>
 #include <QStringList>
 #include <QIcon>
 #include <unordered_map>
-//#include "../gutil/src/test/modeltest.h"
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);
 using namespace std;
@@ -212,8 +211,8 @@ DatabaseModel::DatabaseModel(const char *f,
     connect(&m_db, SIGNAL(NotifyFavoritesUpdated()),
             this, SIGNAL(NotifyFavoritesUpdated()),
             Qt::QueuedConnection);
-    connect(&m_db, SIGNAL(NotifyExceptionOnBackgroundThread(const std::shared_ptr<GUtil::Exception<>> &)),
-            this, SLOT(_handle_database_worker_exception(const std::shared_ptr<GUtil::Exception<>> &)));
+    connect(&m_db, SIGNAL(NotifyExceptionOnBackgroundThread(const std::shared_ptr<std::exception> &)),
+            this, SLOT(_handle_database_worker_exception(const std::shared_ptr<std::exception> &)));
     connect(&m_db, SIGNAL(NotifyProgressUpdated(int, bool, QString)),
             this, SIGNAL(NotifyProgressUpdated(int, bool, QString)));
 }
@@ -230,8 +229,23 @@ void DatabaseModel::Open(const Credentials &creds)
 
     // Fetch the root index
     fetchMore(QModelIndex());
+}
 
-    //new ModelTest(this);
+void DatabaseModel::Open(const GUtil::CryptoPP::Cryptor &cryptor)
+{
+    m_db.Open(cryptor);
+
+    // Fetch the root index
+    fetchMore(QModelIndex());
+}
+
+void DatabaseModel::SaveAs(const QString &filename, const Credentials &creds)
+{
+    if(IsOpen()){
+        ClearUndoStack();
+        m_db.SaveAs(filename, creds);
+        _reset_model();
+    }
 }
 
 GUtil::CryptoPP::Cryptor const &DatabaseModel::Cryptor() const
@@ -674,12 +688,14 @@ void DatabaseModel::_mov_entries(const EntryId &pid, int r_first, int r_last,
         r_dest_cpy -= move_cnt;
 
     QList<EntryContainer *> &cl = _get_child_list(parent_index);
-    Vector<EntryContainer *> to_move((EntryContainer *)NULL, move_cnt, true);
+    QVector<EntryContainer *> to_move;
+    to_move.resize(move_cnt);
+
     for(int i = r_last; i >= r_first; --i){
         to_move[i - r_first] = cl[i];
         cl.removeAt(i);
     }
-    for(uint i = 0; i < to_move.Length(); ++i)
+    for(int i = 0; i < to_move.length(); ++i)
         cl_targ.insert(r_dest_cpy + i, to_move[i]);
 
     // Adjust rows at both source and dest
@@ -695,7 +711,7 @@ void DatabaseModel::_mov_entries(const EntryId &pid, int r_first, int r_last,
     endMoveRows();
 }
 
-const char *DatabaseModel::FilePath() const
+const QString &DatabaseModel::FilePath() const
 {
     return m_db.FilePath();
 }
@@ -703,6 +719,11 @@ const char *DatabaseModel::FilePath() const
 bool DatabaseModel::CheckCredentials(const Credentials &creds) const
 {
     return m_db.CheckCredentials(creds);
+}
+
+Credentials::TypeEnum DatabaseModel::GetCredentialsType() const
+{
+    return m_db.GetCredentialsType();
 }
 
 void DatabaseModel::AddFile(const FileId &id, const char *filepath)
@@ -725,17 +746,35 @@ void DatabaseModel::ExportFile(const FileId &id, const char *export_file_path)
     m_db.ExportFile(id, export_file_path);
 }
 
-void DatabaseModel::ExportToPortableSafe(const char *export_filename,
+void DatabaseModel::ExportToPortableSafe(const QString &export_filename,
                                          const Credentials &creds)
 {
     m_db.ExportToPortableSafe(export_filename, creds);
 }
 
-void DatabaseModel::ImportFromPortableSafe(const char *export_filename,
+void DatabaseModel::ImportFromPortableSafe(const QString &import_filename,
                                            const Credentials &creds)
 {
+    ClearUndoStack();
+    m_db.ImportFromPortableSafe(import_filename, creds);
+    connect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_thread_finished_reset_model()));
+}
+
+void DatabaseModel::ExportToXml(const QString &export_filename)
+{
+    m_db.ExportToXml(export_filename);
+}
+
+void DatabaseModel::ImportFromXml(const QString &import_filename)
+{
+    ClearUndoStack();
+    m_db.ImportFromXml(import_filename);
+    connect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_thread_finished_reset_model()));
+}
+
+void DatabaseModel::_reset_model()
+{
     beginResetModel();
-    m_db.ImportFromPortableSafe(export_filename, creds);
     __cleanup_entry_list(m_root);
     m_index.clear();
     endResetModel();
@@ -744,32 +783,11 @@ void DatabaseModel::ImportFromPortableSafe(const char *export_filename,
     FetchAllEntries();
 }
 
-void DatabaseModel::ImportFromDatabase(const DatabaseModel &other)
+void DatabaseModel::_thread_finished_reset_model()
 {
-    beginResetModel();
-    m_db.ImportFromDatabase(other.m_db);
-    __cleanup_entry_list(m_root);
-    m_index.clear();
-    endResetModel();
-
-    // re-fetch the model
-    fetchMore();
-    FetchAllEntries();
-}
-
-QHash<FileId, PasswordDatabase::FileInfo_t> DatabaseModel::GetFileSummary()
-{
-    return m_db.GetFileSummary();
-}
-
-QHash<FileId, PasswordDatabase::FileInfo_t> DatabaseModel::GetOrphanedFiles()
-{
-    return m_db.GetOrphanedFiles();
-}
-
-QSet<FileId> DatabaseModel::GetReferencedFiles()
-{
-    return m_db.GetReferencedFileIds();
+    disconnect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_thread_finished_reset_model()));
+    _reset_model();
+    emit NotifyImportFinished();
 }
 
 void DatabaseModel::CancelAllBackgroundOperations()
@@ -777,7 +795,7 @@ void DatabaseModel::CancelAllBackgroundOperations()
     m_db.CancelFileTasks();
 }
 
-void DatabaseModel::_handle_database_worker_exception(const shared_ptr<Exception<>> &ex)
+void DatabaseModel::_handle_database_worker_exception(const shared_ptr<exception> &ex)
 {
     // We will throw the exception for the background worker, because here we'll catch
     //  it on the main thread.
@@ -795,16 +813,18 @@ QMimeData *DatabaseModel::mimeData(const QModelIndexList &indexes) const
 {
     QMimeData *ret = NULL;
 
-    // Gather data for all indexes.
-    Vector<EntryId> l(indexes.length());
+    // Gather data for all indexes
+    QList<EntryId> l;
+    l.reserve(indexes.length());
+
     for(const QModelIndex &ind : indexes){
         if(ind.column() != 0) continue;     // Ignore duplicate rows
         EntryContainer *ec = _get_container_from_index(ind);
         if(!ec) continue;
-        l.PushBack(ec->entry.GetId());
+        l.append(ec->entry.GetId());
     }
 
-    if(l.Length() > 0){
+    if(l.length() > 0){
         // Serialize the move data
         QByteArray data;
         for(auto iter = l.begin(), e = l.end(); iter != e; ++iter){
@@ -818,30 +838,42 @@ QMimeData *DatabaseModel::mimeData(const QModelIndexList &indexes) const
     return ret;
 }
 
-bool DatabaseModel::dropMimeData(const QMimeData *data,
+bool DatabaseModel::dropMimeData(const QMimeData *mimedata,
                                  Qt::DropAction action,
                                  int row, int,
                                  const QModelIndex &parent)
 {
-    if(action != Qt::MoveAction)
+    if(action != Qt::MoveAction && action != Qt::CopyAction)
         return false;
 
-    QByteArray sd = data->data(MIMETYPE_MOVE_ENTRY);
-    if(!sd.isEmpty()){
-        QList<QByteArray> entries = sd.split(':');
+    QByteArray sd = mimedata->data(MIMETYPE_MOVE_ENTRY);
+    if(sd.isEmpty())
+        return false;
 
-        if(entries.length() > 1)
-            throw NotImplementedException<>("Moving more than one entry not implemented");
-        else if(entries.isEmpty())
-            return false;
+    QList<QByteArray> entries = sd.split(':');
 
-        QModelIndex eind = FindIndexById(QByteArray::fromBase64(entries[0]));
-        if(!eind.isValid())
-            throw Exception<>("Source Entry Id not found in model");
+    if(entries.length() > 1)
+        throw NotImplementedException<>("Moving or copying more than one entry not implemented");
+    else if(entries.isEmpty())
+        return false;
 
+    QModelIndex eind = FindIndexById(QByteArray::fromBase64(entries[0]));
+    if(!eind.isValid())
+        throw Exception<>("Source Entry Id not found in model");
+
+    if(action == Qt::MoveAction)
+    {
         MoveEntries(eind.parent(), eind.row(), eind.row(), parent, row);
     }
-    return false;
+    else if(action == Qt::CopyAction)
+    {
+        Entry cpy = *GetEntryFromIndex(eind);
+        cpy.SetParentId(data(parent, EntryIdRole).value<EntryId>());
+        cpy.SetRow(row);
+        cpy.SetModifyDate(QDateTime::currentDateTime());
+        AddEntry(cpy);
+    }
+    return true;
 }
 
 void DatabaseModel::MoveEntries(const QModelIndex &src_parent, int src_first, int src_last,
@@ -874,17 +906,12 @@ void DatabaseModel::_emit_row_changed(const QModelIndex &ind)
 
 Qt::DropActions DatabaseModel::supportedDropActions() const
 {
-    return Qt::MoveAction;
+    return Qt::MoveAction | Qt::CopyAction;
 }
 
 void DatabaseModel::WaitForBackgroundThreadIdle()
 {
     m_db.WaitForThreadIdle();
-}
-
-void DatabaseModel::DeleteOrphans()
-{
-    m_db.DeleteOrphans();
 }
 
 

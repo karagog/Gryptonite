@@ -36,7 +36,7 @@
   <customwidget>
    <class>Grypt::EntryView</class>
    <extends>QWidget</extends>
-   <header>grypto_entryview.h</header>
+   <header location="global">grypto/entryview.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -29,8 +29,7 @@ namespace Grypt
  *  function, which executes on the background thread.
 */
 class CryptoTransformsWorker :
-    public QThread,
-    protected GUtil::IProgressHandler
+    public QThread
 {
     Q_OBJECT
     bool m_cancel;
@@ -65,14 +64,10 @@ protected:
 
     /** Instructs the subclasses to do their long, arduous work. */
     virtual void do_work() = 0;
-
-    /** \name The progress handler interface
-     *  \{
-    */
-    virtual void ProgressUpdated(int);
-    virtual bool ShouldOperationCancel();
-    /** \} */
-
+    
+    /** Subclasses use this to propagate progress updates and to cancel the task. */
+    bool update_progess(int);
+    
 };
 
 

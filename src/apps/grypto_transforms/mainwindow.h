@@ -41,7 +41,6 @@ protected:
     virtual void closeEvent(QCloseEvent *);
 
 private slots:
-    void _show_about();
     void _new_msg_stdin();
     void _about_to_quit();
 };

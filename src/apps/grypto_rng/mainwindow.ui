@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>450</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Grypto RNG</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../../presentation/grypto_ui.qrc">
+    <normaloff>:/grypto/icons/main.png</normaloff>:/grypto/icons/main.png</iconset>
+  </property>
+  <widget class="DiceRoller" name="diceRoller"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>669</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="action_Quit"/>
+   </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>&amp;Window</string>
+    </property>
+    <addaction name="action_CoinFlipper"/>
+    <addaction name="action_DataGenerator"/>
+   </widget>
+   <widget class="QMenu" name="menu_Help">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="action_About"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuWindow"/>
+   <addaction name="menu_Help"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QDockWidget" name="dw_coinFlipper">
+   <property name="windowTitle">
+    <string>Coin Flipper</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="CoinFlipper" name="coinFlipper"/>
+  </widget>
+  <widget class="QDockWidget" name="dw_dataGenerator">
+   <property name="windowTitle">
+    <string>Data Generator</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="DataGenerator" name="dataGenerator"/>
+  </widget>
+  <action name="action_CoinFlipper">
+   <property name="text">
+    <string>&amp;Coin Tosser</string>
+   </property>
+  </action>
+  <action name="action_DataGenerator">
+   <property name="text">
+    <string>&amp;Data Generator</string>
+   </property>
+  </action>
+  <action name="action_Quit">
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+  </action>
+  <action name="action_About">
+   <property name="text">
+    <string>&amp;About</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>CoinFlipper</class>
+   <extends>QWidget</extends>
+   <header>coinflipper.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DiceRoller</class>
+   <extends>QWidget</extends>
+   <header>diceroller.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DataGenerator</class>
+   <extends>QWidget</extends>
+   <header>datagenerator.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../../presentation/grypto_ui.qrc"/>
+ </resources>
+ <connections/>
+</ui>

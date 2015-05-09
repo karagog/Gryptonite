@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ limitations under the License.*/
 #include "mainwindow.h"
 #include "about.h"
 #include "settings.h"
-#include <grypto_notifyupdatedialog.h>
+#include <grypto/notifyupdatedialog.h>
 #include <gutil/globallogger.h>
 #include <gutil/grouplogger.h>
 #include <gutil/filelogger.h>
@@ -74,9 +74,9 @@ Application::Application(int &argc, char **argv)
                     });
 
     CommandLineArgs args(argc, argv);
-    String open_file;
+    QString open_file;
     if(args.Length() > 1){
-        open_file = args[1];
+        open_file = QString::fromUtf8(args[1]);
     }
 
     // Don't let exceptions crash us, they will be logged to the global logger
@@ -86,7 +86,7 @@ Application::Application(int &argc, char **argv)
     Q_INIT_RESOURCE(grypto_ui);
 
     // Register the metatypes we are going to use
-    qRegisterMetaType<shared_ptr<Exception<>>>("std::shared_ptr<GUtil::Exception<>>");
+    qRegisterMetaType<shared_ptr<exception>>("std::shared_ptr<std::exception>");
     qRegisterMetaType<Grypt::EntryId>("Grypt::EntryId");
     qRegisterMetaTypeStreamOperators<Grypt::IdType>("Grypt::IdType");
 

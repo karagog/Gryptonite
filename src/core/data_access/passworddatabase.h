@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,10 +15,8 @@ limitations under the License.*/
 #ifndef GRYPTO_PASSWORDDATABASE_H
 #define GRYPTO_PASSWORDDATABASE_H
 
-#include <grypto_common.h>
+#include <grypto/common.h>
 #include <gutil/exception.h>
-#include <gutil/smartpointer.h>
-#include <gutil/iprogresshandler.h>
 #include <QString>
 #include <QObject>
 #include <memory>
@@ -38,13 +36,12 @@ class Entry;
     It throws GUtil::Exception to indicate errors.
 */
 class PasswordDatabase :
-        public QObject,
-        protected GUtil::IProgressHandler
+        public QObject
 {
     Q_OBJECT
     void *d;
-    const GUtil::String m_filepath;
-    GUtil::SmartPointer<QLockFile> m_lockfile;
+    QString m_filepath;
+    std::unique_ptr<QLockFile> m_lockfile;
 public:
 
     /** Holds information about a process */
@@ -72,7 +69,7 @@ public:
      *      The default always returns false.
      *      The argument contains information about the process that has locked the database.
     */
-    PasswordDatabase(const char *file_path,
+    PasswordDatabase(const QString &file_path,
                      std::function<bool(const ProcessInfo &)> ask_for_lock_override =
                             [](const ProcessInfo &){ return false; },
                      QObject * = NULL);
@@ -93,17 +90,33 @@ public:
     */
     void Open(const Credentials &creds);
 
+    /** This version of Open() uses a cryptor, which does not require you to know the password/keyfile,
+        only the actual key used to encrypt/decrypt. Otherwise this function behaves identically to the other Open().
+    */
+    void Open(const GUtil::CryptoPP::Cryptor &);
+
     /** Returns true if the database was already opened. */
     bool IsOpen() const;
+
+    /** Saves the database to the new file location and with new credentials.
+     *  (existing files will be overwritten). It works on the main thread
+     *  so it will block until finished. Upon finishing
+     *  the PasswordDatabase object will be pointing to the new file location
+     *  and all subsequent updates will go there.
+    */
+    void SaveAs(const QString &filename, const Credentials &);
 
     /** Throws an exception if the database is not opened. */
     void FailIfNotOpen() const{ if(!IsOpen()) throw GUtil::Exception<>("Database not open"); }
 
     /** Returns the filepath. */
-    GUtil::String const &FilePath() const{ return m_filepath; }
+    QString const &FilePath() const{ return m_filepath; }
 
     /** Returns true if the password and keyfile are correct. */
     bool CheckCredentials(const Credentials &) const;
+
+    /** Returns the credentials used to unlock the database. */
+    Credentials::TypeEnum GetCredentialsType() const;
 
     /** Returns a reference to the cryptor for you to use (but not change). */
     GUtil::CryptoPP::Cryptor const &Cryptor() const;
@@ -211,10 +224,7 @@ public:
     /** Returns the complete list of file ids and associated file sizes.
      *  Note that some files may not be referenced by an entry id.
     */
-    QHash<FileId, FileInfo_t> GetFileSummary() const;
-
-    /** Returns a list of the orphaned files, along with their sizes in bytes. */
-    QHash<FileId, FileInfo_t> GetOrphanedFiles() const;
+    QHash<FileId, FileInfo_t> QueryFileSummary() const;
 
     /** Returns the set of file ids which are referenced by the entry ids. */
     QSet<FileId> GetReferencedFileIds() const;
@@ -225,25 +235,33 @@ public:
     void CancelFileTasks();
 
     /** Exports the entire database in the portable safe format. */
-    void ExportToPortableSafe(const char *export_filename,
+    void ExportToPortableSafe(const QString &export_filename,
                               const Credentials &) const;
 
     /** Imports data from the portable safe file. */
-    void ImportFromPortableSafe(const char *export_filename,
+    void ImportFromPortableSafe(const QString &import_filename,
                                 const Credentials &);
+
+    /** Exports the database in plaintext to an XML file. */
+    void ExportToXml(const QString &export_filename);
+
+    /** Imports the XML data that was generated using ExportToXml(). */
+    void ImportFromXml(const QString &import_filename);
 
     /** Imports data from the other database. New ID's will be given to
      *  every entry and file, so there is no possibility of collision.
     */
     void ImportFromDatabase(const PasswordDatabase &);
 
-
     /** Call this function to iterate through all entries, deleting
      *  those that don't have parents. Afterwards it will iterate through
      *  files and delete those that are not referenced by an entry.
+     *
+     *  \note The cache is updated at the very end of this operation on the
+     *      background thread. You should beware that if you depend on the
+     *      data being fresh you should call WaitForThreadIdle().
     */
     void DeleteOrphans();
-
 
 signals:
 
@@ -256,29 +274,28 @@ signals:
     void NotifyProgressUpdated(int progress, bool cancellable, const QString &task_string = QString());
 
     /** Notifies that the exception was received on the background thread. */
-    void NotifyExceptionOnBackgroundThread(const std::shared_ptr<GUtil::Exception<>> &);
+    void NotifyExceptionOnBackgroundThread(const std::shared_ptr<std::exception> &);
 
-
-protected:
-
-    /** \name GUtil::IProgressHandler interface
-     *  \{
-    */
-    virtual void ProgressUpdated(int);
-    virtual bool ShouldOperationCancel();
-    /** \}*/
+    /** Notifies that the background thread is no longer busy with tasks. */
+    void NotifyThreadIdle();
 
 
 private:
 
     // Main thread methods
     void _init_cryptor(const Credentials &, const byte *salt, GUINT32 salt_len);
+    void _init_cryptor(const GUtil::CryptoPP::Cryptor &);
+    bool _try_lock_file();
+    void _open(std::function<void(byte const *)> init_cryptor);
+    void _close();
 
     // Worker thread bodies
     void _background_worker(GUtil::CryptoPP::Cryptor *);
 
     // Utility functions
     void _convert_to_readonly_exception_and_notify(const GUtil::Exception<> &);
+    bool _progress_callback(int);
+    bool _should_operation_cancel();
 
     // These util functions can only be called if you possess the index lock
     // Returns true if the second id is an ancestor of the first
@@ -300,8 +317,10 @@ private:
     void _bw_add_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const QByteArray &, bool);
     void _bw_exp_file(const QString &, GUtil::CryptoPP::Cryptor&, const FileId &, const char *);
     void _bw_del_file(const QString &, const FileId &);
-    void _bw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
-    void _bw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const char *ps_filepath, const Credentials &);
+    void _bw_export_to_gps(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath, const Credentials &);
+    void _bw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath, const Credentials &);
+    void _bw_export_to_xml(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath);
+    void _bw_import_from_xml(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath);
     void _bw_fail_if_cancelled();
     int m_progressMin, m_progressMax;
     QString m_curTaskString;

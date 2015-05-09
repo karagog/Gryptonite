@@ -47,6 +47,7 @@ Source: "{#TopDir}\installers\LICENSE_QT"; DestDir: "{app}"; Flags: ignoreversio
 ; Application executables and shared libraries
 Source: "{#TopDir}\bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_transforms.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#TopDir}\bin\grypto_rng.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_legacy_plugin.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_core.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#TopDir}\bin\grypto_ui.dll"; DestDir: "{app}"; Flags: ignoreversion

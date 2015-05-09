@@ -13,12 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "mainwindow.h"
-#include <grypto_notifyupdatedialog.h>
+#include "about.h"
+#include <grypto/notifyupdatedialog.h>
 #include <gutil/updatenotifier.h>
 #include <gutil/application.h>
 #include <gutil/qt_settings.h>
 #include <gutil/globallogger.h>
 #include <gutil/filelogger.h>
+#include <gutil/messageboxlogger.h>
+#include <gutil/grouplogger.h>
 #include <QStandardPaths>
 #include <QUrl>
 USING_NAMESPACE_GUTIL;
@@ -39,15 +42,36 @@ public:
           settings("transforms"),
           main_window(&settings)
     {
+        // Don't allow exceptions to crash us. You can read the log to find exception details.
+        SetTrapExceptions(true);
+        setQuitOnLastWindowClosed(false);
+
         connect(&updater, SIGNAL(UpdateInfoReceived(QString,QUrl)),
                 this, SLOT(_update_info_received(QString,QUrl)));
 
         main_window.show();
+
+        // Log global messages to a group logger, which writes to all loggers in the group
+        SetGlobalLogger(new GUtil::GroupLogger{
+                            new GUtil::Qt::MessageBoxLogger(&main_window),
+                            new GUtil::FileLogger(QString("%1/" APPLICATION_LOG)
+                                .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation)).toUtf8()),
+                        });
     }
 
     virtual void CheckForUpdates(bool){
         updater.CheckForUpdates(QUrl(GRYPTO_LATEST_VERSION_URL));
     }
+
+protected:
+    virtual void show_about(QWidget *parent){
+        (new ::About(parent == 0 ? &main_window : parent))->ShowAbout();
+    }
+    virtual void about_to_quit(){
+        GUtil::Qt::Application::about_to_quit();
+        SetGlobalLogger(NULL);
+    }
+
 private slots:
     void _update_info_received(const QString &latest_version_string, const QUrl &download_url){
         GUtil::Version latest_version(latest_version_string.toUtf8().constData());
@@ -65,32 +89,5 @@ private slots:
 int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(grypto_ui);
-
-    int ret = 1;
-    try
-    {
-        Application a(argc, argv);
-
-        // Set up a global file logger, so the application can log errors somewhere
-        SetGlobalLogger(new FileLogger(
-                            String::Format("%s/" APPLICATION_LOG,
-                                           QStandardPaths::writableLocation(QStandardPaths::DataLocation).toUtf8().constData())));
-
-        a.setQuitOnLastWindowClosed(false);
-
-        // Don't allow exceptions to crash us. You can read the log to find exception details.
-        a.SetTrapExceptions(true);
-
-        // Execute the application event loop
-        ret = a.exec();
-    }
-    catch(const std::exception &ex)
-    {
-        GlobalLogger().LogException(ex);
-        ret = 2;
-    }
-
-    // Clean up and return
-    SetGlobalLogger(NULL);
-    return ret;
+    return Application(argc, argv).exec();
 }

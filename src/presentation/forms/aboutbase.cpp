@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "aboutbase.h"
 #include <gutil/application.h>
-#include <grypto_common.h>
+#include <grypto/common.h>
 #include <QDesktopServices>
 #include <QIcon>
 #include <QPushButton>

@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef LEGACYMANAGER_H
 #define LEGACYMANAGER_H
 
-#include <grypto_ilegacy.h>
+#include <grypto/ilegacy.h>
 
 
 /** Manages legacy functions like updating old database formats. */

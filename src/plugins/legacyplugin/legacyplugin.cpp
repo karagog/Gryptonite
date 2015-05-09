@@ -14,9 +14,9 @@ limitations under the License.*/
 
 #include "legacyplugin.h"
 #include "../../legacy/legacyutils.h"
-#include <grypto_entry.h>
-#include <grypto_newpassworddialog.h>
-#include <grypto_getpassworddialog.h>
+#include <grypto/entry.h>
+#include <grypto/newpassworddialog.h>
+#include <grypto/getpassworddialog.h>
 #include <QMessageBox>
 #include <QFileDialog>
 using namespace std;
@@ -61,7 +61,8 @@ QString LegacyPlugin::UpgradeDatabase(const QString &path,
 
         Credentials creds;
         {
-            GetPasswordDialog dlg(settings, QFileInfo(path).fileName(), parent);
+            GetPasswordDialog dlg(settings, QFileInfo(path).fileName(),
+                                  Credentials::NoType, QString(), parent);
             if(QDialog::Rejected == dlg.exec())
                 return QString::null;
             creds = dlg.GetCredentials();

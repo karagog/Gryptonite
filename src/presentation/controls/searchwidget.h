@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef SEARCHWIDGET_H
 #define SEARCHWIDGET_H
 
-#include "grypto_filtereddatabasemodel.h"
+#include <grypto/filtereddatabasemodel.h>
 #include <QWidget>
 
 namespace Ui {

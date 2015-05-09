@@ -39,8 +39,8 @@ void CoinFlipper::_update()
     uint total = m_model->Heads() + m_model->Tails();
     double head_percent = ((double)m_model->Heads())/total * 100;
     double tail_percent = ((double)m_model->Tails())/total * 100;
-    ui->lbl_headCount->setText(QString("%1").arg(m_model->Heads()));
-    ui->lbl_tailCount->setText(QString("%1").arg(m_model->Tails()));
+    ui->lbl_headCount->setText(QString("%L1").arg(m_model->Heads()));
+    ui->lbl_tailCount->setText(QString("%L1").arg(m_model->Tails()));
     ui->lbl_headPercent->setText(QString("%1").arg(total == 0 ? 0 : head_percent, 0, 'g', 6));
     ui->lbl_tailPercent->setText(QString("%1").arg(total == 0 ? 0 : tail_percent, 0, 'g', 6));
 }

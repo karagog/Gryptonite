@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>543</width>
-    <height>349</height>
+    <height>256</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -43,6 +43,18 @@
         </property>
         <widget class="QWidget" name="pg_rawData">
          <layout class="QGridLayout" name="gridLayout_2">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
           <item row="0" column="0">
            <widget class="QLabel" name="label_12">
             <property name="text">
@@ -105,6 +117,18 @@
         </widget>
         <widget class="QWidget" name="pg_distribution">
          <layout class="QFormLayout" name="formLayout_5">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
           <item row="0" column="0">
            <widget class="QLabel" name="label_3">
             <property name="text">
@@ -195,6 +219,15 @@
            <widget class="QStackedWidget" name="sw_params">
             <widget class="QWidget" name="pg_uniform">
              <layout class="QFormLayout" name="formLayout_3">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <item row="0" column="0">
                <widget class="QLabel" name="label_4">
                 <property name="text">
@@ -248,6 +281,15 @@
             </widget>
             <widget class="QWidget" name="pg_normal">
              <layout class="QFormLayout" name="formLayout_6">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <item row="0" column="0">
                <widget class="QLabel" name="label_7">
                 <property name="text">
@@ -298,6 +340,15 @@
             </widget>
             <widget class="QWidget" name="pg_geometric">
              <layout class="QFormLayout" name="formLayout_7">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <item row="0" column="0">
                <widget class="QLabel" name="label_9">
                 <property name="text">
@@ -328,6 +379,15 @@
             </widget>
             <widget class="QWidget" name="pg_exponential">
              <layout class="QFormLayout" name="formLayout_8">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <item row="0" column="0">
                <widget class="QLabel" name="label_2">
                 <property name="text">
@@ -355,6 +415,15 @@
             </widget>
             <widget class="QWidget" name="pg_poisson">
              <layout class="QFormLayout" name="formLayout_9">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <item row="0" column="0">
                <widget class="QLabel" name="label_10">
                 <property name="text">

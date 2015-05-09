@@ -2700,12 +2700,23 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
 
                 _bw_exp_file(conn_str, my_cryptor, fid, tf.fileName().toUtf8());
                 QByteArray file_data;
+                bool compressed = false;
                 {
                     QFile f(tf.fileName());
                     f.open(QFile::ReadOnly);
                     file_data = f.readAll();
+
+                    // Try compressing it to see if it gets smaller
+                    QByteArray file_data_comp = qCompress(file_data, 9);
+                    if(file_data_comp.length() < file_data.length()){
+                        file_data = file_data_comp;
+                        compressed = true;
+                    }
                 }
                 tf.remove();
+
+                if(compressed)
+                    sw.writeAttribute("comp", "1");
 
                 sw.writeCharacters(file_data.toBase64());
                 sw.writeEndElement();
@@ -2791,13 +2802,17 @@ static void __parse_xml_files(QXmlStreamReader &sr, QHash<int, QString> &files)
 {
     int depth = 0;
     int cur_id = -1;
+    bool compressed = false;
     QString cur_path;
     while(0 <= depth){
         switch(sr.readNext()){
         case QXmlStreamReader::StartElement:
             depth++;
-            if(sr.name() == "f")
+            if(sr.name() == "f"){
                 cur_id = sr.attributes().value("id").toInt();
+                if(sr.attributes().hasAttribute("comp"))
+                    compressed = (0 != sr.attributes().value("comp").toInt());
+            }
             break;
         case QXmlStreamReader::Characters:
             if(cur_id != -1)
@@ -2808,7 +2823,10 @@ static void __parse_xml_files(QXmlStreamReader &sr, QHash<int, QString> &files)
                     throw Exception<>("Cannot open temporary file");
 
                 cur_path = tf.fileName();
-                tf.write(QByteArray::fromBase64(sr.text().toLatin1()));
+                QByteArray data = QByteArray::fromBase64(sr.text().toLatin1());
+                if(compressed)
+                    data = qUncompress(data);
+                tf.write(data);
             }
             break;
         case QXmlStreamReader::EndElement:
@@ -2816,6 +2834,7 @@ static void __parse_xml_files(QXmlStreamReader &sr, QHash<int, QString> &files)
             if(0 == depth){
                 files.insert(cur_id, cur_path);
                 cur_id = -1;
+                compressed = false;
                 cur_path.clear();
             }
             break;

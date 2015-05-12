@@ -1635,8 +1635,10 @@ QList<Entry> PasswordDatabase::FindFavoriteEntries() const
     G_D;
     QList<entry_cache> rows;
     unique_lock<mutex> lkr(d->index_lock);
-    for(const EntryId &id : d->favorite_index)
+    for(const EntryId &id : d->favorite_index){
+        GASSERT(d->index.find(id) != d->index.end());
         rows.append(d->index[id]);
+    }
     lkr.unlock();
 
     QList<Entry> ret;
@@ -2050,7 +2052,6 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
         QSet<EntryId> claimed_entries;
         QList<EntryId> deleted_entries;
         QList<FileId> deleted_files;
-        int max_fav = -1;
 
         // Populate an in-memory index of the hierarchy
         QSqlQuery q("SELECT ID,ParentID,FileID,Favorite FROM Entry", db);
@@ -2061,11 +2062,8 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
             int     fav = q.value("Favorite").toInt();
             entries.insert(eid, {eid, fid, fav});
             parent_index[pid].insert(eid);
-            if(-1 != fav){
+            if(0 <= fav)
                 favorites.insert(eid);
-                if(fav > max_fav)
-                    max_fav = fav;
-            }
         }
 
         // Get a comprehensive list of all files in the database
@@ -2094,9 +2092,9 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
                 q.prepare("DELETE FROM Entry WHERE ID=?");
                 q.addBindValue((QByteArray)eid);
                 DatabaseUtils::ExecuteQuery(q);
-                deleted_entries.append(eid);
 
-                if(0 < entries[eid].favorite)
+                deleted_entries.append(eid);
+                if(0 <= entries[eid].favorite)
                     favorites.remove(eid);
             }
         }
@@ -3102,7 +3100,7 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
 void PasswordDatabase::_bw_check_and_repair(const QString &conn_str, GUtil::CryptoPP::Cryptor&)
 {
     G_D;
-    QString final_report = "Checking and Repair: ";
+    QString final_report = "Check and Repair: ";
     finally([&]{
         emit NotifyProgressUpdated(100, false, final_report);
     });

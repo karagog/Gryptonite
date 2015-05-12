@@ -14,6 +14,7 @@ limitations under the License.*/
 
 #include "datagenerator.h"
 #include "ui_datagenerator.h"
+#include "about.h"
 #include <gutil/file.h>
 #include <gutil/exception.h>
 #include <QFileDialog>
@@ -410,6 +411,7 @@ void DataGenerator::_generate()
 
         m_progressDialog = new QProgressDialog(tr("Exporting raw data..."),
                                                tr("Cancel"), 0, 100, this);
+        m_progressDialog->setWindowTitle(GRYPTO_RNG_APP_NAME);
         connect(m_progressDialog.data(), SIGNAL(canceled()), this, SLOT(_cancel()));
         connect(this, SIGNAL(ProgressUpdated(int)), m_progressDialog.data(), SLOT(setValue(int)));
         //m_progressDialog->setModal(true);
@@ -426,6 +428,7 @@ void DataGenerator::_generate()
         const int N = ui->spn_n->value();
 
         m_progressDialog = new QProgressDialog(this);
+        m_progressDialog->setWindowTitle(GRYPTO_RNG_APP_NAME);
         connect(m_progressDialog.data(), SIGNAL(canceled()), this, SLOT(_cancel()));
         connect(this, SIGNAL(ProgressUpdated(int)), m_progressDialog.data(), SLOT(setValue(int)));
         //m_progressDialog->setModal(true);
@@ -491,7 +494,7 @@ void DataGenerator::_generate()
         }
 
         m_progressDialog->setLabelText(
-                    QString(tr("Generating %1 values of a %2 distribution %3..."))
+                    QString(tr("Generating %L1 values of a %2 distribution %3..."))
                                                                    .arg(N)
                                                                    .arg(disttype)
                                                                    .arg(msg));

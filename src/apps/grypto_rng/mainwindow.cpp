@@ -14,6 +14,7 @@ limitations under the License.*/
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "about.h"
 #include <gutil/application.h>
 #include <QWhatsThis>
 
@@ -26,6 +27,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
       m_settings(settings)
 {
     ui->setupUi(this);
+    setWindowTitle(GRYPTO_RNG_APP_NAME);
     if(settings->Contains(SETTING_LAST_GEOMETRY)){
         restoreGeometry(settings->Value(SETTING_LAST_GEOMETRY).toByteArray());
         restoreState(settings->Value(SETTING_LAST_STATE).toByteArray());

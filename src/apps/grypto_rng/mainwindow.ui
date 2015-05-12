@@ -10,9 +10,6 @@
     <height>300</height>
    </rect>
   </property>
-  <property name="windowTitle">
-   <string>Grypto RNG</string>
-  </property>
   <property name="windowIcon">
    <iconset resource="../../presentation/grypto_ui.qrc">
     <normaloff>:/grypto/icons/main.png</normaloff>:/grypto/icons/main.png</iconset>

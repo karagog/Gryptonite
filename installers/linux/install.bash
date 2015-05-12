@@ -44,9 +44,9 @@ echo "export LD_LIBRARY_PATH=$INSTALL_DIR_LIBS"      >> $START_LOC
 cp $START_LOC $START_LOC_TRANSFORMS
 cp $START_LOC $START_LOC_RNG
 
-echo "$INSTALL_DIR_LIBS/gryptonite"                 >> $START_LOC
-echo "$INSTALL_DIR_LIBS/grypto_transforms"          >> $START_LOC_TRANSFORMS
-echo "$INSTALL_DIR_LIBS/grypto_rng"                 >> $START_LOC_RNG
+echo "$INSTALL_DIR_LIBS/gryptonite \$@"             >> $START_LOC
+echo "$INSTALL_DIR_LIBS/grypto_transforms \$@"      >> $START_LOC_TRANSFORMS
+echo "$INSTALL_DIR_LIBS/grypto_rng \$@"             >> $START_LOC_RNG
 
 chmod +x $START_LOC
 chmod +x $START_LOC_TRANSFORMS

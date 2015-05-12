@@ -106,6 +106,14 @@ public:
     */
     void SaveAs(const QString &filename, const Credentials &);
 
+    /** Runs some sanity checks on the database and vaccuums unused space.
+     *
+     *  It does the following checks and actions:
+     *   * Validates the hierarchy, making sure all children have a correct row sequence
+     *   * Reclaims unused space in the database (executes VACCUUM command)
+    */
+    void CheckAndRepairDatabase();
+
     /** Throws an exception if the database is not opened. */
     void FailIfNotOpen() const{ if(!IsOpen()) throw GUtil::Exception<>("Database not open"); }
 
@@ -326,6 +334,7 @@ private:
     void _bw_import_from_gps(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath, const Credentials &);
     void _bw_export_to_xml(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath);
     void _bw_import_from_xml(const QString &, GUtil::CryptoPP::Cryptor&, const QString &filepath);
+    void _bw_check_and_repair(const QString &, GUtil::CryptoPP::Cryptor&);
     void _bw_fail_if_cancelled();
     int m_progressMin, m_progressMax;
     QString m_curTaskString;

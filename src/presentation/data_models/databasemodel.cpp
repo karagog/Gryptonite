@@ -248,6 +248,13 @@ void DatabaseModel::SaveAs(const QString &filename, const Credentials &creds)
     }
 }
 
+void DatabaseModel::CheckAndRepairDatabase()
+{
+    ClearUndoStack();
+    connect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_thread_finished_reset_model()));
+    m_db.CheckAndRepairDatabase();
+}
+
 GUtil::CryptoPP::Cryptor const &DatabaseModel::Cryptor() const
 {
     return m_db.Cryptor();
@@ -792,7 +799,7 @@ void DatabaseModel::_thread_finished_reset_model()
 {
     disconnect(&m_db, SIGNAL(NotifyThreadIdle()), this, SLOT(_thread_finished_reset_model()));
     _reset_model();
-    emit NotifyImportFinished();
+    emit NotifyReadOnlyTransactionFinished();
 }
 
 void DatabaseModel::CancelAllBackgroundOperations()

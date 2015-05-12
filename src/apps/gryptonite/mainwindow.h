@@ -89,7 +89,7 @@ public slots:
     void RecoverFromReadOnly();
 
     /** This slot is called when a database import operation is finished. */
-    void DatabaseImportFinished();
+    void ReadOnlyTransactionFinished();
 
     /** Locks the interface. (true = lock)*/
     void Lock();
@@ -122,6 +122,7 @@ private slots:
     void _import_from_portable_safe();
     void _export_to_xml();
     void _import_from_xml();
+    void _file_maintenance();
 
     void _new_entry();
     void _new_child_entry();
@@ -183,7 +184,7 @@ private:
     Grypt::ClipboardAccess m_clipboard;
     Grypt::Lockout m_lockoutTimer;
     bool m_isLocked;
-    bool m_importing;
+    bool m_readonlyTransaction;
     QByteArray m_lockedState;
     QByteArray m_savedState;
     QString m_keyfileLocation;
@@ -216,7 +217,7 @@ private:
     Grypt::Entry const *_get_currently_selected_entry() const;
     void _edit_entry(const Grypt::Entry &);
     bool _handle_key_pressed(QKeyEvent *);
-    void _prepare_ui_for_import();
+    void _prepare_ui_for_readonly_transaction();
 
 };
 

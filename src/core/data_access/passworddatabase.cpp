@@ -291,7 +291,8 @@ public:
         ImportFromXML,
 
         // Misc commands
-        DispatchOrphans
+        DispatchOrphans,
+        CheckAndRepair
     } CommandType;
 
     virtual ~bg_worker_command(){}
@@ -469,6 +470,14 @@ public:
           FilePath(filepath)
     {}
     const QString FilePath;
+};
+
+class check_and_repair_command : public bg_worker_command
+{
+public:
+    check_and_repair_command()
+        :bg_worker_command(CheckAndRepair)
+    {}
 };
 
 
@@ -934,6 +943,12 @@ void PasswordDatabase::_close()
     }
     m_lockfile->unlock();
     G_D_UNINIT();
+}
+
+void PasswordDatabase::CheckAndRepairDatabase()
+{
+    G_D;
+    __queue_command(d, new check_and_repair_command);
 }
 
 PasswordDatabase::~PasswordDatabase()
@@ -2263,6 +2278,11 @@ void PasswordDatabase::_background_worker(GUtil::CryptoPP::Cryptor *c)
                     _bw_import_from_xml(conn_str, *bgCryptor, ifx->FilePath);
                 }
                     break;
+                case bg_worker_command::CheckAndRepair:
+                {
+                    _bw_check_and_repair(conn_str, *bgCryptor);
+                }
+                    break;
                 default:
                     break;
                 }
@@ -3047,6 +3067,96 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
         d->file_index.emplace(fc.id, fc);
 
     d->wc_index.notify_all();
+}
+
+void PasswordDatabase::_bw_check_and_repair(const QString &conn_str, GUtil::CryptoPP::Cryptor&)
+{
+    G_D;
+    QString final_report = "Checking and Repair: ";
+    finally([&]{
+        emit NotifyProgressUpdated(100, false, final_report);
+    });
+
+    // First clean up orphaned entries and files
+    emit NotifyProgressUpdated(5, false, "Removing orphaned entries and files...");
+    _bw_dispatch_orphans(conn_str);
+
+    // Then validate the hierarchy
+    emit NotifyProgressUpdated(20, false, "Validating entry hierarchy...");
+    QList<EntryId> reorder_parents;
+    QHash<EntryId, QList<EntryId>> parent_index;
+    QSqlQuery q("SELECT ID,ParentID,Row FROM Entry ORDER BY ParentID,Row ASC",
+                QSqlDatabase::database(conn_str));
+    unique_ptr<EntryId> prev;
+    int expected_row = 0;
+    while(q.next()){
+        EntryId pid = q.value("ParentID").toByteArray();
+        if(!prev)
+            prev.reset(new EntryId(pid));
+        else if(*prev != pid){
+            expected_row = 0;
+            *prev = pid;
+        }
+
+        if((reorder_parents.isEmpty() || pid != reorder_parents.back())
+                && expected_row != q.value("Row").toInt())
+            reorder_parents.append(pid);
+
+        parent_index[pid].append(q.value("ID").toByteArray());
+        expected_row++;
+    }
+
+    if(0 < reorder_parents.length()){
+        emit NotifyProgressUpdated(40, false,
+                                   QString("%1 parents with children out of order..."
+                                           "Correcting this now...")
+                                   .arg(reorder_parents.length()));
+
+        QSqlDatabase db(QSqlDatabase::database(conn_str));
+        db.transaction();
+        bool success = true;
+        try{
+            for(const EntryId &pid : reorder_parents){
+                for(int i = 0; i < parent_index[pid].length(); i++){
+                    q.prepare("UPDATE Entry SET Row=? WHERE ID=?");
+                    q.addBindValue(i);
+                    q.addBindValue((QByteArray)parent_index[pid][i]);
+                    DatabaseUtils::ExecuteQuery(q);
+                }
+            }
+        }
+        catch(...){
+            db.rollback();
+            success = false;
+        }
+
+        if(success)
+            db.commit();
+
+        // Update the index to make sure it matches what's in the database
+        lock_guard<mutex> lkr(d->index_lock);
+        for(const EntryId &pid : reorder_parents){
+            for(int i = 0; i < parent_index[pid].length(); i++)
+                d->index[parent_index[pid][i]].row = i;
+
+            sort(d->parent_index[pid].children.begin(),
+                 d->parent_index[pid].children.end(),
+              [&](const EntryId &lhs, const EntryId &rhs){
+                 return d->index[lhs].row < d->index[rhs].row;
+            });
+        }
+        d->wc_index.notify_all();
+
+        final_report.append(QString("Child ordering fixed for %1 parent entries")
+                            .arg(reorder_parents.length()));
+    }
+    else{
+        final_report.append("No issues found");
+    }
+
+    // Lastly reclaim unused space
+    emit NotifyProgressUpdated(90, false, "Reclaiming unused file space...");
+    q.exec("VACUUM");
 }
 
 

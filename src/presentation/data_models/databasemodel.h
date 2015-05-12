@@ -60,6 +60,8 @@ public:
 
     void SaveAs(const QString &filename, const Credentials &);
 
+    void CheckAndRepairDatabase();
+
     /** The path to the database on disk. */
     const QString &FilePath() const;
 
@@ -202,8 +204,9 @@ signals:
     void NotifyProgressUpdated(int, bool, const QString &);
     void NotifyUndoStackChanged();
 
-    /** This signal notifies that the last import operation was finished. */
-    void NotifyImportFinished();
+    /** This signal notifies that the last read-only transaction was finished, and the
+     *  database can now be safely modified again. */
+    void NotifyReadOnlyTransactionFinished();
 
 
 private slots:

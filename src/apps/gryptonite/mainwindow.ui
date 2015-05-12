@@ -96,7 +96,7 @@
      <x>0</x>
      <y>0</y>
      <width>795</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -164,6 +164,8 @@
     <property name="title">
      <string>&amp;Help</string>
     </property>
+    <addaction name="actionFile_Maintenance"/>
+    <addaction name="separator"/>
     <addaction name="action_About"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -482,6 +484,14 @@
    </property>
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;A utility that generates high quality pseudo-random data in various forms. You can flip coins, roll dice or generate various types of statistical distributions.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionFile_Maintenance">
+   <property name="text">
+    <string>File &amp;Maintenance</string>
+   </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Use file maintenance to do things like check the integrity of the database and to reclaim unused file space. You should rarely (if ever) have to use this.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Reclaiming file space may be periodically necessary if you added large files to the database and then removed them. In this case your password database does not automatically resize smaller, so you should use file maintenance to vaccuum the unused space.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>

@@ -113,7 +113,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget
       m_action_new_child(tr("New &Child"), this),
       m_btn_pop_out(tr("Pop Out")),
       m_isLocked(true),
-      m_importing(false),
+      m_readonlyTransaction(false),
       m_grypto_transforms_visible(false),
       m_minimize_msg_shown(false),
       m_canHide(true),
@@ -179,10 +179,11 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget
     connect(ui->actionQuit, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(ui->actionNewOpenDB, SIGNAL(triggered()), this, SLOT(_new_open_database()));
     connect(ui->action_Save_As, SIGNAL(triggered()), this, SLOT(_save_as()));
-    connect(ui->action_export_ps, SIGNAL(triggered()), this, SLOT(_export_to_portable_safe()));
-    connect(ui->action_import_ps, SIGNAL(triggered()), this, SLOT(_import_from_portable_safe()));
+//    connect(ui->action_export_ps, SIGNAL(triggered()), this, SLOT(_export_to_portable_safe()));
+//    connect(ui->action_import_ps, SIGNAL(triggered()), this, SLOT(_import_from_portable_safe()));
     connect(ui->action_XML_export, SIGNAL(triggered()), this, SLOT(_export_to_xml()));
     connect(ui->action_XML_import, SIGNAL(triggered()), this, SLOT(_import_from_xml()));
+    connect(ui->actionFile_Maintenance, SIGNAL(triggered()), this, SLOT(_file_maintenance()));
     connect(ui->action_Close, SIGNAL(triggered()), this, SLOT(_close_database()));
     connect(ui->actionNew_Entry, SIGNAL(triggered()), this, SLOT(_new_entry()));
     connect(ui->action_EditEntry, SIGNAL(triggered()), this, SLOT(_edit_entry()));
@@ -205,7 +206,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget
     {
         QAction *a_whatsthis = QWhatsThis::createAction(this);
         ui->menu_Help->insertAction(ui->action_About, a_whatsthis);
-        ui->menu_Help->insertSeparator(ui->action_About);
     }
 
     connect(ui->view_entry, SIGNAL(RowActivated(int)), this, SLOT(_entry_row_activated(int)));
@@ -626,13 +626,13 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
             this, SLOT(_entries_moved(QModelIndex, int, int, QModelIndex)));
     connect(dbm, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
             this, SLOT(_entries_updated(QModelIndex,QModelIndex)));
-    connect(dbm, SIGNAL(NotifyImportFinished()),
-            this, SLOT(DatabaseImportFinished()));
+    connect(dbm, SIGNAL(NotifyReadOnlyTransactionFinished()),
+            this, SLOT(ReadOnlyTransactionFinished()));
 }
 
 void MainWindow::_entries_added_or_removed(const QModelIndex &parent_index)
 {
-    if(m_importing)
+    if(m_readonlyTransaction)
         return;
 
     ui->treeView->ResizeColumnsToContents();
@@ -656,7 +656,7 @@ void MainWindow::_entries_added_or_removed(const QModelIndex &parent_index)
 void MainWindow::_entries_moved(const QModelIndex &par_src, int, int,
                                 const QModelIndex &par_dest)
 {
-    if(m_importing)
+    if(m_readonlyTransaction)
         return;
 
     ui->treeView->ResizeColumnsToContents();
@@ -681,7 +681,7 @@ void MainWindow::_entries_moved(const QModelIndex &par_src, int, int,
 void MainWindow::_entries_updated(const QModelIndex &top_left,
                                   const QModelIndex &bottom_right)
 {
-    if(m_importing)
+    if(m_readonlyTransaction)
         return;
 
     if(!top_left.isValid() || !bottom_right.isValid())
@@ -1025,7 +1025,7 @@ void MainWindow::_import_from_portable_safe()
             return;
     }
 
-    _prepare_ui_for_import();
+    _prepare_ui_for_readonly_transaction();
     _get_database_model()->ImportFromPortableSafe(fn, dlg.GetCredentials());
 }
 
@@ -1057,9 +1057,9 @@ void MainWindow::_export_to_xml()
     _get_database_model()->ExportToXml(fn);
 }
 
-void MainWindow::_prepare_ui_for_import()
+void MainWindow::_prepare_ui_for_readonly_transaction()
 {
-    m_importing = true;
+    m_readonlyTransaction = true;
     DropToReadOnly();
     ui->actionNewOpenDB->setEnabled(false);
     ui->action_Save_As->setEnabled(false);
@@ -1092,8 +1092,29 @@ void MainWindow::_import_from_xml()
 //                   " connection to the database. Thank you for your patience."));
 //    mb->show();
 
-    _prepare_ui_for_import();
+    _prepare_ui_for_readonly_transaction();
     _get_database_model()->ImportFromXml(fn);
+}
+
+void MainWindow::_file_maintenance()
+{
+    if(!IsFileOpen())
+        return;
+
+    if(QMessageBox::Yes != QMessageBox::information(
+                this, tr("File Maintenance"),
+                tr("File Maintenance will check your database for certain types of errors"
+                   " and will reclaim unused file space. Be aware that you will be"
+                   " unable to undo anything that happened prior to this."
+                   "\n\n"
+                   "Are you sure you want to run File Maintenance?"),
+                QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)){
+        return;
+    }
+
+    _prepare_ui_for_readonly_transaction();
+    _get_database_model()->CheckAndRepairDatabase();
+    _update_undo_text();
 }
 
 void MainWindow::_new_entry()
@@ -1167,6 +1188,7 @@ void MainWindow::_update_ui_file_opened(bool b)
 
     ui->menu_Export->setEnabled(b);
     ui->menu_Import->setEnabled(b);
+    ui->actionFile_Maintenance->setEnabled(b);
 
     if(b){
         ui->statusbar->showMessage(tr("Database opened successfully"), STATUSBAR_MSG_TIMEOUT);
@@ -1891,9 +1913,9 @@ void MainWindow::RecoverFromReadOnly()
     }
 }
 
-void MainWindow::DatabaseImportFinished()
+void MainWindow::ReadOnlyTransactionFinished()
 {
+    m_readonlyTransaction = false;
     RecoverFromReadOnly();
-    m_importing = false;
     _update_trayIcon_menu();
 }

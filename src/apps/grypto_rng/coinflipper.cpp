@@ -35,8 +35,8 @@ CoinFlipper::CoinFlipper(QWidget *parent)
 
 CoinFlipper::~CoinFlipper()
 {
-    delete ui;
     delete m_model;
+    delete ui;
 }
 
 void CoinFlipper::_progress_updated(int progress)

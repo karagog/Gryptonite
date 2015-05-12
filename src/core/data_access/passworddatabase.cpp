@@ -2004,9 +2004,9 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
         QHash<EntryId, entry_row> entries;
         QHash<EntryId, QSet<EntryId>> parent_index;
         QSet<FileId> all_files;
+        QSet<FileId> claimed_files;
         QSet<EntryId> favorites;
         QSet<EntryId> claimed_entries;
-        QSet<FileId> claimed_files;
         QList<EntryId> deleted_entries;
         QList<FileId> deleted_files;
         int max_fav = -1;
@@ -2020,14 +2020,17 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
             int     fav = q.value("Favorite").toInt();
             entries.insert(eid, {eid, fid, fav});
             parent_index[pid].insert(eid);
-            if(!fid.IsNull())
-                all_files.insert(fid);
             if(-1 != fav){
                 favorites.insert(eid);
                 if(fav > max_fav)
                     max_fav = fav;
             }
         }
+
+        // Get a comprehensive list of all files in the database
+        q.exec("SELECT Id FROM File");
+        while(q.next())
+            all_files.insert(q.value("Id").toByteArray());
 
         // Starting at the root, populate a set of entries that can be reached,
         //  and remember any files that were referenced along the way

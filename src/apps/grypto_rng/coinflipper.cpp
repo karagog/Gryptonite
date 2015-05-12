@@ -53,9 +53,6 @@ void CoinFlipper::_progress_updated(int progress)
         ui->tbl_results->resize(ui->tbl_results->width(), ui->tbl_results->height() + 1);
         ui->tbl_results->resize(ui->tbl_results->width(), old_height);
     }
-    else if(progress == 0){
-        m_pd.show();
-    }
 }
 
 void CoinFlipper::_update()

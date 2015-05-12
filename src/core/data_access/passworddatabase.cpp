@@ -2034,6 +2034,10 @@ void PasswordDatabase::_bw_remove_favorite(const QString &conn_str, const EntryI
 void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
 {
     G_D;
+    QList<EntryId> deleted_entries;
+    QList<FileId> deleted_files;
+    QList<EntryId> sorted_favorites;
+
     QSqlDatabase db(QSqlDatabase::database(conn_str));
     db.transaction();
     try
@@ -2050,8 +2054,6 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
         QSet<FileId> claimed_files;
         QSet<EntryId> favorites;
         QSet<EntryId> claimed_entries;
-        QList<EntryId> deleted_entries;
-        QList<FileId> deleted_files;
 
         // Populate an in-memory index of the hierarchy
         QSqlQuery q("SELECT ID,ParentID,FileID,Favorite FROM Entry", db);
@@ -2101,7 +2103,7 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
 
         // Update the favorites now that some may have been removed
         // Make a list of favorites sorted by their index
-        QList<EntryId> sorted_favorites = favorites.toList();
+        sorted_favorites = favorites.toList();
         sort(sorted_favorites.begin(), sorted_favorites.end(),
           [&](const EntryId &lhs, const EntryId &rhs){
             return entries[lhs].favorite < entries[rhs].favorite;
@@ -2136,23 +2138,6 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
         if(0 < deleted_files.count()){
             qDebug("Removed %d orphaned files...", deleted_files.count());
         }
-
-        // Update the index:
-        unique_lock<mutex> lkr(d->index_lock);
-        for(const EntryId &eid : deleted_entries){
-            d->index.erase(eid);
-            d->parent_index.erase(eid);
-        }
-        for(const FileId &fid : deleted_files){
-            d->file_index.erase(fid);
-        }
-        for(const EntryId &eid : d->deleted_entries){
-            // We delayed removing this from the parent index, but we can do it now
-            d->parent_index.erase(eid);
-        }
-        d->deleted_entries.clear();
-        d->favorite_index = sorted_favorites;
-        d->wc_index.notify_all();
     }
     catch(...)
     {
@@ -2160,6 +2145,23 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
         throw;
     }
     db.commit();
+
+    // Update the index:
+    lock_guard<mutex> lkr(d->index_lock);
+    for(const EntryId &eid : deleted_entries){
+        d->index.erase(eid);
+        d->parent_index.erase(eid);
+    }
+    for(const FileId &fid : deleted_files){
+        d->file_index.erase(fid);
+    }
+    for(const EntryId &eid : d->deleted_entries){
+        // We delayed removing this from the parent index, but we can do it now
+        d->parent_index.erase(eid);
+    }
+    d->deleted_entries.clear();
+    d->favorite_index = sorted_favorites;
+    d->wc_index.notify_all();
 }
 
 

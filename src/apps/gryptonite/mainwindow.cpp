@@ -969,7 +969,13 @@ void MainWindow::_save_as()
         return;
 
     DatabaseModel *dbm = _get_database_model();
-    dbm->SaveAs(fn, dlg.GetCredentials());
+    m_readonlyTransaction = true;
+    TryFinally([&]{
+        dbm->SaveAs(fn, dlg.GetCredentials());
+    }, [](exception &){},
+    [&]{
+        m_readonlyTransaction = false;
+    });
     if(dbm->GetCredentialsType() == Credentials::KeyfileType ||
             dbm->GetCredentialsType() == Credentials::PasswordAndKeyfileType)
         m_keyfileLocation = dlg.GetKeyfileLocation();

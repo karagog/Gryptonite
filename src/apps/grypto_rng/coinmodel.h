@@ -18,6 +18,8 @@ limitations under the License.*/
 #include <gutil/cryptopp_rng.h>
 #include <vector>
 #include <QAbstractTableModel>
+#include <QFuture>
+#include <QMutex>
 
 class CoinModel :
         public QAbstractTableModel
@@ -45,12 +47,27 @@ public slots:
     /** Clears the model. */
     void Clear();
 
+signals:
+
+    void NotifyProgressUpdated(int progress);
+
 private:
-    GUtil::CryptoPP::RNG m_rng;
-    std::vector<bool> m_data;
+    // These members are used only by the main thread
+    QFuture<void> m_worker;
     int m_lazySize;
+
+    // These members are used by both the main and worker threads
+    QScopedPointer<QMutex> m_lock;
+    std::vector<bool> m_data;
     uint m_heads;
     uint m_tails;
+
+    // These members are only used by the worker thread
+    GUtil::CryptoPP::RNG m_rng;
+
+    void _worker_flip(int times);
+    bool _can_fetch_more(const QModelIndex &) const;
+    void _fail_if_worker_busy();
 };
 
 #endif // COINMODEL_H

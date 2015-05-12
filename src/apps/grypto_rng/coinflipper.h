@@ -18,6 +18,7 @@ limitations under the License.*/
 #include "coinmodel.h"
 #include <gutil/qt_settings.h>
 #include <QWidget>
+#include <QProgressDialog>
 
 namespace Ui {
 class coinflipper;
@@ -39,10 +40,12 @@ public:
 private slots:
     void _flip();
     void _clear();
+    void _progress_updated(int);
 
 private:
     Ui::coinflipper *ui;
     CoinModel *m_model;
+    QProgressDialog m_pd;
 
     void _update();
 };

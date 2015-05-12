@@ -15,23 +15,47 @@ limitations under the License.*/
 #include "coinflipper.h"
 #include "ui_coinflipper.h"
 #include "coinmodel.h"
+#include "about.h"
 
 #define SETTING_COINFLIPPER_N    "cf_n"
 
 CoinFlipper::CoinFlipper(QWidget *parent)
     :QWidget(parent),
       ui(new Ui::coinflipper),
-      m_model(new CoinModel(this))
+      m_model(new CoinModel(this)),
+      m_pd(this)
 {
     ui->setupUi(this);
     ui->tbl_results->setModel(m_model);
+    connect(m_model, SIGNAL(NotifyProgressUpdated(int)), this, SLOT(_progress_updated(int)));
     _update();
+    m_pd.setWindowTitle(GRYPTO_RNG_APP_NAME);
+    m_pd.setCancelButton(0);
 }
 
 CoinFlipper::~CoinFlipper()
 {
     delete ui;
     delete m_model;
+}
+
+void CoinFlipper::_progress_updated(int progress)
+{
+    m_pd.setValue(progress);
+
+    if(progress == 100){
+        // This code section executes when the coin model's background worker is finished
+        _update();
+
+        // This doesn't really resize it, but it causes a resize event on the vertical axis,
+        //  which forces the view to fetch more if it needs to
+        int old_height = ui->tbl_results->height();
+        ui->tbl_results->resize(ui->tbl_results->width(), ui->tbl_results->height() + 1);
+        ui->tbl_results->resize(ui->tbl_results->width(), old_height);
+    }
+    else if(progress == 0){
+        m_pd.show();
+    }
 }
 
 void CoinFlipper::_update()
@@ -47,12 +71,12 @@ void CoinFlipper::_update()
 
 void CoinFlipper::_flip()
 {
-    m_model->Flip(ui->spn_flip->value());
-    _update();
+    // Show a progress dialog while the worker is busy
+    int count = ui->spn_flip->value();
+    m_pd.setLabelText(QString(tr("Flipping %L1 coins...")).arg(count));
 
-    // This doesn't really resize it, but it causes a resize event on the vertical axis,
-    //  which forces the view to fetch more if it needs to
-    ui->tbl_results->resize(ui->tbl_results->width(), ui->tbl_results->height() + 1);
+    // Tell the model to start flipping
+    m_model->Flip(count);
 }
 
 void CoinFlipper::_clear()

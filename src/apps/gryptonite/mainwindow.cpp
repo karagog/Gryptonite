@@ -846,9 +846,11 @@ static QString __get_new_database_filename(QWidget *parent,
                                                QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
                                                "Grypto DB (*.gdb *.GPdb);;All Files (*)", 0,
                                                confirm_overwrite ? (QFileDialog::Option)0 : QFileDialog::DontConfirmOverwrite);
-    QFileInfo fi(ret);
-    if(!fi.exists() && fi.suffix().isEmpty())
-        ret.append(".gdb");
+    if(!ret.isEmpty()){
+        QFileInfo fi(ret);
+        if(!fi.exists() && fi.suffix().isEmpty())
+            ret.append(".gdb");
+    }
     return ret;
 }
 

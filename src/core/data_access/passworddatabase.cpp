@@ -29,6 +29,7 @@ limitations under the License.*/
 #include <QSet>
 #include <QQueue>
 #include <QFileInfo>
+#include <QFile>
 #include <QResource>
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -136,6 +137,31 @@ struct d_t
           closing(false)
     {}
 };
+}
+
+
+class QFileIO : public GUtil::IInput, public GUtil::IOutput
+{
+    QFile &ref;
+public:
+    QFileIO(QFile &f) :ref(f) {}
+    virtual GUINT32 ReadBytes(byte *buffer, GUINT32 buffer_len, GUINT32 bytes_to_read){
+        return ref.read((char *)buffer, Min(buffer_len, bytes_to_read));
+    }
+    virtual GUINT32 WriteBytes(const byte *data, GUINT32 len){
+        return ref.write((const char *)data, len);
+    }
+
+    virtual GUINT32 BytesAvailable() const{ return ref.bytesAvailable(); }
+    virtual void Flush(){ ref.flush(); }
+};
+
+
+static void __open_file_or_die(QFile &f, QFile::OpenMode mode)
+{
+    if(!f.open(mode))
+        throw Exception<>(QString("Cannot open file: %1")
+                          .arg(f.errorString()).toUtf8());
 }
 
 
@@ -553,7 +579,7 @@ static void __check_version(const QString &dbstring)
 
 void PasswordDatabase::ValidateDatabase(const char *filepath)
 {
-    if(!File::Exists(filepath))
+    if(!QFile::exists(filepath))
         throw Exception<>(String::Format("File does not exist: %s", filepath));
 
     // This will fail with an exception if the database is invalid sqlite
@@ -2357,14 +2383,15 @@ void PasswordDatabase::_bw_add_file(const QString &conn_str,
         {
             QByteArrayOutput o(encrypted_data);
             SmartPointer<IInput> data_in;
+            QFile f;
 
             // The data can be either a file path or the contents itself,
             //  depending on the value of the flag
             if(by_path){
-                File *f = new File(data);
-                data_in = f;
-                f->Open(File::OpenRead);
-                plaintext_length = f->Length();
+                f.setFileName(data);
+                data_in = new QFileIO(f);
+                __open_file_or_die(f, QFile::ReadOnly);
+                plaintext_length = f.size();
             }
             else{
                 data_in = new QByteArrayInput(data);
@@ -2437,15 +2464,16 @@ void PasswordDatabase::_bw_exp_file(const QString &conn_str,
     const QByteArray encrypted_data(q.record().value(0).toByteArray());
     {
         QByteArrayInput i(encrypted_data);
-        File f(filepath);
-        f.Open(File::OpenReadWriteTruncate);
+        QFile f(filepath);
+        QFileIO fio(f);
+        __open_file_or_die(f, QFile::ReadWrite|QFile::Truncate);
 
         _bw_fail_if_cancelled();
         emit NotifyProgressUpdated(35, true, m_curTaskString);
 
         m_progressMin = 35, m_progressMax = 100;
         d->thread_cancellable = true;
-        cryptor.DecryptData(&f, &i, NULL, DEFAULT_CHUNK_SIZE,
+        cryptor.DecryptData(&fio, &i, NULL, DEFAULT_CHUNK_SIZE,
                             [&](int p){ return _progress_callback(p); });
     }
 }
@@ -2561,7 +2589,7 @@ void PasswordDatabase::_bw_export_to_gps(const QString &conn_str,
 }
 
 void PasswordDatabase::_bw_import_from_gps(const QString &conn_str,
-                                           GUtil::CryptoPP::Cryptor &my_cryptor,
+                                           GUtil::CryptoPP::Cryptor &,
                                            const QString &ps_filepath,
                                            const Credentials &creds)
 {
@@ -2906,9 +2934,11 @@ static void __add_files_from_xml(const QHash<int, QString> &files,
         QByteArray crypttext;
         {
             // Encrypt the file and move it into memory
-            File f(files[fid_local].toUtf8(), File::OpenRead);
+            QFile f(files[fid_local]);
+            QFileIO fio(f);
             QByteArrayOutput bao(crypttext);
-            cryptor.EncryptData(&bao, &f);
+            __open_file_or_die(f, QFile::ReadOnly);
+            cryptor.EncryptData(&bao, &fio);
         }
 
         int pt_len = crypttext.length() - cryptor.GetCrypttextSizeDiff();

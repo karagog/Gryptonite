@@ -199,13 +199,16 @@ void NewPasswordDialog::_generate_keyfile()
         return;
 
     fn = QFileInfo(fn).absoluteFilePath();
+    {
+        byte data[KEYFILE_SIZE];
+        GUtil::GlobalRNG()->Fill(data, KEYFILE_SIZE);
 
-    byte data[KEYFILE_SIZE];
-    GUtil::GlobalRNG()->Fill(data, KEYFILE_SIZE);
-    GUtil::File f(fn.toUtf8().constData());
-    f.Open(f.OpenWrite);
-    f.Write(data, KEYFILE_SIZE);
-
+        QFile f(fn);
+        if(!f.open(QFile::ReadWrite | QFile::Truncate))
+            throw GUtil::Exception<>(QString("Cannot open file: %1")
+                                     .arg(f.errorString()).toUtf8());
+        f.write((const char *)data, KEYFILE_SIZE);
+    }
     ui->le_filePath->setText(fn);
 }
 

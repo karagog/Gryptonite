@@ -55,7 +55,7 @@ QVariant CoinModel::data(const QModelIndex &index, int role) const
         {
         case Qt::DisplayRole:
             if(index.column() == 0)
-                ret = index.row() + 1;
+                ret = QString("%L1").arg(index.row() + 1);
             else if(index.column() == 1)
                 ret = value ? tr("Heads") : tr("Tails");
             break;

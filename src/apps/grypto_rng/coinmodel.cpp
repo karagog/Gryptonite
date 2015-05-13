@@ -13,12 +13,22 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "coinmodel.h"
-#include <QtConcurrentRun>
 #include <QMutexLocker>
+#include <QThread>
 using namespace std;
 USING_NAMESPACE_GUTIL;
 
 #define FETCH_SIZE  100
+
+class worker_thread : public QThread{
+    CoinModel *m_coinModel;
+    int m_flipTimes;
+    void run(){ m_coinModel->_worker_flip(m_flipTimes); }
+public:
+    worker_thread(CoinModel *cm, int flip_times)
+        :m_coinModel(cm), m_flipTimes(flip_times) {}
+};
+
 
 CoinModel::CoinModel(QObject *p)
     :QAbstractTableModel(p),
@@ -30,7 +40,8 @@ CoinModel::CoinModel(QObject *p)
 
 CoinModel::~CoinModel()
 {
-    m_worker.waitForFinished();
+    if(m_worker)
+        m_worker->wait();
 }
 
 int CoinModel::rowCount(const QModelIndex &par) const
@@ -165,7 +176,7 @@ void CoinModel::_worker_flip(int times)
 
 void CoinModel::_fail_if_worker_busy()
 {
-    if(!m_worker.isFinished())
+    if(m_worker && !m_worker->isFinished())
         throw Exception<>("The worker thread is currently busy");
 }
 
@@ -182,7 +193,8 @@ void CoinModel::Flip(int times)
                           .arg(m_data.max_size() - m_data.size())
                           .toUtf8());
 
-    m_worker = QtConcurrent::run(this, &CoinModel::_worker_flip, times);
+    m_worker.reset(new worker_thread(this, times));
+    m_worker->start();
 }
 
 void CoinModel::Clear()

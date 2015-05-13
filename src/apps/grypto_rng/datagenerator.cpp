@@ -19,7 +19,7 @@ limitations under the License.*/
 #include <gutil/exception.h>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QtConcurrent/QtConcurrentRun>
+#include <QThread>
 #include <functional>
 #include <cstdio>
 USING_NAMESPACE_GUTIL;
@@ -71,6 +71,83 @@ enum unit_type_index_enum
     unit_megabytes = 2
 };
 
+class raw_data_exporter : public QThread
+{
+    DataGenerator *m_dg;
+    GUINT64 m_count;
+    QString m_path;
+    void run(){ m_dg->_export_raw_data(m_count, m_path); }
+public:
+    raw_data_exporter(DataGenerator *dg, GUINT64 num_bytes, const QString &path)
+        :m_dg(dg), m_count(num_bytes), m_path(path) {}
+};
+
+class uniform_exporter : public QThread
+{
+    DataGenerator *m_dg;
+    GUINT64 m_n;
+    double m_min, m_max;
+    bool m_discrete;
+    QString m_path;
+    void run(){ m_dg->_gen_dist_uniform(m_n, m_min, m_max, m_discrete, m_path); }
+public:
+    uniform_exporter(DataGenerator *dg,
+                     GUINT64 n, double min, double max,
+                     bool discrete, const QString &path)
+        :m_dg(dg), m_n(n), m_min(min), m_max(max), m_discrete(discrete), m_path(path) {}
+};
+
+class normal_exporter : public QThread
+{
+    DataGenerator *m_dg;
+    GUINT64 m_n;
+    double m_mean, m_stdev;
+    bool m_discrete;
+    QString m_path;
+    void run(){ m_dg->_gen_dist_normal(m_n, m_mean, m_stdev, m_discrete, m_path); }
+public:
+    normal_exporter(DataGenerator *dg,
+                    GUINT64 n, double mean, double stdev,
+                    bool discrete, const QString &path)
+        :m_dg(dg), m_n(n), m_mean(mean), m_stdev(stdev), m_discrete(discrete), m_path(path) {}
+};
+
+class geometric_exporter : public QThread
+{
+    DataGenerator *m_dg;
+    GUINT64 m_n;
+    double m_e;
+    QString m_path;
+    void run(){ m_dg->_gen_dist_geometric(m_n, m_e, m_path); }
+public:
+    geometric_exporter(DataGenerator *dg, GUINT64 n, double e, const QString &path)
+        :m_dg(dg), m_n(n), m_e(e), m_path(path) {}
+};
+
+class exponential_exporter : public QThread
+{
+    DataGenerator *m_dg;
+    GUINT64 m_n;
+    double m_lambda;
+    QString m_path;
+    void run(){ m_dg->_gen_dist_exponential(m_n, m_lambda, m_path); }
+public:
+    exponential_exporter(DataGenerator *dg, GUINT64 n, double lambda, const QString &path)
+        :m_dg(dg), m_n(n), m_lambda(lambda), m_path(path) {}
+};
+
+class poisson_exporter : public QThread
+{
+    DataGenerator *m_dg;
+    GUINT64 m_n;
+    double m_e;
+    QString m_path;
+    void run(){ m_dg->_gen_dist_poisson(m_n, m_e, m_path); }
+public:
+    poisson_exporter(DataGenerator *dg, GUINT64 n, double e, const QString &path)
+        :m_dg(dg), m_n(n), m_e(e), m_path(path) {}
+};
+
 
 DataGenerator::DataGenerator(QWidget *parent)
     :QWidget(parent),
@@ -90,7 +167,8 @@ DataGenerator::DataGenerator(QWidget *parent)
 DataGenerator::~DataGenerator()
 {
     delete ui;
-    m_worker.waitForFinished();
+    if(m_worker)
+        m_worker->wait();
 }
 
 void DataGenerator::_select_file()
@@ -388,7 +466,7 @@ void DataGenerator::_gen_dist_poisson(GUINT32 N, double E, const QString &fn)
 
 void DataGenerator::_generate()
 {
-    if(!m_worker.isFinished())
+    if(m_worker && !m_worker->isFinished())
         throw Exception<>(tr("Busy processing the last operation...").toUtf8().constData());
 
     QString fn = ui->le_outFile->text().trimmed();
@@ -406,7 +484,7 @@ void DataGenerator::_generate()
         case unit_kilobytes:    // Note: fall-through is intentional
             num_bytes *= 1000;
         default:
-            break;
+            throw NotImplementedException<>();
         }
 
         m_progressDialog = new QProgressDialog(tr("Exporting raw data..."),
@@ -417,8 +495,7 @@ void DataGenerator::_generate()
         //m_progressDialog->setModal(true);
         m_progressDialog->show();
 
-        m_worker = QtConcurrent::run(this, &DataGenerator::_export_raw_data,
-                                     num_bytes, fn);
+        m_worker.reset(new raw_data_exporter(this, num_bytes, fn));
     }
         break;
     case mode_distribution:
@@ -444,10 +521,7 @@ void DataGenerator::_generate()
 
             disttype = QString("%1 uniform").arg(discrete ? "discrete" : "continuous");
             msg = QString(tr("in the range [%1, %2]")).arg(min).arg(max);
-            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_uniform,
-                                         N, min, max,
-                                         discrete,
-                                         fn);
+            m_worker.reset(new uniform_exporter(this, N, min, max, discrete, fn));
         }
             break;
         case dist_normal:
@@ -456,10 +530,7 @@ void DataGenerator::_generate()
             const double stdev = ui->spn_normal_sigma->value();
             disttype = "normal";
             msg = QString(tr("with a mean of %1 and standard deviation of %2")).arg(mean).arg(stdev);
-            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_normal,
-                                         N, mean, stdev,
-                                         discrete,
-                                         fn);
+            m_worker.reset(new normal_exporter(this, N, mean, stdev, discrete, fn));
         }
             break;
         case dist_geometric:
@@ -467,8 +538,7 @@ void DataGenerator::_generate()
             const double E = ui->spn_geometric_e->value();
             disttype = "geometric";
             msg = QString(tr("with an expected value of %1")).arg(E);
-            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_geometric,
-                                         N, E, fn);
+            m_worker.reset(new geometric_exporter(this, N, E, fn));
         }
             break;
         case dist_exponential:
@@ -476,8 +546,7 @@ void DataGenerator::_generate()
             const double lambda = ui->spn_exponential_lambda->value();
             disttype = "exponential";
             msg = QString(tr("with lambda value %1")).arg(lambda);
-            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_exponential,
-                                         N, lambda, fn);
+            m_worker.reset(new exponential_exporter(this, N, lambda, fn));
         }
             break;
         case dist_poisson:
@@ -485,8 +554,7 @@ void DataGenerator::_generate()
             const double E = ui->spn_poisson_e->value();
             disttype = "poisson";
             msg = QString(tr("with an expected value of %1")).arg(E);
-            m_worker = QtConcurrent::run(this, &DataGenerator::_gen_dist_poisson,
-                                         N, E, fn);
+            m_worker.reset(new poisson_exporter(this, N, E, fn));
         }
             break;
         default:
@@ -501,8 +569,11 @@ void DataGenerator::_generate()
     }
         break;
     default:
-        break;
+        throw NotImplementedException<>();
     }
+
+    GASSERT(m_worker && m_worker->isFinished());
+    m_worker->start();
 }
 
 void DataGenerator::_cancel()

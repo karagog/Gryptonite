@@ -18,9 +18,10 @@ limitations under the License.*/
 #include <gutil/qt_settings.h>
 #include <gutil/cryptopp_rng.h>
 #include <QWidget>
-#include <QFuture>
 #include <QPointer>
 #include <QProgressDialog>
+
+class QThread;
 
 namespace Ui {
 class DataGenerator;
@@ -29,11 +30,16 @@ class DataGenerator;
 class DataGenerator : public QWidget
 {
     Q_OBJECT
-
+    friend class raw_data_exporter;
+    friend class uniform_exporter;
+    friend class normal_exporter;
+    friend class geometric_exporter;
+    friend class exponential_exporter;
+    friend class poisson_exporter;
 public:
     explicit DataGenerator(QWidget *parent = 0);
     ~DataGenerator();
-    
+
     void SaveParameters(GUtil::Qt::Settings *) const;
     void RestoreParameters(GUtil::Qt::Settings *);
 
@@ -59,7 +65,7 @@ private:
     GUtil::CryptoPP::RNG m_rng;
     QPointer<QProgressDialog> m_progressDialog;
 
-    QFuture<void> m_worker;
+    QScopedPointer<QThread> m_worker;
     bool m_cancel;
 
     void _export_raw_data(GUINT32 num_bytes, const QString &outfile);

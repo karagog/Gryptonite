@@ -18,13 +18,13 @@ limitations under the License.*/
 #include <gutil/cryptopp_rng.h>
 #include <vector>
 #include <QAbstractTableModel>
-#include <QFuture>
 #include <QMutex>
 
 class CoinModel :
         public QAbstractTableModel
 {
     Q_OBJECT
+    friend class worker_thread;
 public:
     CoinModel(QObject * = 0);
     virtual ~CoinModel();
@@ -53,7 +53,7 @@ signals:
 
 private:
     // These members are used only by the main thread
-    QFuture<void> m_worker;
+    QScopedPointer<QThread> m_worker;
     int m_lazySize;
 
     // These members are used by both the main and worker threads

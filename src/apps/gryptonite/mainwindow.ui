@@ -19,7 +19,7 @@
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="page_locked">
        <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -108,9 +108,44 @@
       <string>&amp;Recent Files</string>
      </property>
     </widget>
+    <widget class="QMenu" name="menu_Export">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="toolTip">
+      <string>Coming soon!</string>
+     </property>
+     <property name="title">
+      <string>&amp;Export</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
+     </property>
+     <addaction name="action_XML_export"/>
+     <addaction name="action_export_ps"/>
+    </widget>
+    <widget class="QMenu" name="menu_Import">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="toolTip">
+      <string>Coming soon!</string>
+     </property>
+     <property name="title">
+      <string>&amp;Import</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
+     </property>
+     <addaction name="action_XML_import"/>
+     <addaction name="action_import_ps"/>
+    </widget>
     <addaction name="actionNewOpenDB"/>
     <addaction name="action_Save_As"/>
     <addaction name="action_Close"/>
+    <addaction name="separator"/>
+    <addaction name="menu_Export"/>
+    <addaction name="menu_Import"/>
     <addaction name="separator"/>
     <addaction name="menu_Recent_Files"/>
     <addaction name="separator"/>
@@ -122,12 +157,15 @@
     <property name="title">
      <string>&amp;Tools</string>
     </property>
+    <addaction name="action_grypto_rng"/>
     <addaction name="action_grypto_transforms"/>
    </widget>
    <widget class="QMenu" name="menu_Help">
     <property name="title">
      <string>&amp;Help</string>
     </property>
+    <addaction name="actionFile_Maintenance"/>
+    <addaction name="separator"/>
     <addaction name="action_About"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -176,7 +214,7 @@
         <bool>true</bool>
        </property>
        <property name="dragDropMode">
-        <enum>QAbstractItemView::InternalMove</enum>
+        <enum>QAbstractItemView::DragDrop</enum>
        </property>
        <property name="defaultDropAction">
         <enum>Qt::MoveAction</enum>
@@ -381,6 +419,9 @@
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Export all entries and files to a secure Portable Safe file (.gps).&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;The Portable Safe file, invented by George Karagoulis, securely stores and obscures everything about the data it contains. It is impossible to determine the file's structure or glean any information about the contents without possessing the user's password and/or keyfile. It is the most secure way to transport your data if you have to expose it to the outside world, such as during a file transfer.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;After you export, you can import it by creating a new empty file and saying Import-&amp;gt;Portable Safe.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
   </action>
   <action name="action_import_ps">
    <property name="text">
@@ -388,6 +429,9 @@
    </property>
    <property name="whatsThis">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Import entries and files from a Portable Safe file (.gps)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
    </property>
   </action>
   <action name="action_About">
@@ -424,12 +468,38 @@
     <string>&amp;What's This?</string>
    </property>
   </action>
+  <action name="action_XML_export">
+   <property name="text">
+    <string>&amp;XML</string>
+   </property>
+  </action>
+  <action name="action_XML_import">
+   <property name="text">
+    <string>&amp;XML</string>
+   </property>
+  </action>
+  <action name="action_grypto_rng">
+   <property name="text">
+    <string>Grypto-&amp;RNG</string>
+   </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;A utility that generates high quality pseudo-random data in various forms. You can flip coins, roll dice or generate various types of statistical distributions.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionFile_Maintenance">
+   <property name="text">
+    <string>File &amp;Maintenance</string>
+   </property>
+   <property name="whatsThis">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Use file maintenance to do things like check the integrity of the database and to reclaim unused file space. You should rarely (if ever) have to use this.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Reclaiming file space may be periodically necessary if you added large files to the database and then removed them. In this case your password database does not automatically resize smaller, so you should use file maintenance to vaccuum the unused space.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
    <class>Grypt::SearchWidget</class>
    <extends>QWidget</extends>
-   <header>grypto_searchwidget.h</header>
+   <header location="global">grypto/searchwidget.h</header>
    <container>1</container>
    <slots>
     <signal>FilterChanged(Grypt::FilterInfo_t)</signal>
@@ -438,12 +508,12 @@
   <customwidget>
    <class>GUtil::Qt::TreeView</class>
    <extends>QTreeView</extends>
-   <header>gutil/treeview.h</header>
+   <header location="global">gutil/treeview.h</header>
   </customwidget>
   <customwidget>
    <class>Grypt::EntryView</class>
    <extends>QWidget</extends>
-   <header>grypto_entryview.h</header>
+   <header location="global">grypto/entryview.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

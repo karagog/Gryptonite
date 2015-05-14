@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "filtereddatabasemodel.h"
 #include "databasemodel.h"
-#include "grypto_entry.h"
+#include <grypto/entry.h>
 #include <gutil/variant.h>
 USING_NAMESPACE_GUTIL1(Qt);
 USING_NAMESPACE_GUTIL;

@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@ limitations under the License.*/
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "grypto_clipboardaccess.h"
-#include "grypto_databasemodel.h"
-#include <grypto_lockout.h>
+#include <grypto/clipboardaccess.h>
+#include <grypto/databasemodel.h>
+#include <grypto/lockout.h>
 #include <gutil/smartpointer.h>
 #include <gutil/progressbarcontrol.h>
 #include <QMainWindow>
@@ -64,17 +64,14 @@ class MainWindow : public QMainWindow
 public:
 
     /** Creates a main window, optionally opening the given file. */
-    explicit MainWindow(GUtil::Qt::Settings *, const char *open_file = 0, QWidget *parent = 0);
+    explicit MainWindow(GUtil::Qt::Settings *,
+                        const QString &open_file = QString::null,
+                        QWidget *parent = 0);
     ~MainWindow();
 
     bool IsFileOpen() const;
 
     bool IsLocked() const{ return m_isLocked; }
-
-    /** Puts the interface irrevocably into read only mode. This is used in case of
-     *  emergencies, like if the data access layer is failing to write the database.
-    */
-    void DropToReadOnly();
 
     bool IsReadOnly() const{ return m_readonly; }
 
@@ -82,6 +79,17 @@ public:
     void AboutToQuit();
 
 public slots:
+
+    /** Puts the interface irrevocably into read only mode. This is used in case of
+     *  emergencies, like if the data access layer is failing to write the database.
+    */
+    void DropToReadOnly();
+
+    /** If the interface was in read-only mode, this puts it back in editable mode. */
+    void RecoverFromReadOnly();
+
+    /** This slot is called when a database import operation is finished. */
+    void ReadOnlyTransactionFinished();
 
     /** Locks the interface. (true = lock)*/
     void Lock();
@@ -112,6 +120,9 @@ private slots:
     void _save_as();
     void _export_to_portable_safe();
     void _import_from_portable_safe();
+    void _export_to_xml();
+    void _import_from_xml();
+    void _file_maintenance();
 
     void _new_entry();
     void _new_child_entry();
@@ -120,7 +131,8 @@ private slots:
     void _add_remove_favorite();
     void _search();
     void _action_lock_unlock_interface();
-    void _cryptographic_transformations();
+    void _grypto_transforms();
+    void _grypto_rng();
 
     void _undo();
     void _redo();
@@ -152,6 +164,10 @@ private slots:
 
     void _reset_lockout_timer();
 
+    void _entries_added_or_removed(const QModelIndex &);
+    void _entries_moved(const QModelIndex &, int, int, const QModelIndex &);
+    void _entries_updated(const QModelIndex &, const QModelIndex &);
+
 
 private:
     Ui::MainWindow *ui;
@@ -168,9 +184,12 @@ private:
     Grypt::ClipboardAccess m_clipboard;
     Grypt::Lockout m_lockoutTimer;
     bool m_isLocked;
+    bool m_readonlyTransaction;
     QByteArray m_lockedState;
     QByteArray m_savedState;
+    QString m_keyfileLocation;
     QProcess m_grypto_transforms;
+    QProcess m_grypto_rng;
     bool m_grypto_transforms_visible;
     QPointer<QWidget> m_entryView;
 
@@ -191,11 +210,14 @@ private:
     void _update_time_format();
     Grypt::FilteredDatabaseModel *_get_proxy_model() const;
     Grypt::DatabaseModel *_get_database_model() const;
+    bool _verify_credentials();
+    QString _get_keyfile_location() const;
 
     void _select_entry(const Grypt::EntryId &);
     Grypt::Entry const *_get_currently_selected_entry() const;
     void _edit_entry(const Grypt::Entry &);
     bool _handle_key_pressed(QKeyEvent *);
+    void _prepare_ui_for_readonly_transaction();
 
 };
 

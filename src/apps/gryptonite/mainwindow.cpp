@@ -17,14 +17,14 @@ limitations under the License.*/
 #include "preferences_edit.h"
 #include "settings.h"
 #include "legacymanager.h"
-#include "grypto_common.h"
-#include "grypto_newpassworddialog.h"
-#include "grypto_getpassworddialog.h"
-#include "grypto_databasemodel.h"
-#include "grypto_filtereddatabasemodel.h"
-#include "grypto_entry_edit.h"
 #include "entry_popup.h"
-#include <grypto_organizefavoritesdialog.h>
+#include <grypto/common.h>
+#include <grypto/newpassworddialog.h>
+#include <grypto/getpassworddialog.h>
+#include <grypto/databasemodel.h>
+#include <grypto/filtereddatabasemodel.h>
+#include <grypto/entry_edit.h>
+#include <grypto/organizefavoritesdialog.h>
 #include <gutil/qt_settings.h>
 #include <gutil/widget.h>
 #include <gutil/application.h>
@@ -103,7 +103,7 @@ public:
 };
 
 
-MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *parent)
+MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget *parent)
     :QMainWindow(parent),
       ui(new Ui::MainWindow),
       m_trayIcon(QIcon(":/grypto/icons/main.png"), this),
@@ -113,6 +113,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
       m_action_new_child(tr("New &Child"), this),
       m_btn_pop_out(tr("Pop Out")),
       m_isLocked(true),
+      m_readonlyTransaction(false),
       m_grypto_transforms_visible(false),
       m_minimize_msg_shown(false),
       m_canHide(true),
@@ -178,8 +179,11 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     connect(ui->actionQuit, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(ui->actionNewOpenDB, SIGNAL(triggered()), this, SLOT(_new_open_database()));
     connect(ui->action_Save_As, SIGNAL(triggered()), this, SLOT(_save_as()));
-    connect(ui->action_export_ps, SIGNAL(triggered()), this, SLOT(_export_to_portable_safe()));
-    connect(ui->action_import_ps, SIGNAL(triggered()), this, SLOT(_import_from_portable_safe()));
+//    connect(ui->action_export_ps, SIGNAL(triggered()), this, SLOT(_export_to_portable_safe()));
+//    connect(ui->action_import_ps, SIGNAL(triggered()), this, SLOT(_import_from_portable_safe()));
+    connect(ui->action_XML_export, SIGNAL(triggered()), this, SLOT(_export_to_xml()));
+    connect(ui->action_XML_import, SIGNAL(triggered()), this, SLOT(_import_from_xml()));
+    connect(ui->actionFile_Maintenance, SIGNAL(triggered()), this, SLOT(_file_maintenance()));
     connect(ui->action_Close, SIGNAL(triggered()), this, SLOT(_close_database()));
     connect(ui->actionNew_Entry, SIGNAL(triggered()), this, SLOT(_new_entry()));
     connect(ui->action_EditEntry, SIGNAL(triggered()), this, SLOT(_edit_entry()));
@@ -190,7 +194,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     connect(ui->action_Redo, SIGNAL(triggered()), this, SLOT(_redo()));
     connect(ui->action_Search, SIGNAL(triggered()), this, SLOT(_search()));
     connect(ui->actionLockUnlock, SIGNAL(triggered()), this, SLOT(_action_lock_unlock_interface()));
-    connect(ui->action_grypto_transforms, SIGNAL(triggered()), this, SLOT(_cryptographic_transformations()));
+    connect(ui->action_grypto_transforms, SIGNAL(triggered()), this, SLOT(_grypto_transforms()));
+    connect(ui->action_grypto_rng, SIGNAL(triggered()), this, SLOT(_grypto_rng()));
     connect(ui->action_Favorites, SIGNAL(triggered()), this, SLOT(_organize_favorites()));
     connect(ui->action_Preferences, SIGNAL(triggered()), this, SLOT(_edit_preferences()));
     connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
@@ -201,7 +206,6 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
     {
         QAction *a_whatsthis = QWhatsThis::createAction(this);
         ui->menu_Help->insertAction(ui->action_About, a_whatsthis);
-        ui->menu_Help->insertSeparator(ui->action_About);
     }
 
     connect(ui->view_entry, SIGNAL(RowActivated(int)), this, SLOT(_entry_row_activated(int)));
@@ -252,8 +256,8 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const char *open_file, QWidget *p
 #ifdef Q_OS_WIN
     m_taskbarButton.setWindow(this->windowHandle());
 #endif // Q_OS_WIN
-    
-    if(open_file){
+
+    if(!open_file.isEmpty()){
         _new_open_database(open_file);
     }
     else if(m_settings->Value(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE).toBool()){
@@ -279,6 +283,10 @@ void MainWindow::AboutToQuit()
     if(m_grypto_transforms_visible)
         m_grypto_transforms.write("quit\n");
 
+    bool rng_active = QProcess::Running == m_grypto_rng.state();
+    if(rng_active)
+        m_grypto_rng.write("quit\n");
+
     // Save the search settings before we close
     m_settings->SetValue(MAINWINDOW_SEARCH_SETTING, ui->searchWidget->GetFilter().ToXml());
 
@@ -299,6 +307,9 @@ void MainWindow::AboutToQuit()
 
     if(m_grypto_transforms_visible)
         m_grypto_transforms.waitForFinished();
+
+    if(rng_active)
+        m_grypto_rng.waitForFinished();
 }
 
 void MainWindow::_hide()
@@ -607,12 +618,106 @@ void MainWindow::_install_new_database_model(DatabaseModel *dbm)
     connect(&m_progressBar, SIGNAL(Clicked()), dbm, SLOT(CancelAllBackgroundOperations()));
     connect(dbm, SIGNAL(NotifyProgressUpdated(int, bool, QString)),
             this, SLOT(_progress_updated(int, bool, QString)));
+    connect(dbm, SIGNAL(rowsInserted(QModelIndex,int,int)),
+            this, SLOT(_entries_added_or_removed(QModelIndex)));
+    connect(dbm, SIGNAL(rowsRemoved(QModelIndex,int,int)),
+            this, SLOT(_entries_added_or_removed(QModelIndex)));
+    connect(dbm, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
+            this, SLOT(_entries_moved(QModelIndex, int, int, QModelIndex)));
+    connect(dbm, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+            this, SLOT(_entries_updated(QModelIndex,QModelIndex)));
+    connect(dbm, SIGNAL(NotifyReadOnlyTransactionFinished()),
+            this, SLOT(ReadOnlyTransactionFinished()));
+}
+
+void MainWindow::_entries_added_or_removed(const QModelIndex &parent_index)
+{
+    if(m_readonlyTransaction)
+        return;
+
+    ui->treeView->ResizeColumnsToContents();
+
+    DatabaseModel *dbm = _get_database_model();
+    const EntryId pid = parent_index.data(DatabaseModel::EntryIdRole).value<EntryId>();
+
+    // If the changed parent is a child of a favorite, then update the tray icon menu
+    bool favorites_affected = false;
+    for(const EntryId &fid : dbm->FindFavoriteIds()){
+        if(dbm->HasAncestor(pid, fid)){
+            favorites_affected = true;
+            break;
+        }
+    }
+
+    if(favorites_affected)
+        _update_trayIcon_menu();
+}
+
+void MainWindow::_entries_moved(const QModelIndex &par_src, int, int,
+                                const QModelIndex &par_dest)
+{
+    if(m_readonlyTransaction)
+        return;
+
+    ui->treeView->ResizeColumnsToContents();
+
+    DatabaseModel *dbm = _get_database_model();
+    const EntryId pid_src  = par_src.data(DatabaseModel::EntryIdRole).value<EntryId>();
+    const EntryId pid_dest = par_dest.data(DatabaseModel::EntryIdRole).value<EntryId>();
+
+    // If the changed parent is a child of a favorite, then update the tray icon menu
+    bool favorites_affected = false;
+    for(const EntryId &fid : dbm->FindFavoriteIds()){
+        if(dbm->HasAncestor(pid_src, fid) || dbm->HasAncestor(pid_dest, fid)){
+            favorites_affected = true;
+            break;
+        }
+    }
+
+    if(favorites_affected)
+        _update_trayIcon_menu();
+}
+
+void MainWindow::_entries_updated(const QModelIndex &top_left,
+                                  const QModelIndex &bottom_right)
+{
+    if(m_readonlyTransaction)
+        return;
+
+    if(!top_left.isValid() || !bottom_right.isValid())
+        return;
+
+    ui->treeView->ResizeColumnsToContents();
+
+    // If any rows that changed are favorites, then update the tray icon menu
+    DatabaseModel *dbm = _get_database_model();
+    QModelIndex par = top_left.parent();
+    GASSERT(par == bottom_right.parent());
+    bool favorites_affected = false;
+
+    // If the parent has a favorite ancestor...
+    for(const EntryId &fid : dbm->FindFavoriteIds()){
+        if(dbm->HasAncestor(par.data(DatabaseModel::EntryIdRole).value<EntryId>(), fid)){
+            favorites_affected = true;
+            break;
+        }
+    }
+
+    // Or if any of the changed rows are favorites...
+    for(int r = top_left.row(); !favorites_affected && r <= bottom_right.row(); r++){
+        if(dbm->GetEntryFromIndex(dbm->index(r, 0, par))->IsFavorite())
+            favorites_affected = true;
+    }
+
+    if(favorites_affected)
+        _update_trayIcon_menu();
 }
 
 void MainWindow::_new_open_database(const QString &path)
 {
     Credentials creds;
     QString open_path = path;
+    QString keyfile_loc;
     SmartPointer<DatabaseModel> dbm;
     ui->statusbar->showMessage(QString(tr("Opening %1...")).arg(path));
     {
@@ -697,13 +802,23 @@ void MainWindow::_new_open_database(const QString &path)
             if(QDialog::Rejected == dlg.exec())
                 return;
             creds = dlg.GetCredentials();
+
+            if(creds.Type == Credentials::KeyfileType ||
+                    creds.Type == Credentials::PasswordAndKeyfileType){
+                keyfile_loc = dlg.GetKeyfileLocation();
+            }
         }
         else if(!file_updated){
             modal_dialog_helper_t mh(this);
-            GetPasswordDialog dlg(m_settings, filename, this);
+            GetPasswordDialog dlg(m_settings, filename, Credentials::NoType, QString(), this);
             if(QDialog::Rejected == dlg.exec())
                 return;
             creds = dlg.GetCredentials();
+
+            if(creds.Type == Credentials::KeyfileType ||
+                    creds.Type == Credentials::PasswordAndKeyfileType){
+                keyfile_loc = dlg.GetKeyfileLocation();
+            }
         }
 
         // Close the database (if one was open)
@@ -719,6 +834,7 @@ void MainWindow::_new_open_database(const QString &path)
     }
 
     _install_new_database_model(dbm.Data());
+    m_keyfileLocation = keyfile_loc;
     dbm.Relinquish();
 }
 
@@ -726,10 +842,16 @@ static QString __get_new_database_filename(QWidget *parent,
                                            const QString &title,
                                            bool confirm_overwrite)
 {
-    return QFileDialog::getSaveFileName(parent, title,
-                                        QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-                                        "Grypto DB (*.gdb *.GPdb);;All Files (*)", 0,
-                                        confirm_overwrite ? (QFileDialog::Option)0 : QFileDialog::DontConfirmOverwrite);
+    QString ret = QFileDialog::getSaveFileName(parent, title,
+                                               QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
+                                               "Grypto DB (*.gdb *.GPdb);;All Files (*)", 0,
+                                               confirm_overwrite ? (QFileDialog::Option)0 : QFileDialog::DontConfirmOverwrite);
+    if(!ret.isEmpty()){
+        QFileInfo fi(ret);
+        if(!fi.exists() && fi.suffix().isEmpty())
+            ret.append(".gdb");
+    }
+    return ret;
 }
 
 void MainWindow::_new_open_database()
@@ -737,12 +859,7 @@ void MainWindow::_new_open_database()
     modal_dialog_helper_t mh(this);
     QString path = __get_new_database_filename(this, tr("File Location"), false);
     if(!path.isEmpty())
-    {
-        QFileInfo fi(path);
-        if(!fi.exists() && fi.suffix() != "gdb")
-            path.append(".gdb");
         _new_open_database(path);
-    }
 }
 
 void MainWindow::_open_recent_database(QAction *a)
@@ -757,7 +874,7 @@ void MainWindow::_open_recent_database(QAction *a)
         _create_recent_files_menu(paths);
         m_settings->SetValue(SETTING_RECENT_FILES, paths);
         m_settings->CommitChanges();
-        
+
         QMessageBox::warning(this, tr("File not found"), QString("The file does not exist: %1").arg(path));
     }
 }
@@ -773,6 +890,7 @@ void MainWindow::_close_database(bool delete_model)
     {
         m_lockoutTimer.StopLockoutTimer();
         ui->statusbar->showMessage(tr("Closing database..."));
+        m_trayIcon.setToolTip(GRYPTO_APP_NAME " (Closing file... Sometimes this can take a while...)");
 
         // Disconnect the database model
         QAbstractItemModel *old_model = _get_proxy_model()->sourceModel();
@@ -782,6 +900,7 @@ void MainWindow::_close_database(bool delete_model)
         if(delete_model)
             delete old_model;
 
+        m_keyfileLocation.clear();
         m_readonly = false;
         setWindowTitle(GRYPTO_APP_NAME);
         _lock_unlock_interface(false);
@@ -789,86 +908,116 @@ void MainWindow::_close_database(bool delete_model)
     }
 }
 
-void MainWindow::_save_as()
+bool MainWindow::_verify_credentials()
 {
-    GASSERT(IsFileOpen());
-    modal_dialog_helper_t mh(this);
-    {
-        GetPasswordDialog dlg(m_settings,
-                              QFileInfo(_get_database_model()->FilePath()).fileName(),
-                              this);
-        if(QDialog::Accepted != dlg.exec())
-            return;
+    bool ret = false;
+    QString keyfile_loc = _get_keyfile_location();
+    DatabaseModel *dbm = _get_database_model();
+    GASSERT(dbm);
 
-        if(!_get_database_model()->CheckCredentials(dlg.GetCredentials())){
-            QMessageBox::information(this,
-                                     tr("Password Incorrect"),
-                                     tr("The password you entered for the current file"
-                                        " is incorrect. Therefore I am not allowed to "
-                                        " save it with different credentials."));
-            return;
+    Credentials creds;
+    if(!keyfile_loc.isEmpty() &&
+            dbm->GetCredentialsType() == Credentials::KeyfileType)
+    {
+        creds.Type = Credentials::KeyfileType;
+        creds.Keyfile = keyfile_loc;
+        if(!(ret = dbm->CheckCredentials(creds))){
+            QMessageBox::warning(this, tr("Keyfile Incorrect"),
+                                 QString(tr("The keyfile at %1 is incorrect or missing"))
+                                 .arg(keyfile_loc));
         }
     }
+
+    if(!ret){
+        modal_dialog_helper_t mh(this);
+        GetPasswordDialog dlg(m_settings,
+                              QFileInfo(dbm->FilePath()).fileName(),
+                              dbm->GetCredentialsType(),
+                              keyfile_loc,
+                              this);
+
+        if(QDialog::Accepted == dlg.exec()){
+            if((ret = dbm->CheckCredentials(dlg.GetCredentials()))){
+                // Update the keyfile location because it may have changed
+                m_keyfileLocation = dlg.GetKeyfileLocation();
+            }
+            else{
+                QMessageBox::warning(this,
+                                     tr("Password Incorrect"),
+                                     tr("The credentials you entered are incorrect"));
+            }
+        }
+    }
+    return ret;
+}
+
+void MainWindow::_save_as()
+{
+    if(!IsFileOpen())
+        return;
+
+    modal_dialog_helper_t mh(this);
+    if(!_verify_credentials())
+        return;
 
     QString fn = __get_new_database_filename(this, tr("Save as file"), true);
     if(fn.isEmpty())
         return;
-    else if(QFileInfo(fn).absoluteFilePath() ==
-            QFileInfo(_get_database_model()->FilePath()).absoluteFilePath())
-        throw Exception<>("Cannot save to the same path as the original");
-
-    // Create the database object, which only reserves a lock on the new database
-    SmartPointer<DatabaseModel> dbm(new DatabaseModel(fn.toUtf8().constData()));
 
     NewPasswordDialog dlg(m_settings, fn, this);
     if(QDialog::Accepted != dlg.exec())
         return;
 
-    if(QFile::exists(fn))
-        if(!QFile::remove(fn))
-            throw Exception<>("Save as file already exists and I couldn't remove it");
+    DatabaseModel *dbm = _get_database_model();
+    m_readonlyTransaction = true;
+    TryFinally([&]{
+        dbm->SaveAs(fn, dlg.GetCredentials());
+    }, [](exception &){},
+    [&]{
+        m_readonlyTransaction = false;
+    });
+    if(dbm->GetCredentialsType() == Credentials::KeyfileType ||
+            dbm->GetCredentialsType() == Credentials::PasswordAndKeyfileType)
+        m_keyfileLocation = dlg.GetKeyfileLocation();
+    else
+        m_keyfileLocation.clear();
 
-    // Initialize the new database
-    dbm->Open(dlg.GetCredentials());
-
-    // Close the old database and install the new one on the main window
-    DatabaseModel *old_model = _get_database_model();
-    _close_database(false);     // Don't delete the old database model!
-
-    // Copy the old database to the new one
-    dbm->ImportFromDatabase(*old_model);
-
-    _install_new_database_model(dbm);
-
-    dbm.Relinquish();
-    delete old_model;
+    RecoverFromReadOnly();
+    _update_ui_file_opened(true);
+    _update_recent_files(fn);
+    _update_available_actions();
+    ui->statusbar->showMessage(QString(tr("Successfully saved as %1"))
+                               .arg(QFileInfo(fn).fileName()), STATUSBAR_MSG_TIMEOUT);
+    m_fileLabel->setText(fn);
 }
 
 void MainWindow::_export_to_portable_safe()
 {
+    modal_dialog_helper_t mh(this);
+    if(!_verify_credentials())
+        return;
+
     QString fn = QFileDialog::getSaveFileName(this, tr("Export to Portable Safe"),
                                               QString(),
                                               "GUtil Portable Safe (*.gps)"
                                               ";;All Files(*)");
     if(fn.isEmpty())
         return;
-
-    if(QFileInfo(fn).suffix().isEmpty())
+    else if(QFileInfo(fn).suffix().isEmpty())
         fn.append(".gps");
 
     NewPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
-    {
-        modal_dialog_helper_t mh(this);
-        if(QDialog::Accepted != dlg.exec())
-            return;
-    }
+    if(QDialog::Accepted != dlg.exec())
+        return;
 
-    _get_database_model()->ExportToPortableSafe(fn.toUtf8(), dlg.GetCredentials());
+    _get_database_model()->ExportToPortableSafe(fn, dlg.GetCredentials());
 }
 
 void MainWindow::_import_from_portable_safe()
 {
-    GASSERT(IsFileOpen());
+    if(!IsFileOpen())
+        return;
+
     QString fn = QFileDialog::getOpenFileName(this, tr("Import from Portable Safe"),
                                               QString(),
                                               "GUtil Portable Safe (*.gps)"
@@ -876,19 +1025,111 @@ void MainWindow::_import_from_portable_safe()
     if(fn.isEmpty() || !QFile::exists(fn))
         return;
 
-    GetPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(), this);
+    GetPasswordDialog dlg(m_settings, QFileInfo(fn).fileName(),
+                          Credentials::NoType, QString(), this);
     {
         modal_dialog_helper_t mh(this);
         if(QDialog::Accepted != dlg.exec())
             return;
     }
 
-    _get_database_model()->ImportFromPortableSafe(fn.toUtf8(), dlg.GetCredentials());
+    _prepare_ui_for_readonly_transaction();
+    _get_database_model()->ImportFromPortableSafe(fn, dlg.GetCredentials());
+}
+
+void MainWindow::_export_to_xml()
+{
+    modal_dialog_helper_t mh(this);
+
+    if(QMessageBox::Yes !=
+            QMessageBox::warning(this, tr("Caution!"),
+                         tr("You are about to export all your secret information"
+                            " as plaintext. Are you sure you want to do this?"),
+                         QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)){
+        return;
+    }
+
+    QString fn = QFileDialog::getSaveFileName(this, tr("Export to XML"),
+                                              QString(),
+                                              "XML (*.xml)"
+                                              ";;All Files(*)");
+    if(fn.isEmpty())
+        return;
+    else if(QFileInfo(fn).suffix().isEmpty())
+        fn.append(".xml");
+
+    // Make sure it's you who's exporting
+    if(!_verify_credentials())
+        return;
+
+    _get_database_model()->ExportToXml(fn);
+}
+
+void MainWindow::_prepare_ui_for_readonly_transaction()
+{
+    m_readonlyTransaction = true;
+    DropToReadOnly();
+    ui->actionNewOpenDB->setEnabled(false);
+    ui->action_Save_As->setEnabled(false);
+    ui->action_Close->setEnabled(false);
+    ui->menu_Export->setEnabled(false);
+    ui->menu_Recent_Files->setEnabled(false);
+    ui->actionLockUnlock->setEnabled(false);
+}
+
+void MainWindow::_import_from_xml()
+{
+    if(!IsFileOpen())
+        return;
+
+    QString fn;
+    {
+        modal_dialog_helper_t mh(this);
+        fn = QFileDialog::getOpenFileName(this, tr("Import from XML"),
+                                          QString(),
+                                          "XML (*.xml)"
+                                          ";;All Files(*)");
+        if(fn.isEmpty() || !QFile::exists(fn))
+            return;
+    }
+
+//    QMessageBox *mb = new QMessageBox(this);
+//    mb->setWindowTitle("Importing from XML");
+//    mb->setText(tr("The import process may take several minutes, depending on"
+//                   " how many entries you're importing and the speed of your"
+//                   " connection to the database. Thank you for your patience."));
+//    mb->show();
+
+    _prepare_ui_for_readonly_transaction();
+    _get_database_model()->ImportFromXml(fn);
+}
+
+void MainWindow::_file_maintenance()
+{
+    if(!IsFileOpen())
+        return;
+
+    if(QMessageBox::Yes != QMessageBox::information(
+                this, tr("File Maintenance"),
+                tr("File Maintenance will check your database for certain types of errors"
+                   " and will reclaim unused file space. Be aware that you will be"
+                   " unable to undo anything that happened prior to this."
+                   "\n\n"
+                   "Are you sure you want to run File Maintenance?"),
+                QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)){
+        return;
+    }
+
+    _prepare_ui_for_readonly_transaction();
+    _get_database_model()->CheckAndRepairDatabase();
+    _update_undo_text();
 }
 
 void MainWindow::_new_entry()
 {
-    GASSERT(IsFileOpen());
+    if(!IsFileOpen())
+        return;
+
     modal_dialog_helper_t mh(this);
 
     DatabaseModel *model = _get_database_model();
@@ -903,13 +1144,14 @@ void MainWindow::_new_entry()
         }
         model->AddEntry(dlg.GetEntry());
         _select_entry(dlg.GetEntry().GetId());
-        ui->treeView->ResizeColumnsToContents();
     }
 }
 
 void MainWindow::_new_child_entry()
 {
-    GASSERT(IsFileOpen());
+    if(!IsFileOpen())
+        return;
+
     modal_dialog_helper_t mh(this);
 
     DatabaseModel *model = _get_database_model();
@@ -952,11 +1194,12 @@ void MainWindow::_update_ui_file_opened(bool b)
     ui->action_Save_As->setEnabled(b);
     ui->action_Close->setEnabled(b);
 
-//    ui->menu_Export->setEnabled(b);
-//    ui->menu_Import->setEnabled(b);
+    ui->menu_Export->setEnabled(b);
+    ui->menu_Import->setEnabled(b);
+    ui->actionFile_Maintenance->setEnabled(b);
 
     if(b){
-        ui->statusbar->showMessage(tr("Database Opened Successfully"), STATUSBAR_MSG_TIMEOUT);
+        ui->statusbar->showMessage(tr("Database opened successfully"), STATUSBAR_MSG_TIMEOUT);
     }
     else
     {
@@ -973,7 +1216,10 @@ void MainWindow::_update_ui_file_opened(bool b)
         m_fileLabel->clear();
     }
     _update_undo_text();
+
     _update_trayIcon_menu();
+    m_trayIcon.setToolTip(tr(GRYPTO_APP_NAME " Encrypted Secrets"));
+
     _treeview_currentindex_changed(ui->treeView->currentIndex());
 }
 
@@ -1049,12 +1295,22 @@ void MainWindow::_update_trayIcon_menu()
 
 void MainWindow::_update_undo_text()
 {
-    DatabaseModel *m = _get_database_model();
-    ui->action_Undo->setText(m && m->CanUndo() ? QString("&Undo %1").arg(m->UndoText().ConstData()) : "Undo");
-    ui->action_Undo->setEnabled(m && m->CanUndo());
+    if(IsLocked()){
+        ui->action_Undo->setText(tr("&Undo"));
+        ui->action_Redo->setText(tr("&Redo"));
+    }
+    else{
+        DatabaseModel *m = _get_database_model();
+        ui->action_Undo->setEnabled(m && m->CanUndo());
+        ui->action_Undo->setText(m && m->CanUndo() ?
+                                     QString(tr("&Undo %1")).arg(m->UndoText()) :
+                                     tr("&Undo"));
 
-    ui->action_Redo->setText(m && m->CanRedo() ? QString("&Redo %1").arg(m->RedoText().ConstData()) : "Redo");
-    ui->action_Redo->setEnabled(m && m->CanRedo());
+        ui->action_Redo->setEnabled(m && m->CanRedo());
+        ui->action_Redo->setText(m && m->CanRedo() ?
+                                     QString(tr("&Redo %1")).arg(m->RedoText()) :
+                                     tr("&Redo"));
+    }
 }
 
 FilteredDatabaseModel *MainWindow::_get_proxy_model() const
@@ -1077,6 +1333,9 @@ void MainWindow::_edit_entry()
 
 void MainWindow::_delete_entry()
 {
+    if(!IsFileOpen())
+        return;
+
     QModelIndex ind = ui->treeView->currentIndex();
     if(ind.isValid()){
         DatabaseModel *model = _get_database_model();
@@ -1087,7 +1346,6 @@ void MainWindow::_delete_entry()
                     QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel))
         {
             model->RemoveEntry(*e);
-            ui->treeView->ResizeColumnsToContents();
         }
     }
 }
@@ -1114,7 +1372,6 @@ void MainWindow::_edit_entry(const Entry &e)
     {
         _get_database_model()->UpdateEntry(dlg.GetEntry());
         _nav_index_changed(m_navStack.index());
-        ui->treeView->ResizeColumnsToContents();
     }
 }
 
@@ -1162,7 +1419,7 @@ void MainWindow::_undo()
     DatabaseModel *m = _get_database_model();
     if(m->CanUndo())
     {
-        QString txt = m->UndoText().ToQString();
+        QString txt = m->UndoText();
         m->Undo();
         ui->statusbar->showMessage(QString("Undid %1").arg(txt), STATUSBAR_MSG_TIMEOUT);
     }
@@ -1173,7 +1430,7 @@ void MainWindow::_redo()
     DatabaseModel *m = _get_database_model();
     if(m->CanRedo())
     {
-        QString txt = m->RedoText().ToQString();
+        QString txt = m->RedoText();
         m->Redo();
         ui->statusbar->showMessage(QString("Redid %1").arg(txt), STATUSBAR_MSG_TIMEOUT);
     }
@@ -1258,14 +1515,18 @@ void MainWindow::PopOutCurrentEntry()
 
     // Open any URL fields with QDesktopServices
     bool autolaunch = m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool();
+    bool suppress_popup = false;
 
     // The ctrl key does the opposite
     if(QApplication::keyboardModifiers() == ::Qt::ControlModifier)
         autolaunch = !autolaunch;
 
     if(autolaunch){
+        // Open all URL fields using the OS-registered URL handler
+        int url_cnt = 0;
         for(const SecretValue &sv : e.Values()){
             if(sv.GetName().toLower() == "url"){
+                url_cnt++;
                 if(!QDesktopServices::openUrl(QUrl(sv.GetValue()))){
                     QMessageBox::warning(this, tr("Opening URL Failed"),
                                          QString(tr("Could not open URL: %1"))
@@ -1273,14 +1534,21 @@ void MainWindow::PopOutCurrentEntry()
                 }
             }
         }
+
+        // If every value is a URL, then don't show the popup. This allows you to use
+        //  the app as a simple URL launcher without using the popup
+        if(url_cnt == e.Values().length())
+            suppress_popup = true;
     }
 
-    EntryPopup *ep = new EntryPopup(e, _get_database_model(), m_settings, this);
-    connect(ep, SIGNAL(CedeControl()), this, SLOT(_show()));
+    if(!suppress_popup){
+        EntryPopup *ep = new EntryPopup(e, _get_database_model(), m_settings, this);
+        connect(ep, SIGNAL(CedeControl()), this, SLOT(_show()));
 
-    if(m_entryView)
-        m_entryView->deleteLater();
-    (m_entryView = ep)->show();
+        if(m_entryView)
+            m_entryView->deleteLater();
+        (m_entryView = ep)->show();
+    }
     _hide();
 }
 
@@ -1396,16 +1664,18 @@ void MainWindow::_lock_unlock_interface(bool lock)
         ui->stackedWidget->setCurrentIndex(1);
         ui->actionLockUnlock->setText(tr("&Lock Application"));
         ui->actionLockUnlock->setData(true);
-        m_trayIcon.setToolTip(tr(GRYPTO_APP_NAME " Encrypted Secrets"));
         m_isLocked = false;
 
         // We have to start the lockout timer again, because it was stopped when we locked
         int minutes = m_settings->Value(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT).toInt();
         if(minutes > 0)
             m_lockoutTimer.StartLockoutTimer(minutes);
+
+        ui->statusbar->showMessage(tr("Unlocked"), STATUSBAR_MSG_TIMEOUT);
     }
 
     _update_available_actions();
+    _update_undo_text();
 }
 
 void MainWindow::_update_available_actions()
@@ -1414,9 +1684,14 @@ void MainWindow::_update_available_actions()
 
     bool enable_if_unlocked = !IsLocked() && IsFileOpen();
     bool enable_if_writable = enable_if_unlocked && !IsReadOnly();
+    ui->actionNewOpenDB->setEnabled(true);
+    ui->action_Close->setEnabled(true);
+    ui->menu_Recent_Files->setEnabled(true);
+    ui->actionLockUnlock->setEnabled(true);
+
     ui->action_Save_As->setEnabled(enable_if_unlocked);
-//    ui->menu_Export->setEnabled(enable_if_unlocked);
-//    ui->menu_Import->setEnabled(enable_if_writable);
+    ui->menu_Export->setEnabled(enable_if_unlocked);
+    ui->menu_Import->setEnabled(enable_if_writable);
     m_action_new_child.setEnabled(enable_if_writable);
     ui->actionNew_Entry->setEnabled(enable_if_writable);
     ui->action_EditEntry->setEnabled(enable_if_writable);
@@ -1445,26 +1720,24 @@ void MainWindow::_action_lock_unlock_interface()
     }
 }
 
+// Only returns the keyfile location if it's relevant
+QString MainWindow::_get_keyfile_location() const
+{
+    QString ret;
+    DatabaseModel *dbm = _get_database_model();
+    if(dbm &&
+            (dbm->GetCredentialsType() == Credentials::KeyfileType ||
+             dbm->GetCredentialsType() == Credentials::PasswordAndKeyfileType) &&
+            m_settings->Value(GRYPTONITE_SETTING_REMEMBER_KEYFILE).toBool()){
+        ret = m_keyfileLocation;
+    }
+    return ret;
+}
+
 void MainWindow::RequestUnlock()
 {
-    {
-        bool unlock = false;
-        modal_dialog_helper_t mh(this);
-        GetPasswordDialog dlg(m_settings,
-                              QFileInfo(_get_database_model()->FilePath()).fileName(),
-                              this);
-        if(QDialog::Accepted == dlg.exec()){
-            if(_get_database_model()->CheckCredentials(dlg.GetCredentials()))
-                unlock = true;
-            else
-                __show_access_denied(this, tr("Invalid Password"));
-        }
-
-        if(!unlock)
-            return;
-    }
-
-    _lock_unlock_interface(false);
+    if(_verify_credentials())
+        _lock_unlock_interface(false);
 }
 
 bool MainWindow::event(QEvent *e)
@@ -1483,7 +1756,7 @@ void MainWindow::_reset_lockout_timer()
     //QApplication::beep();
 }
 
-void MainWindow::_cryptographic_transformations()
+void MainWindow::_grypto_transforms()
 {
     if(QProcess::Running == m_grypto_transforms.state()){
         m_grypto_transforms.write("activate\n");
@@ -1498,6 +1771,25 @@ void MainWindow::_cryptographic_transformations()
                                   QString(tr("Unable to start %1: %2")
                                           .arg(path)
                                           .arg(m_grypto_transforms.errorString())));
+        }
+    }
+}
+
+void MainWindow::_grypto_rng()
+{
+    if(QProcess::Running == m_grypto_rng.state()){
+        m_grypto_rng.write("activate\n");
+    }
+    else{
+        QString path = QString("\"%1/%2\"")
+                .arg(QApplication::applicationDirPath())
+                .arg("grypto_rng");
+        m_grypto_rng.start(path);
+        if(!m_grypto_rng.waitForStarted()){
+            QMessageBox::critical(this, tr("Error"),
+                                  QString(tr("Unable to start %1: %2")
+                                          .arg(path)
+                                          .arg(m_grypto_rng.errorString())));
         }
     }
 }
@@ -1530,7 +1822,9 @@ void MainWindow::_progress_updated(int progress, bool cancellable, const QString
 
 void MainWindow::_organize_favorites()
 {
-    GASSERT(IsFileOpen());
+    if(!IsFileOpen())
+        return;
+
     QList<EntryId> favorites;
     DatabaseModel *dbm = _get_database_model();
     {
@@ -1600,14 +1894,36 @@ void MainWindow::_collapse_all()
     ui->treeView->ResizeColumnsToContents();
 }
 
+#define READ_ONLY_STRING " (Read Only)"
+
 void MainWindow::DropToReadOnly()
 {
     if(!IsReadOnly()){
-        setWindowTitle(tr(GRYPTO_APP_NAME " (Read Only)"));
+        setWindowTitle(tr(GRYPTO_APP_NAME READ_ONLY_STRING));
         ui->statusbar->showMessage(tr("Now in Read-Only mode for your protection"));
-        m_fileLabel->setText(m_fileLabel->text().append(" (Read Only)"));
+        m_fileLabel->setText(m_fileLabel->text().append(READ_ONLY_STRING));
 
         m_readonly = true;
         _update_available_actions();
     }
+}
+
+void MainWindow::RecoverFromReadOnly()
+{
+    if(IsReadOnly()){
+        setWindowTitle(tr(GRYPTO_APP_NAME));
+        m_fileLabel->setText(m_fileLabel->text().left(m_fileLabel->text().length() - strlen(READ_ONLY_STRING)));
+        _update_undo_text();
+
+        m_readonly = false;
+        _update_available_actions();
+        ui->treeView->ResizeColumnsToContents();
+    }
+}
+
+void MainWindow::ReadOnlyTransactionFinished()
+{
+    m_readonlyTransaction = false;
+    RecoverFromReadOnly();
+    _update_trayIcon_menu();
 }

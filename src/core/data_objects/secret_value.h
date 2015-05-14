@@ -1,4 +1,4 @@
-/*Copyright 2010 George Karagoulis
+/*Copyright 2010-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef GRYPTO_SECRETVALUE_H
 #define	GRYPTO_SECRETVALUE_H
 
-#include "grypto_common.h"
+#include <grypto/common.h>
 #include <QVariant>
 
 NAMESPACE_GRYPTO;

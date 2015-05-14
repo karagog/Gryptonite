@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ limitations under the License.*/
 #define GETPASSWORDDIALOG_H
 
 #include <gutil/qt_settings.h>
-#include <grypto_common.h>
+#include <grypto/common.h>
 #include <QDialog>
 
 namespace Ui {
@@ -37,11 +37,15 @@ class GetPasswordDialog :
 public:
     explicit GetPasswordDialog(
             GUtil::Qt::Settings *,
-            const QString &title = QString(),
+            const QString &title_filename = QString(),
+            Credentials::TypeEnum creds_type = Credentials::NoType,
+            const QString &keyfile_location = QString(),
             QWidget *parent = 0);
     ~GetPasswordDialog();
 
     Credentials const &GetCredentials() const{ return m_creds; }
+
+    QString GetKeyfileLocation() const;
 
     virtual void accept();
 

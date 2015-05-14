@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@ limitations under the License.*/
 
 #include "entryview.h"
 #include "ui_entryview.h"
-#include <grypto_entrymodel.h>
-#include <grypto_databasemodel.h>
+#include <grypto/entrymodel.h>
+#include <grypto/databasemodel.h>
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QSortFilterProxyModel>

@@ -16,6 +16,7 @@ limitations under the License.*/
 #include "ui_mainwindow.h"
 #include "about.h"
 #include "cryptotransforms.h"
+#include <gutil/application.h>
 #include <QWhatsThis>
 USING_NAMESPACE_GRYPTO;
 
@@ -47,7 +48,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *settings, QWidget *parent)
 
     connect(ui->action_Quit, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(_about_to_quit()));
-    connect(ui->action_About, SIGNAL(triggered()), this, SLOT(_show_about()));
+    connect(ui->action_About, SIGNAL(triggered()), gApp, SLOT(About()));
 }
 
 MainWindow::~MainWindow()
@@ -62,11 +63,6 @@ void MainWindow::closeEvent(QCloseEvent *ev)
     qApp->quit();
 
     QMainWindow::closeEvent(ev);
-}
-
-void MainWindow::_show_about()
-{
-    (new ::About(this))->ShowAbout();
 }
 
 void MainWindow::_new_msg_stdin()

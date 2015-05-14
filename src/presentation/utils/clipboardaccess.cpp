@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 #include "clipboardaccess.h"
-#include "grypto_common.h"
+#include <grypto/common.h>
 #include <QClipboard>
 #include <QApplication>
 #include <QTimerEvent>

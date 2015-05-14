@@ -10,7 +10,7 @@ TARGET = grypto_ui
 unix: VERSION = 3.0.0
 
 DEFINES += GUTIL_CORE_QT_ADAPTERS
-QMAKE_CXXFLAGS += -std=c++0x
+QMAKE_CXXFLAGS += -std=c++11
 
 CONFIG(debug, debug|release) {
     #message(Preparing debug build)
@@ -18,6 +18,7 @@ CONFIG(debug, debug|release) {
 }
 else {
     #message(Preparing release build)
+    DEFINES += QT_NO_DEBUG_OUTPUT
     unix: QMAKE_RPATHDIR =
 }
 

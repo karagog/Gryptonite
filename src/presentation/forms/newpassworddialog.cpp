@@ -1,4 +1,4 @@
-/*Copyright 2014 George Karagoulis
+/*Copyright 2014-2015 George Karagoulis
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@ limitations under the License.*/
 
 #include "newpassworddialog.h"
 #include "ui_newpassworddialog.h"
-#include "grypto_common.h"
+#include <grypto/common.h>
 #include <gutil/file.h>
 #include <QMessageBox>
 #include <QKeyEvent>
 #include <QFileDialog>
+#include <QStandardPaths>
 USING_NAMESPACE_GUTIL1(Qt);
 
 // It doesn't make sense for this to be any larger than
@@ -164,7 +165,13 @@ void NewPasswordDialog::accept()
 
 void NewPasswordDialog::_select_keyfile()
 {
-    QString fn = QFileDialog::getOpenFileName(this, tr("Select Keyfile"));
+    QString dir = GetKeyfileLocation();
+
+    // Open the dialog in the user's home directory if no path is given
+    if(dir.isEmpty())
+        dir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+
+    QString fn = QFileDialog::getOpenFileName(this, tr("Select Keyfile"), dir);
     if(fn.isEmpty())
         return;
 
@@ -192,13 +199,16 @@ void NewPasswordDialog::_generate_keyfile()
         return;
 
     fn = QFileInfo(fn).absoluteFilePath();
+    {
+        byte data[KEYFILE_SIZE];
+        GUtil::GlobalRNG()->Fill(data, KEYFILE_SIZE);
 
-    byte data[KEYFILE_SIZE];
-    GUtil::GlobalRNG()->Fill(data, KEYFILE_SIZE);
-    GUtil::File f(fn.toUtf8().constData());
-    f.Open(f.OpenWrite);
-    f.Write(data, KEYFILE_SIZE);
-
+        QFile f(fn);
+        if(!f.open(QFile::ReadWrite | QFile::Truncate))
+            throw GUtil::Exception<>(QString("Cannot open file: %1")
+                                     .arg(f.errorString()).toUtf8());
+        f.write((const char *)data, KEYFILE_SIZE);
+    }
     ui->le_filePath->setText(fn);
 }
 
@@ -223,6 +233,11 @@ void NewPasswordDialog::_combobox_indexchanged(int ind)
     default:
         break;
     }
+}
+
+QString NewPasswordDialog::GetKeyfileLocation() const
+{
+    return ui->le_filePath->text();
 }
 
 

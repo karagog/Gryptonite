@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef GRYPTO_ILEGACYPLUGIN_H
 #define GRYPTO_ILEGACYPLUGIN_H
 
-#include <grypto_common.h>
+#include <grypto/common.h>
 #include <functional>
 #include <QtPlugin>
 

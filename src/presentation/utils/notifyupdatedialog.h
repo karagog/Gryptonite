@@ -15,7 +15,7 @@ limitations under the License.*/
 #ifndef NOTIFYUPDATEDIALOG_H
 #define NOTIFYUPDATEDIALOG_H
 
-#include <grypto_common.h>
+#include <grypto/common.h>
 #include <QMessageBox>
 #include <QUrl>
 

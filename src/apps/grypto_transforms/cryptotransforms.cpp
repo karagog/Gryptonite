@@ -15,9 +15,9 @@ limitations under the License.*/
 #include "cryptotransforms.h"
 #include "cryptotransformsworker.h"
 #include "ui_cryptotransforms.h"
-#include <grypto_newpassworddialog.h>
-#include <grypto_getpassworddialog.h>
-#include <grypto_common.h>
+#include <grypto/newpassworddialog.h>
+#include <grypto/getpassworddialog.h>
+#include <grypto/common.h>
 #include <gutil/sourcesandsinks.h>
 #include <gutil/qtsourcesandsinks.h>
 #include <gutil/cryptopp_cryptor.h>
@@ -147,7 +147,7 @@ void CryptoTransforms::_change_password()
 
 void CryptoTransforms::_test_password()
 {
-    GetPasswordDialog dlg(m_settings, QString(), this);
+    GetPasswordDialog dlg(m_settings, QString(), Credentials::NoType, QString(), this);
     if(QDialog::Accepted == dlg.exec()){
         if(!m_cryptor)
             QMessageBox::critical(this, tr("No Key"), tr("No key has been set"));

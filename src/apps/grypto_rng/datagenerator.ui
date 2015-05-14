@@ -1,0 +1,601 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DataGenerator</class>
+ <widget class="QWidget" name="DataGenerator">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>543</width>
+    <height>256</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Data Generator</string>
+  </property>
+  <property name="toolTip">
+   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Generate statistical distributions to a file&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+  </property>
+  <property name="whatsThis">
+   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;This window generates statistical data according to the parameters you choose and saves it to a file which can be easily loaded into other programs like Matlab. It is capable of doing most major distribution types.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Uniform&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Any value in the range is equally likely. Can be either continuous or discrete. This simulates events like rolling a die, flipping a coin or spinning a roulette wheel.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Normal (Gaussian)&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Produces a bell curve about the mean with a given standard deviation. Can be either continuous or discrete.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Geometric&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Simulates the number of trials until a success, where each trial is successful with a probability of 1/Expected Value. For example you could simulate the number of coin tosses until you get tails, by using a geometric distribution with expected value of 2.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Exponential&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Simulates the occurence of random events over a line, such as time. Lambda controls how frequently the event occurs on the line. For example, if you want to simulate the occurrence of a volcano erupting and you know it erupts every 1 million years, you could use an exponential distribution with lambda of 1/(1 million) and the results would tell you the number of years between each simulated eruption.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;Poisson&lt;/span&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt; - Generates a poisson distribution with the given expected value. The poisson distribution is related to the exponential distribution, but it does something slightly different. Suppose you live by the highway and you want to count the number of cars that drive by at a certain time of day. If you know the average density of the cars you can compute the expected value (i.e. how many cars you expect to drive past in 1 minute) and use a poisson distribution to simulate each minute where you count the cars. Whereas you would use the exponential distribution to simulate the time/distance between cars, you would use the poisson distribution to simulate counting the cars within an interval.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="2" column="1">
+    <widget class="QLineEdit" name="le_outFile">
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The output file will contain all data points, each on its own line. It can be loaded and analyzed easily with a tool like Matlab via the &amp;quot;load&amp;quot; and &amp;quot;hist&amp;quot; commands:&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Matlab console:&lt;/p&gt;&lt;p&gt;&amp;gt;&amp;gt; data = load('data_generator_output.txt');&lt;/p&gt;&lt;p&gt;&amp;gt;&amp;gt; hist(data, 1000);&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="3">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Parameters</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout_4">
+      <property name="fieldGrowthPolicy">
+       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+      </property>
+      <item row="0" column="0" colspan="2">
+       <widget class="QStackedWidget" name="sw_mode">
+        <property name="currentIndex">
+         <number>1</number>
+        </property>
+        <widget class="QWidget" name="pg_rawData">
+         <layout class="QGridLayout" name="gridLayout_2">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_12">
+            <property name="text">
+             <string>Amount:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spn_rawData_amount">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <spacer name="verticalSpacer">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="0" column="2">
+           <widget class="QComboBox" name="cmb_rawData_units">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>1</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="currentText">
+             <string>Bytes</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>Bytes</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Kilobytes</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Megabytes</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="pg_distribution">
+         <layout class="QFormLayout" name="formLayout_5">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Type:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="cmb_distribution">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The distribution type controls which distribution will be generated&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>Uniform</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Normal (Gaussian)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Geometric</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Exponential</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Poisson</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lbl_distributionType">
+            <property name="text">
+             <string>Distribution:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="cmb_distributionType">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Controls whether the distribution is continuous or discrete&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>Continuous</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Discrete</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>N:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="spn_n">
+            <property name="toolTip">
+             <string>The number of data points to generate</string>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000000000</number>
+            </property>
+            <property name="value">
+             <number>100</number>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QStackedWidget" name="sw_params">
+            <widget class="QWidget" name="pg_uniform">
+             <layout class="QFormLayout" name="formLayout_3">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>Minimum:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_5">
+                <property name="text">
+                 <string>Maximum:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QDoubleSpinBox" name="spn_u_min">
+                <property name="toolTip">
+                 <string>The uniform range minimum</string>
+                </property>
+                <property name="decimals">
+                 <number>9</number>
+                </property>
+                <property name="minimum">
+                 <double>-1000000.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QDoubleSpinBox" name="spn_u_max">
+                <property name="toolTip">
+                 <string>The uniform range maximum</string>
+                </property>
+                <property name="decimals">
+                 <number>9</number>
+                </property>
+                <property name="minimum">
+                 <double>-1000000.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="pg_normal">
+             <layout class="QFormLayout" name="formLayout_6">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Mean:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="text">
+                 <string>σ:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QDoubleSpinBox" name="spn_normal_sigma">
+                <property name="toolTip">
+                 <string>The normal distribution standard deviation</string>
+                </property>
+                <property name="decimals">
+                 <number>21</number>
+                </property>
+                <property name="maximum">
+                 <double>1000000000000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QDoubleSpinBox" name="spn_normal_mean">
+                <property name="toolTip">
+                 <string>The normal distribution mean</string>
+                </property>
+                <property name="decimals">
+                 <number>21</number>
+                </property>
+                <property name="minimum">
+                 <double>-1000000000000000.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000000000000000.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="pg_geometric">
+             <layout class="QFormLayout" name="formLayout_7">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>Expected Value:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QDoubleSpinBox" name="spn_geometric_e">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The expected value of the geometric distribution&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="decimals">
+                 <number>6</number>
+                </property>
+                <property name="minimum">
+                 <double>1.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="pg_exponential">
+             <layout class="QFormLayout" name="formLayout_8">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>Lambda:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QDoubleSpinBox" name="spn_exponential_lambda">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;Lambda controls the expected value of the exponential distribution like 1/L&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="decimals">
+                 <number>21</number>
+                </property>
+                <property name="maximum">
+                 <double>1000000000000000000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="pg_poisson">
+             <layout class="QFormLayout" name="formLayout_9">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_10">
+                <property name="text">
+                 <string>Expected Value:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QDoubleSpinBox" name="spn_poisson_e">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt;&quot;&gt;The expected value of the poisson distribution. Note that this becomes less efficient with higher expected values.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="decimals">
+                 <number>9</number>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="1" colspan="2">
+    <widget class="QComboBox" name="cmb_mode">
+     <item>
+      <property name="text">
+       <string>Distribution</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Raw Data</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QToolButton" name="toolButton">
+     <property name="text">
+      <string>...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_11">
+     <property name="text">
+      <string>Output File:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Mode:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="3">
+    <widget class="QPushButton" name="btn_generate">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Generate</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>btn_generate</sender>
+   <signal>clicked()</signal>
+   <receiver>DataGenerator</receiver>
+   <slot>_generate()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>291</x>
+     <y>312</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>338</x>
+     <y>286</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>cmb_mode</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>DataGenerator</receiver>
+   <slot>_mode_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>110</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>149</x>
+     <y>41</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>cmb_distribution</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>DataGenerator</receiver>
+   <slot>_distribution_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>209</x>
+     <y>87</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>317</x>
+     <y>39</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>cmb_distributionType</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>DataGenerator</receiver>
+   <slot>_distribution_type_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>296</x>
+     <y>122</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>40</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toolButton</sender>
+   <signal>clicked()</signal>
+   <receiver>DataGenerator</receiver>
+   <slot>_select_file()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>512</x>
+     <y>289</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>524</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>_generate()</slot>
+  <slot>_mode_changed(int)</slot>
+  <slot>_distribution_changed(int)</slot>
+  <slot>_distribution_type_changed(int)</slot>
+  <slot>_select_file()</slot>
+ </slots>
+</ui>

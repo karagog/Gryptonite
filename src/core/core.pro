@@ -6,7 +6,7 @@ TOP_DIR = ../..
 DESTDIR = $$TOP_DIR/lib
 TARGET = grypto_core
 TEMPLATE = lib
-QMAKE_CXXFLAGS += -std=c++0x
+QMAKE_CXXFLAGS += -std=c++11
 
 unix: VERSION = 3.0.0
 
@@ -16,6 +16,7 @@ CONFIG(debug, debug|release) {
 }
 else {
     #message(Preparing release build)
+    DEFINES += QT_NO_DEBUG_OUTPUT
     unix: QMAKE_RPATHDIR =
 }
 

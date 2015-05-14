@@ -24,7 +24,7 @@ limitations under the License.*/
 
 #define GRYPTO_APP_NAME "Gryptonite"
 
-#define GRYPTO_VERSION_STRING "3.0.6_beta"
+#define GRYPTO_VERSION_STRING "3.1.0_alpha"
 
 #define GRYPTO_DONATE_URL "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=QW8CL5QNL6EBL&lc=US&item_name=Gryptonite&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted"
 

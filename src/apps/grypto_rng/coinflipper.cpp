@@ -52,6 +52,8 @@ void CoinFlipper::_progress_updated(int progress)
         int old_height = ui->tbl_results->height();
         ui->tbl_results->resize(ui->tbl_results->width(), ui->tbl_results->height() + 1);
         ui->tbl_results->resize(ui->tbl_results->width(), old_height);
+
+        ui->btn_flip->setEnabled(true);
     }
 }
 
@@ -73,7 +75,13 @@ void CoinFlipper::_flip()
     m_pd.setLabelText(QString(tr("Flipping %L1 coins...")).arg(count));
 
     // Tell the model to start flipping
-    m_model->Flip(count);
+    ui->btn_flip->setEnabled(false);    // disable the button first because it looks better
+    try{
+        m_model->Flip(count);
+    } catch(...) {
+        ui->btn_flip->setEnabled(true);
+        throw;
+    }
 }
 
 void CoinFlipper::_clear()

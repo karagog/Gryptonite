@@ -20,7 +20,6 @@ limitations under the License.*/
 #include <QMimeData>
 #include <QStringList>
 #include <QIcon>
-#include <unordered_map>
 USING_NAMESPACE_GUTIL;
 USING_NAMESPACE_GUTIL1(CryptoPP);
 using namespace std;

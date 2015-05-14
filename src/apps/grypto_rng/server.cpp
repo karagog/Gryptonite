@@ -14,7 +14,7 @@ limitations under the License.*/
 
 #include "server.h"
 #include "about.h"
-#include <unordered_map>
+#include <QHash>
 #include <QStringList>
 #include <QCoreApplication>
 using namespace std;
@@ -53,9 +53,9 @@ const char *__command_strings[] = {
 struct trie_node_t
 {
     command_enum command = no_command;
-    unordered_map<char, trie_node_t *> children;
+    QHash<char, trie_node_t *> children;
 
-    ~trie_node_t(){ for(auto c : children) delete c.second; }
+    ~trie_node_t(){ for(auto c : children) delete c; }
 };
 
 void __trie_insert(trie_node_t *n, const char *s, int len, command_enum c)
@@ -70,8 +70,8 @@ void __trie_insert(trie_node_t *n, const char *s, int len, command_enum c)
         // Else we need to keep searching
         auto iter = n->children.find(*s);
         if(iter == n->children.end())
-            n->children.emplace(*s, new trie_node_t);
-        __trie_insert(n->children.at(*s), s + 1, len - 1, c);
+            iter = n->children.insert(*s, new trie_node_t);
+        __trie_insert(*iter, s + 1, len - 1, c);
     }
 }
 
@@ -108,7 +108,7 @@ static command_enum __parse_command(trie_node_t *n, const char *cmd, int len)
         // auto-complete the command, as long as it's unambiguous
         trie_node_t *cur = n;
         while(cur->children.size() == 1)
-            cur = cur->children.begin()->second;
+            cur = *cur->children.begin();
 
         if(0 == cur->children.size()){
             GASSERT(cur->command != no_command);
@@ -121,7 +121,7 @@ static command_enum __parse_command(trie_node_t *n, const char *cmd, int len)
     else{
         auto iter = n->children.find(*cmd);
         if(iter != n->children.end())
-            ret = __parse_command(iter->second, cmd+1, len-1);
+            ret = __parse_command(*iter, cmd+1, len-1);
     }
     return ret;
 }

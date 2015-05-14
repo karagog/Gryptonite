@@ -21,7 +21,6 @@ limitations under the License.*/
 #include <gutil/sourcesandsinks.h>
 #include <gutil/qtsourcesandsinks.h>
 #include <queue>
-#include <unordered_map>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -122,9 +121,9 @@ struct d_t
 
     // The index variables are maintained by both the main thread and
     //  the background threads.
-    unordered_map<Grypt::EntryId, entry_cache> index;
-    unordered_map<Grypt::EntryId, parent_cache> parent_index;
-    unordered_map<Grypt::FileId, file_cache> file_index;
+    QHash<Grypt::EntryId, entry_cache> index;
+    QHash<Grypt::EntryId, parent_cache> parent_index;
+    QHash<Grypt::FileId, file_cache> file_index;
     QSet<Grypt::EntryId> deleted_entries;
     QList<Grypt::EntryId> favorite_index;
     mutex index_lock;
@@ -663,14 +662,14 @@ static void __initialize_cache(d_t *d)
         function<void(const EntryId &)> parse_child_entries;
         parse_child_entries = [&](const EntryId &pid){
             QList<EntryId> &child_list =
-                    d->parent_index.emplace(pid, parent_cache()).first->second.children;
+                    d->parent_index.insert(pid, parent_cache())->children;
 
             for(const EntryId &cid : hierarchy[pid]){
                 child_list.append(cid);
 
                 // Add the entry to the cache
                 const entry_cache &ec = entries[cid];
-                d->index.emplace(cid, ec);
+                d->index.insert(cid, ec);
 
                 // We'll sort the favorites at the end
                 if(0 <= ec.favoriteindex)
@@ -689,7 +688,7 @@ static void __initialize_cache(d_t *d)
         file_cache fc;
         fc.id = q.record().value("ID").toByteArray();
         fc.length = q.record().value("Length").toInt();
-        d->file_index.emplace(fc.id, fc);
+        d->file_index.insert(fc.id, fc);
     }
 
     // Sort the favorite id's by their favorite index
@@ -1051,8 +1050,8 @@ void PasswordDatabase::_bw_add_entry(const QString &conn_str, const Entry &e)
         if(iter == d->index.end())
             return;
 
-        iter->second.row = row;
-        entry_cache const &ec = iter->second;
+        iter->row = row;
+        entry_cache const &ec = *iter;
         d->index_lock.unlock();
 
         __insert_entry(ec, q);
@@ -1276,7 +1275,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
     {
         // Add to the appropriate parent
         auto pi = d->parent_index.find(e.GetParentId());
-        QList<EntryId> &child_ids = pi->second.children;
+        QList<EntryId> &child_ids = pi->children;
         if(0 > e.GetRow() || e.GetRow() > child_ids.length())
             e.SetRow(child_ids.length());
 
@@ -1286,7 +1285,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
         for(int i = e.GetRow() + 1; i < child_ids.length(); ++i){
             auto iter = d->index.find(child_ids[i]);
             if(iter != d->index.end())
-                iter->second.row = i;
+                iter->row = i;
         }
 
         d->index[e.GetId()] = ec;
@@ -1301,10 +1300,10 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
                 auto i = d->index.find(eid);
                 if(i == d->index.end())
                     return;
-                else if(0 <= i->second.favoriteindex){
-                    if(0 < i->second.favoriteindex){
-                        GASSERT(i->second.favoriteindex <= d->favorite_index.length());
-                        favorites.insert(i->second.favoriteindex-1, eid);
+                else if(0 <= i->favoriteindex){
+                    if(0 < i->favoriteindex){
+                        GASSERT(i->favoriteindex <= d->favorite_index.length());
+                        favorites.insert(i->favoriteindex-1, eid);
                     }
                     else
                         d->favorite_index.append(eid);
@@ -1314,7 +1313,7 @@ void PasswordDatabase::AddEntry(Entry &e, bool gen_id)
                 // Recursively check children
                 auto pi = d->parent_index.find(eid);
                 if(pi != d->parent_index.end()){
-                    for(const EntryId &cid : pi->second.children)
+                    for(const EntryId &cid : pi->children)
                         restore_favorites(cid);
                 }
             };
@@ -1393,7 +1392,7 @@ bool PasswordDatabase::_has_ancestor(const EntryId &child, const EntryId &ancest
     if(i == d->index.end())
         return false;
 
-    return _has_ancestor(i->second.parentid, ancestor);
+    return _has_ancestor(i->parentid, ancestor);
 }
 
 void PasswordDatabase::DeleteEntry(const EntryId &id)
@@ -1408,19 +1407,19 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
     unique_lock<mutex> lkr(d->index_lock);
     auto iter = d->index.find(id);
     if(iter != d->index.end()){
-        auto piter = d->parent_index.find(iter->second.parentid);
-        piter->second.children.removeAt(iter->second.row);
+        auto piter = d->parent_index.find(iter->parentid);
+        piter->children.removeAt(iter->row);
 
         // Update the siblings of the item we just removed
-        for(auto r = iter->second.row; r < piter->second.children.length(); ++r){
-            auto ci = d->index.find(piter->second.children[r]);
+        for(auto r = iter->row; r < piter->children.length(); ++r){
+            auto ci = d->index.find(piter->children[r]);
             if(ci != d->index.end())
-                ci->second.row = r;
+                ci->row = r;
         }
 
         // Remove this or any children from the favorites list
         for(int i = d->favorite_index.length() - 1; i >= 0; i--){
-            if(_has_ancestor(d->favorite_index[i], iter->first)){
+            if(_has_ancestor(d->favorite_index[i], id)){
                 d->favorite_index.removeAt(i);
                 favs_updated = true;
             }
@@ -1430,7 +1429,7 @@ void PasswordDatabase::DeleteEntry(const EntryId &id)
         d->deleted_entries.insert(id);
 
         // Don't remove from the parent index, because they may un-delete it
-        //d->parent_index.erase(id);
+        //d->parent_index.remove(id);
     }
     lkr.unlock();
     d->wc_index.notify_all();
@@ -1457,8 +1456,8 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
     // Update the index
     unique_lock<mutex> lkr(d->index_lock);
 
-    QList<EntryId> &src = d->parent_index.find(parentId_src)->second.children;
-    QList<EntryId> &dest = d->parent_index.find(parentId_dest)->second.children;
+    QList<EntryId> &src = d->parent_index.find(parentId_src)->children;
+    QList<EntryId> &dest = d->parent_index.find(parentId_dest)->children;
     QList<EntryId> moving_rows;
     moving_rows.reserve(move_cnt);
 
@@ -1475,7 +1474,7 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
 
     // Update the siblings at the source
     for(int i = row_first; i < src.length(); ++i)
-        d->index.find(src[i])->second.row = i;
+        d->index.find(src[i])->row = i;
 
     // Insert the rows at the dest parent
     if(same_parents && row_dest > row_first)
@@ -1483,12 +1482,12 @@ void PasswordDatabase::MoveEntries(const EntryId &parentId_src, quint32 row_firs
 
     for(int i = 0; i < move_cnt; ++i){
         dest.insert(row_dest + i, moving_rows[i]);
-        d->index.find(moving_rows[i])->second.parentid = parentId_dest;
+        d->index.find(moving_rows[i])->parentid = parentId_dest;
     }
 
     // Update the siblings at the dest
     for(int i = row_dest; i < dest.length(); ++i)
-        d->index.find(dest[i])->second.row = i;
+        d->index.find(dest[i])->row = i;
     lkr.unlock();
 
     // Update the database
@@ -1508,10 +1507,9 @@ Entry PasswordDatabase::FindEntry(const EntryId &id) const
             exit_not_found();
 
         auto i = d->index.find(id);
-        if(i == d->index.end() || !i->second.exists)
+        if(i == d->index.end() || !i->exists)
             exit_not_found();
-
-        ec = i->second;
+        ec = *i;
     }
     return __convert_cache_to_entry(ec, *d->cryptor);
 }
@@ -1524,7 +1522,7 @@ int PasswordDatabase::CountEntriesByParentId(const EntryId &id) const
     int ret = 0;
     auto pi = d->parent_index.find(id);
     if(pi != d->parent_index.end())
-        ret = pi->second.children.length();
+        ret = pi->children.length();
     return ret;
 }
 
@@ -1565,7 +1563,7 @@ void PasswordDatabase::SetFavoriteEntries(const QList<EntryId> &favs)
         for(const EntryId &eid : d->favorite_index){
             auto iter = d->index.find(eid);
             if(iter != d->index.end())
-                iter->second.favoriteindex = -1;
+                iter->favoriteindex = -1;
         }
 
         d->favorite_index = favs;
@@ -1575,7 +1573,7 @@ void PasswordDatabase::SetFavoriteEntries(const QList<EntryId> &favs)
             ctr++;  // Start counting at 1
             auto iter = d->index.find(eid);
             if(iter != d->index.end())
-                iter->second.favoriteindex = ctr;
+                iter->favoriteindex = ctr;
         }
     }
     d->index_lock.unlock();
@@ -1594,7 +1592,7 @@ void PasswordDatabase::AddFavoriteEntry(const EntryId &id)
         auto iter = d->index.find(id);
         if(iter != d->index.end()){
             d->favorite_index.append(id);
-            iter->second.favoriteindex = 0;
+            iter->favoriteindex = 0;
         }
     }
     d->index_lock.unlock();
@@ -1617,7 +1615,7 @@ void PasswordDatabase::RemoveFavoriteEntry(const EntryId &id)
         d->favorite_index.removeAt(ind);
 
         auto iter = d->index.find(id);
-        int old_index = iter->second.favoriteindex;
+        int old_index = iter->favoriteindex;
         if(0 < old_index){
             // Adjust the other favorites' rows
             for(int i = 0; i < d->favorite_index.length() - ind; ++i)
@@ -1712,14 +1710,14 @@ static void __add_referenced_file_ids(d_t *d, QSet<FileId> &s, const EntryId &id
     // Add this entry's file reference
     if(!id.IsNull()){
         auto iter = d->index.find(id);
-        if(iter != d->index.end() && !iter->second.file_id.IsNull())
-            s.insert(iter->second.file_id);
+        if(iter != d->index.end() && !iter->file_id.IsNull())
+            s.insert(iter->file_id);
     }
 
     // Descend into this entry's children
     auto piter = d->parent_index.find(id);
     if(piter != d->parent_index.end()){
-        for(const EntryId &cid : piter->second.children)
+        for(const EntryId &cid : piter->children)
             __add_referenced_file_ids(d, s, cid);
     }
 }
@@ -1755,7 +1753,7 @@ void PasswordDatabase::DeleteFile(const FileId &id)
     FailIfNotOpen();
     G_D;
     d->index_lock.lock();
-    d->file_index.erase(id);
+    d->file_index.remove(id);
     d->index_lock.unlock();
 
     __queue_command(d, new delete_file_command(id));
@@ -1929,7 +1927,7 @@ void PasswordDatabase::_bw_refresh_favorites(const QString &conn_str)
     d->favorite_index = ids;
     for(const entry_cache &ec : rows){
         if(d->index.find(ec.id) == d->index.end())
-            d->index.emplace(ec.id, ec);
+            d->index.insert(ec.id, ec);
     }
     lkr.unlock();
     d->wc_index.notify_all();
@@ -2149,15 +2147,15 @@ void PasswordDatabase::_bw_dispatch_orphans(const QString &conn_str)
     // Update the index:
     lock_guard<mutex> lkr(d->index_lock);
     for(const EntryId &eid : deleted_entries){
-        d->index.erase(eid);
-        d->parent_index.erase(eid);
+        d->index.remove(eid);
+        d->parent_index.remove(eid);
     }
     for(const FileId &fid : deleted_files){
-        d->file_index.erase(fid);
+        d->file_index.remove(fid);
     }
     for(const EntryId &eid : d->deleted_entries){
         // We delayed removing this from the parent index, but we can do it now
-        d->parent_index.erase(eid);
+        d->parent_index.remove(eid);
     }
     d->deleted_entries.clear();
     d->favorite_index = sorted_favorites;
@@ -2430,7 +2428,7 @@ void PasswordDatabase::_bw_add_file(const QString &conn_str,
     file_cache fc;
     fc.id = id;
     fc.length = plaintext_length;
-    d->file_index.emplace(fc.id, fc);
+    d->file_index.insert(fc.id, fc);
     d->wc_index.notify_all();
 }
 
@@ -2699,7 +2697,7 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
         QHash<EntryId, int> entry_mapping;
         QSet<FileId> referenced_files;
         QList<entry_cache> entries;
-        unordered_map<EntryId, parent_cache> parent_index_cpy;
+        QHash<EntryId, parent_cache> parent_index_cpy;
 
         // Define a helper function for recursively adding entries
         int tmpid = 0;
@@ -2722,8 +2720,8 @@ void PasswordDatabase::_bw_export_to_xml(const QString &conn_str, GUtil::CryptoP
         add_children_to_index(EntryId::Null());
 
         tmpid = 0;
-        for(auto p : d->file_index)
-            file_mapping.insert(p.first, tmpid++);
+        for(const FileId &fid : d->file_index.keys())
+            file_mapping.insert(fid, tmpid++);
         parent_index_cpy = d->parent_index;
         d->index_lock.unlock();
 
@@ -3069,7 +3067,7 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
     unique_lock<mutex> lkr(d->index_lock);
     for(const entry_cache &ec : entry_caches.values()){
         GASSERT(d->index.find(ec.id) == d->index.end());
-        d->index.emplace(ec.id, ec);
+        d->index.insert(ec.id, ec);
 
         // We should have cleared the ordering of imported favorites
         GASSERT(0 >= ec.favoriteindex);
@@ -3094,7 +3092,7 @@ void PasswordDatabase::_bw_import_from_xml(const QString &conn_str,
 
     // Finally update the file index
     for(const file_cache &fc : file_mapping.values())
-        d->file_index.emplace(fc.id, fc);
+        d->file_index.insert(fc.id, fc);
 
     d->wc_index.notify_all();
 }

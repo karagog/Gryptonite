@@ -48,6 +48,7 @@ private:
     QProgressDialog m_pd;
 
     void _update();
+    void _set_controls_enabled(bool);
 };
 
 #endif // COINFLIPPER_H

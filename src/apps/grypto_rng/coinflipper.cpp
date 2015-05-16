@@ -39,6 +39,13 @@ CoinFlipper::~CoinFlipper()
     delete ui;
 }
 
+void CoinFlipper::_set_controls_enabled(bool e)
+{
+    ui->btn_flip->setEnabled(e);
+    ui->btn_clear->setEnabled(e);
+    ui->spn_flip->setEnabled(e);
+}
+
 void CoinFlipper::_progress_updated(int progress)
 {
     m_pd.setValue(progress);
@@ -53,7 +60,7 @@ void CoinFlipper::_progress_updated(int progress)
         ui->tbl_results->resize(ui->tbl_results->width(), ui->tbl_results->height() + 1);
         ui->tbl_results->resize(ui->tbl_results->width(), old_height);
 
-        ui->btn_flip->setEnabled(true);
+        _set_controls_enabled(true);
     }
 }
 
@@ -74,12 +81,12 @@ void CoinFlipper::_flip()
     int count = ui->spn_flip->value();
     m_pd.setLabelText(QString(tr("Flipping %L1 coins...")).arg(count));
 
-    // Tell the model to start flipping
-    ui->btn_flip->setEnabled(false);    // disable the button first because it looks better
+    // disable the controls first because it looks better
+    _set_controls_enabled(false);
     try{
         m_model->Flip(count);
     } catch(...) {
-        ui->btn_flip->setEnabled(true);
+        _set_controls_enabled(true);
         throw;
     }
 }

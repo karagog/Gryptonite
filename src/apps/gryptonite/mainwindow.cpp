@@ -1515,14 +1515,15 @@ void MainWindow::PopOutCurrentEntry()
     }
 
     // Open any URL fields with QDesktopServices
-    bool autolaunch = m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool();
-    bool suppress_popup = false;
+    bool autolaunch_urls = m_settings->Value(GRYPTONITE_SETTING_AUTOLAUNCH_URLS).toBool();
+    bool all_urls = false;
+    const bool empty_entry = e.Values().isEmpty();
 
     // The ctrl key does the opposite
     if(QApplication::keyboardModifiers() == ::Qt::ControlModifier)
-        autolaunch = !autolaunch;
+        autolaunch_urls = !autolaunch_urls;
 
-    if(autolaunch){
+    if(autolaunch_urls){
         // Open all URL fields using the OS-registered URL handler
         int url_cnt = 0;
         for(const SecretValue &sv : e.Values()){
@@ -1539,10 +1540,10 @@ void MainWindow::PopOutCurrentEntry()
         // If every value is a URL, then don't show the popup. This allows you to use
         //  the app as a simple URL launcher without using the popup
         if(url_cnt == e.Values().length())
-            suppress_popup = true;
+            all_urls = true;
     }
 
-    if(!suppress_popup){
+    if(!all_urls && !empty_entry){
         EntryPopup *ep = new EntryPopup(e, _get_database_model(), m_settings, this);
         connect(ep, SIGNAL(CedeControl()), this, SLOT(_show()));
 
@@ -1550,7 +1551,10 @@ void MainWindow::PopOutCurrentEntry()
             m_entryView->deleteLater();
         (m_entryView = ep)->show();
     }
-    _hide();
+
+    // Don't hide the main window if there are no values in the entry
+    if(!empty_entry)
+        _hide();
 }
 
 void MainWindow::_filter_updated(const FilterInfo_t &fi)

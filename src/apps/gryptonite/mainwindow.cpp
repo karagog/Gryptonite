@@ -1705,6 +1705,7 @@ void MainWindow::_update_available_actions()
 
     ui->action_grypto_transforms->setEnabled(!IsLocked());
     ui->treeView->setDragEnabled(enable_if_writable);
+    ui->actionFile_Maintenance->setEnabled(enable_if_writable);
 
     _update_trayIcon_menu();
 }

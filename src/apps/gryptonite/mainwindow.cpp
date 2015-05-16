@@ -989,6 +989,7 @@ void MainWindow::_save_as()
     ui->statusbar->showMessage(QString(tr("Successfully saved as %1"))
                                .arg(QFileInfo(fn).fileName()), STATUSBAR_MSG_TIMEOUT);
     m_fileLabel->setText(fn);
+    ui->searchWidget->Clear();
 }
 
 void MainWindow::_export_to_portable_safe()

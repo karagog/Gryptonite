@@ -483,6 +483,8 @@ void DataGenerator::_generate()
             num_bytes *= 1000;
         case unit_kilobytes:    // Note: fall-through is intentional
             num_bytes *= 1000;
+        case unit_bytes:
+            break;
         default:
             throw NotImplementedException<>();
         }

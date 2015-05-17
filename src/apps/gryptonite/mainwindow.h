@@ -218,6 +218,7 @@ private:
     void _edit_entry(const Grypt::Entry &);
     bool _handle_key_pressed(QKeyEvent *);
     void _prepare_ui_for_readonly_transaction();
+    void _set_last_keyfile_location(const QString &);
 
 };
 

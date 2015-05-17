@@ -834,7 +834,7 @@ void MainWindow::_new_open_database(const QString &path)
     }
 
     _install_new_database_model(dbm.Data());
-    m_keyfileLocation = keyfile_loc;
+    _set_last_keyfile_location(keyfile_loc);
     dbm.Relinquish();
 }
 
@@ -908,6 +908,13 @@ void MainWindow::_close_database(bool delete_model)
     }
 }
 
+void MainWindow::_set_last_keyfile_location(const QString &loc)
+{
+    // The location is only set if the preference allows us to set it
+    if(m_settings->Value(GRYPTONITE_SETTING_REMEMBER_KEYFILE).toBool())
+        m_keyfileLocation = loc;
+}
+
 bool MainWindow::_verify_credentials()
 {
     bool ret = false;
@@ -938,8 +945,7 @@ bool MainWindow::_verify_credentials()
 
         if(QDialog::Accepted == dlg.exec()){
             if((ret = dbm->CheckCredentials(dlg.GetCredentials()))){
-                // Update the keyfile location because it may have changed
-                m_keyfileLocation = dlg.GetKeyfileLocation();
+                _set_last_keyfile_location(dlg.GetKeyfileLocation());
             }
             else{
                 QMessageBox::warning(this,
@@ -977,8 +983,9 @@ void MainWindow::_save_as()
         m_readonlyTransaction = false;
     });
     if(dbm->GetCredentialsType() == Credentials::KeyfileType ||
-            dbm->GetCredentialsType() == Credentials::PasswordAndKeyfileType)
-        m_keyfileLocation = dlg.GetKeyfileLocation();
+            dbm->GetCredentialsType() == Credentials::PasswordAndKeyfileType){
+        _set_last_keyfile_location(dlg.GetKeyfileLocation());
+    }
     else
         m_keyfileLocation.clear();
 
@@ -1860,6 +1867,9 @@ void MainWindow::_edit_preferences()
         // Update ourselves to reflect the new settings...
         _update_time_format();
         _update_recent_files();
+
+        if(!m_settings->Value(GRYPTONITE_SETTING_REMEMBER_KEYFILE).toBool())
+            m_keyfileLocation.clear();
     }
 }
 

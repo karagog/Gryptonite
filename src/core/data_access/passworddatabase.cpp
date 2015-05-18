@@ -2638,8 +2638,8 @@ static void __write_entry_to_xml_writer(QXmlStreamWriter &sw, const Entry &e,
     if(e.IsFavorite())
         sw.writeAttribute("fav", QVariant(e.GetFavoriteIndex()).toString());
     if(!e.GetFileId().IsNull()){
-        sw.writeAttribute("f_id", QVariant(file_mapping[e.GetFileId()]).toString());
-        sw.writeAttribute("f_name", e.GetFileName());
+        sw.writeAttribute("fid", QVariant(file_mapping[e.GetFileId()]).toString());
+        sw.writeAttribute("fname", e.GetFileName());
         if(file_mapping.contains(e.GetFileId()))
             file_references.insert(e.GetFileId());
     }
@@ -2800,10 +2800,10 @@ static void __parse_xml_entries(QXmlStreamReader &sr,
                 tmp_entry.SetModifyDate(QDateTime::fromString(sr.attributes().value("date").toString()));
                 if(sr.attributes().hasAttribute("fav"))
                     tmp_entry.SetFavoriteIndex(sr.attributes().value("fav").toInt());
-                if(sr.attributes().hasAttribute("f_id")){
-                    tmp_entry.SetFileName(sr.attributes().value("f_name").toString());
+                if(sr.attributes().hasAttribute("fid")){
+                    tmp_entry.SetFileName(sr.attributes().value("fname").toString());
 
-                    int fid_local = sr.attributes().value("f_id").toInt();
+                    int fid_local = sr.attributes().value("fid").toInt();
                     if(file_mapping.contains(fid_local)){
                         tmp_entry.SetFileId(file_mapping[fid_local].id);
                     }

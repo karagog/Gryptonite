@@ -4,7 +4,7 @@ VERSION=3.1.0_alpha
 
 TOP_DIR=../..
 ICONS_DIR=$TOP_DIR/src/presentation/icons
-QT_DIR=/opt/Qt/5.4/gcc
+QT_DIR=/opt/Qt/5.4/gcc_64
 REPO_DIR=gryptonite_v$VERSION
 
 mkdir $REPO_DIR

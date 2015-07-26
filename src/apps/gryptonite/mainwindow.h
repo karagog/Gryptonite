@@ -142,6 +142,8 @@ private slots:
     void _update_trayIcon_menu();
     void _favorite_action_clicked(QAction *);
 
+    void _navigate_forwards();
+    void _navigate_backwards();
     void _nav_index_changed(int);
     void _update_undo_text();
     void _update_recent_files(const QString & = QString::null);

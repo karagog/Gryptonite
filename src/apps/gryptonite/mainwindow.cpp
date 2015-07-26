@@ -149,7 +149,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget
     btn_navBack->setToolTip(tr("Navigate Backwards"));
     btn_navBack->setWhatsThis(tr("Navigate backwards through the history of your selections"));
     btn_navBack->setAutoRaise(true);
-    connect(btn_navBack, SIGNAL(clicked()), &m_navStack, SLOT(undo()));
+    connect(btn_navBack, SIGNAL(clicked()), this, SLOT(_navigate_backwards()));
     ui->toolBar->addWidget(btn_navBack);
 
     btn_navForward = new QToolButton(this);
@@ -157,7 +157,7 @@ MainWindow::MainWindow(GUtil::Qt::Settings *s, const QString &open_file, QWidget
     btn_navForward->setToolTip(tr("Navigate Forwards"));
     btn_navForward->setWhatsThis(tr("Navigate forwards through the history of your selections"));
     btn_navForward->setAutoRaise(true);
-    connect(btn_navForward, SIGNAL(clicked()), &m_navStack, SLOT(redo()));
+    connect(btn_navForward, SIGNAL(clicked()), this, SLOT(_navigate_forwards()));
     ui->toolBar->addWidget(btn_navForward);
 
     m_btn_pop_out.setToolTip(tr("View entry in a smaller window"));
@@ -1455,6 +1455,27 @@ public:
 
 };
 
+void MainWindow::_navigate_forwards()
+{
+    if(ui->treeView->currentIndex().isValid()){
+        m_navStack.redo();
+    }
+    else{
+        _nav_index_changed(m_navStack.index());
+    }
+}
+
+void MainWindow::_navigate_backwards()
+{
+    if(ui->treeView->currentIndex().isValid()){
+        m_navStack.undo();
+    }
+    else{
+        // If no item is selected, then select the last item
+        _nav_index_changed(m_navStack.index());
+    }
+}
+
 void MainWindow::_nav_index_changed(int nav_index)
 {
     nav_index -= 1;
@@ -1934,6 +1955,7 @@ void MainWindow::RecoverFromReadOnly()
         m_readonly = false;
         _update_available_actions();
         ui->treeView->ResizeColumnsToContents();
+        ui->searchWidget->Clear();
     }
 }
 

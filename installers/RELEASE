@@ -1,0 +1,34 @@
+This document describes the release process. You must carefully follow it,
+because the repository on GitHub is used by the auto-updater to detect new
+versions. So if you do it incorrectly you could harm the user experience.
+
+The way the auto-updater works is it checks the contents of the
+"latest_release" file in this directory on the master branch at GitHub. So
+when your release is finished, the last thing you should do is update the
+master branch to reflect the new release version. Follow these steps to do it
+the right way.
+
+  1.) Switch to the "release" branch (which is based off "master"), do all
+      your release testing and make all last minute changes on this branch.
+
+  2.) When you are satisfied that the release is ready, update all the
+      version numbers throughout the code. A good way to do this is to look
+      at the previous commits titled "Updated version numbers..." and update
+      all those same locations.
+
+  3.) Update the contents of the "latest_release" and/or "latest_pre_release"
+      depending if you are making an official release or an alpha/beta.
+      IMPORTANT: You should only do this on the release branch, and NOT the
+      master branch. When you are done with this step, push the release branch
+      to GitHub.
+		
+  4.) On GitHub, create a new release targeting the "release" branch. Make a
+      nice description and add the binaries that you want the users to download.
+      After you create the release the hooks will add the binaries to the
+      sourceforge mirror. You will still have to manually update the default
+      downloads so new users will get the latest version by default.
+
+  5.) After all previous steps are completed, then you can fast-forward the
+      master branch to the release branch and push it to GitHub. Within a
+      couple minutes the auto-updater should pick up the new version and notify
+      users of the new version.

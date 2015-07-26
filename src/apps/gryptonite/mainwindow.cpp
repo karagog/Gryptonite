@@ -1955,6 +1955,7 @@ void MainWindow::RecoverFromReadOnly()
         m_readonly = false;
         _update_available_actions();
         ui->treeView->ResizeColumnsToContents();
+        ui->searchWidget->Clear();
     }
 }
 

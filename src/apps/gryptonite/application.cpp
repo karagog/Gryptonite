@@ -49,6 +49,7 @@ static void __init_default_settings(GUtil::Qt::Settings &settings)
     init_setting(GRYPTONITE_SETTING_AUTOLOAD_LAST_FILE, true);
     init_setting(GRYPTONITE_SETTING_RECENT_FILES_LENGTH, 10);
     init_setting(GRYPTONITE_SETTING_CLOSE_MINIMIZES_TO_TRAY, true);
+    init_setting(GRYPTONITE_SETTING_REMEMBER_KEYFILE, true);
     init_setting(GRYPTONITE_SETTING_TIME_FORMAT_24HR, true);
     init_setting(GRYPTONITE_SETTING_LOCKOUT_TIMEOUT, 15);
     init_setting(GRYPTONITE_SETTING_CLIPBOARD_TIMEOUT, 30);

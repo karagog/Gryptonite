@@ -34,12 +34,14 @@ Makefile*
 # Qt-specific ignores
 ui_*.h
 moc_*.cpp
+moc_*.h
 *.moc
 qrc_*.cpp
 *.Debug
 *.Release
 *.pro.user*
 *-build-desktop
+.qmake.stash
 
 *.sqlite
 *.log

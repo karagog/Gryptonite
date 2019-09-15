@@ -9,7 +9,9 @@ it myself on Linux and Windows, but I would be willing to help support other pla
 Before you begin, you will need a python interpreter in the system path, because the build process
 leverages custom python scripts. If you want to generate documentation you will also need doxygen.
 
-You will also need Qt version 5 and Crypto++ version 5.6.2 from their website. You should install
+You will also need Qt version 5 and Crypto++ version 5.6.2 from their website. It is important that
+you use that exact version, because I found that later versions are not backwards compatible (even if
+it compiles and runs, it doesn't decrypt data correctly using the same calls). You should install
 the Crypto++ headers somewhere in the compiler's include path and the libs in a path where the
 linker can find it. Building and installing third party libraries is beyond the scope of this document.
 
